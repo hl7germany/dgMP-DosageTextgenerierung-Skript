@@ -11,3 +11,7 @@ Die Implementierung wird „wie besehen“ (AS IS) bereitgestellt, ohne jegliche
 In keinem Fall haften die Autor:innen, Mitwirkenden oder bereitstellenden Organisationen für Ansprüche, Schäden oder sonstige Haftung – gleich aus welchem Rechtsgrund –, die sich aus der Nutzung der Referenzimplementierung oder deren Einsatz ergeben.  
 
 Die Nutzer:innen dieser Referenzimplementierung tragen die alleinige Verantwortung dafür, deren Eignung, Korrektheit und Konformität mit relevanten rechtlichen, regulatorischen und sicherheitsrelevanten Anforderungen vor jeglicher Nutzung über Demonstrations- oder Testzwecke hinaus zu prüfen.
+
+## Beschreibung
+
+Dieses Skript wird im Rahmen des [Medication IG DE](https://ig.fhir.de/igs/medication/) verwendet. Die Beschreibung und Verwendung findet sich in diesem Implementation Guide.
