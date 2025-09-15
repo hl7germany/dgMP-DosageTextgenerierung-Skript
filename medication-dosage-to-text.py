@@ -29,6 +29,7 @@ import sys
 import os
 
 __version__ = "1.0.0"
+__language__ = "de-DE"
 
 class MedicationDosageTextGenerator:
     """
