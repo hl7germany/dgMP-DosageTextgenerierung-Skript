@@ -70,24 +70,15 @@ class MedicationDosageTextGenerator:
         'sun': 'sonntags'
     }
     
-    # Time unit translations (singular/plural)
-    TIME_UNITS_SINGULAR = {
-        's': 'Sekunde',
-        'min': 'Minute', 
-        'h': 'Stunde',
-        'd': 'Tag',
-        'wk': 'Woche',
-        'mo': 'Monat',
-        'a': 'Jahr'
-    }
-    TIME_UNITS_PLURAL = {
-        's': 'Sekunden',
-        'min': 'Minuten',
-        'h': 'Stunden', 
-        'd': 'Tage',
-        'wk': 'Wochen',
-        'mo': 'Monate',
-        'a': 'Jahre'
+    # Time unit translations
+    TIME_UNITS = {
+        's': 'Sekunde(n)',
+        'min': 'Minute(n)', 
+        'h': 'Stunde(n)',
+        'd': 'Tag(n)',
+        'wk': 'Woche(n)',
+        'mo': 'Monat(e)',
+        'a': 'Jahr(e)'
     }
     
     def __init__(self):
@@ -546,7 +537,7 @@ class MedicationDosageTextGenerator:
             str: German unit name (e.g., "Tag" vs "Tage")
         """
         # Choose singular or plural based on value
-        unit_dict = self.TIME_UNITS_SINGULAR if value == 1 else self.TIME_UNITS_PLURAL
+        unit_dict = self.TIME_UNITS
         return unit_dict.get(unit, unit)  # Fallback to original unit if not found
     
     def _generate_day_of_week_text(self, dosage_instructions):
@@ -973,12 +964,12 @@ class MedicationDosageTextGenerator:
             if period == 1:
                 interval_text = "täglich"
             else:
-                interval_text = f"alle {period} Tage"
+                interval_text = f"alle {period} Tag(e)"
         elif period_unit == 'wk':
             if period == 1:
                 interval_text = "wöchentlich"
             else:
-                interval_text = f"alle {period} Wochen"
+                interval_text = f"alle {period} Woche(n)"
         else:
             interval_text = f"alle {period} {period_unit}"
         
