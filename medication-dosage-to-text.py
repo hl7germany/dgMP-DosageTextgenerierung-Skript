@@ -28,7 +28,7 @@ import json
 import sys
 import os
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __language__ = "de-DE"
 
 class MedicationDosageTextGenerator:
@@ -307,7 +307,7 @@ class MedicationDosageTextGenerator:
         for when_code in self.WHEN_CODES_ORDER:
             dose_value = dose_amounts[when_code]
             # Format dose value (preserve decimals only if needed)
-            formatted_dose = self._format_dose_value(dose_value)
+            formatted_dose = self._format_decimal_value(dose_value)
             dose_values.append(formatted_dose)
 
         dose_pattern = "-".join(dose_values)
@@ -461,7 +461,7 @@ class MedicationDosageTextGenerator:
             return ""
 
         dose_value, unit = dose_info
-        formatted_dose = self._format_dose_value(dose_value)
+        formatted_dose = self._format_decimal_value(dose_value)
 
         if unit:
             return f"je {formatted_dose} {unit}"
@@ -489,26 +489,30 @@ class MedicationDosageTextGenerator:
         duration_unit = bounds_duration.get('code', '')
 
         if duration_value and duration_unit:
+            # Format duration value with German decimal separator
+            formatted_value = self._format_decimal_value(duration_value)
             # Format duration with proper German unit
             formatted_unit = self._format_time_unit_german(duration_value, duration_unit)
-            return f"für {duration_value} {formatted_unit}"
+            return f"für {formatted_value} {formatted_unit}"
 
         return ""
 
-    def _format_dose_value(self, dose_value):
+    def _format_decimal_value(self, value):
         """
-        Format a dose value, removing unnecessary decimal places.
+        Format a numeric value with German decimal separator (comma).
+        Removes unnecessary decimal places for whole numbers.
         
         Args:
-            dose_value (float): Numeric dose value
+            value (float/int): Numeric value
             
         Returns:
-            str: Formatted dose (e.g., "1" instead of "1.0", "1.5" kept as is)
+            str: Formatted value (e.g., "1" instead of "1,0", "1,5" kept as is)
         """
-        if dose_value == int(dose_value):
-            return str(int(dose_value))
+        if value == int(value):
+            return str(int(value))
         else:
-            return str(dose_value)
+            # Use comma as decimal separator for German format
+            return str(value).replace('.', ',')
 
     def _format_time_german(self, time_string):
         """
@@ -611,15 +615,15 @@ class MedicationDosageTextGenerator:
             day_name = self.DAY_TRANSLATIONS.get(day_code, day_code)
 
             # Format dose value and create day entry
-            formatted_dose = self._format_dose_value(dose_value)
+            formatted_dose = self._format_decimal_value(dose_value)
             dose_text = f"je {formatted_dose}"
             if unit_text:
                 dose_text += f" {unit_text}"
 
             day_text_parts.append(f"{day_name} — {dose_text}")
 
-        # Combine all days with commas
-        combined_days = ", ".join(day_text_parts)
+        # Combine all days with semicolons (each day is a complete dosage instruction with unit)
+        combined_days = "; ".join(day_text_parts)
 
         # Add bounds if present
         if bounds_text:
@@ -736,14 +740,15 @@ class MedicationDosageTextGenerator:
         Format a period with unit into German description.
         
         Args:
-            period (int): Numeric period value
+            period (int/float): Numeric period value
             period_unit (str): FHIR period unit code
             
         Returns:
             str: German period description like "3 Tage" or "2 Wochen"
         """
+        formatted_period = self._format_decimal_value(period)
         unit_name = self._format_time_unit_german(period, period_unit)
-        return f"{period} {unit_name}"
+        return f"{formatted_period} {unit_name}"
 
     def _generate_dayofweek_and_time_schema_text(self, dosage_instructions):
         """
@@ -849,8 +854,8 @@ class MedicationDosageTextGenerator:
                 combined_times = "; ".join(time_dose_parts)
                 day_text_parts.append(f"{day_name} {combined_times}")
 
-        # Combine all days
-        combined_days = ", ".join(day_text_parts)
+        # Combine all days with semicolons (each day is a complete dosage instruction with unit)
+        combined_days = "; ".join(day_text_parts)
 
         # Add bounds if present
         if bounds_text:
@@ -915,18 +920,19 @@ class MedicationDosageTextGenerator:
             dose_values = []
             for when_code in self.WHEN_CODES_ORDER:
                 dose_value = dose_pattern[when_code]
-                formatted_dose = self._format_dose_value(dose_value)
+                formatted_dose = self._format_decimal_value(dose_value)
                 dose_values.append(formatted_dose)
 
             dose_pattern_text = "-".join(dose_values)
-            day_text_parts.append(f"{day_name} {dose_pattern_text}")
+            
+            # Add unit to each day if available
+            if unit_text:
+                day_text_parts.append(f"{day_name} {dose_pattern_text} {unit_text}")
+            else:
+                day_text_parts.append(f"{day_name} {dose_pattern_text}")
 
-        # Combine all days
-        combined_days = ", ".join(day_text_parts)
-
-        # Add unit if available
-        if unit_text:
-            combined_days += f" {unit_text}"
+        # Combine all days with semicolons (each day is a complete dosage instruction with unit)
+        combined_days = "; ".join(day_text_parts)
 
         # Add bounds if present
         if bounds_text:
@@ -973,14 +979,17 @@ class MedicationDosageTextGenerator:
             if period == 1:
                 interval_text = "täglich"
             else:
-                interval_text = f"alle {period} Tage"
+                formatted_period = self._format_decimal_value(period)
+                interval_text = f"alle {formatted_period} Tage"
         elif period_unit == 'wk':
             if period == 1:
                 interval_text = "wöchentlich"
             else:
-                interval_text = f"alle {period} Wochen"
+                formatted_period = self._format_decimal_value(period)
+                interval_text = f"alle {formatted_period} Wochen"
         else:
-            interval_text = f"alle {period} {period_unit}"
+            formatted_period = self._format_decimal_value(period)
+            interval_text = f"alle {formatted_period} {period_unit}"
 
         # Group dosages by time or when code
         time_to_dosages = {}  # time_key -> list of dosages
@@ -1042,7 +1051,7 @@ class MedicationDosageTextGenerator:
                         unit_text = dose_unit
 
             # Format dose text
-            formatted_dose = self._format_dose_value(total_dose_value)
+            formatted_dose = self._format_decimal_value(total_dose_value)
             dose_text = f"je {formatted_dose}"
             if unit_text:
                 dose_text += f" {unit_text}"
