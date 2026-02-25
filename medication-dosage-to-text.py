@@ -797,57 +797,69 @@ class MedicationDosageTextGenerator:
         if not dosage_instructions:
             return ""
 
-        # Group dosages by day of week
-        day_to_dosages = {}  # day_code -> list of dosages
+        # Group and aggregate dosages by day and time to ensure deterministic output
+        # independent from the input dosage order.
+        day_to_time_dose = {}  # day_code -> {time_key -> {'dose': total, 'unit': unit}}
         bounds_text = ""
 
         for dosage in dosage_instructions:
             timing = dosage.get('timing', {})
             repeat_element = timing.get('repeat', {})
             day_codes = repeat_element.get('dayOfWeek', [])
+            time_list = repeat_element.get('timeOfDay', [])
 
             # Extract bounds (should be consistent across dosages)
             if not bounds_text:
                 bounds_text = self._extract_bounds_text(dosage)
 
-            # Group dosages by day
+            # Extract dose information
+            dose_info = self._extract_dose_quantity(dosage)
+            if not dose_info or not day_codes or not time_list:
+                continue
+
+            dose_value, dose_unit = dose_info
+
+            # Aggregate dose per day+time key
             for day_code in day_codes:
-                if day_code not in day_to_dosages:
-                    day_to_dosages[day_code] = []
-                day_to_dosages[day_code].append(dosage)
+                if day_code not in day_to_time_dose:
+                    day_to_time_dose[day_code] = {}
+
+                for time_value in time_list:
+                    time_key = str(time_value)
+                    if time_key not in day_to_time_dose[day_code]:
+                        day_to_time_dose[day_code][time_key] = {
+                            'dose': 0,
+                            'unit': dose_unit
+                        }
+
+                    day_to_time_dose[day_code][time_key]['dose'] += dose_value
+                    if not day_to_time_dose[day_code][time_key]['unit']:
+                        day_to_time_dose[day_code][time_key]['unit'] = dose_unit
+
+        if not day_to_time_dose:
+            return ""
 
         # Format each day with its time-dose combinations
-        sorted_days = sorted(day_to_dosages.keys(),
+        sorted_days = sorted(day_to_time_dose.keys(),
                              key=lambda day: self.DAY_ORDER.index(day) if day in self.DAY_ORDER else 99)
 
         day_text_parts = []
         for day_code in sorted_days:
-            day_dosages = day_to_dosages[day_code]
+            time_to_dose = day_to_time_dose[day_code]
             day_name = self.DAY_TRANSLATIONS.get(day_code, day_code)
 
-            # Generate time-dose combinations for this day
+            # Generate time-dose combinations for this day (sorted chronologically)
             time_dose_parts = []
-            for dosage in day_dosages:
-                timing = dosage.get('timing', {})
-                repeat_element = timing.get('repeat', {})
-                time_list = repeat_element.get('timeOfDay', [])
+            for time_key in sorted(time_to_dose.keys()):
+                dose_entry = time_to_dose[time_key]
+                formatted_time = self._format_time_german(time_key)
+                formatted_dose = self._format_decimal_value(dose_entry['dose'])
 
-                if not time_list:
-                    continue
+                dose_text = f"je {formatted_dose}"
+                if dose_entry['unit']:
+                    dose_text += f" {dose_entry['unit']}"
 
-                # Format times (sort chronologically)
-                formatted_times = []
-                for time_value in sorted(time_list):
-                    formatted_time = self._format_time_german(time_value)
-                    formatted_times.append(formatted_time)
-
-                # Extract dose information
-                dose_text = self._extract_dose_text_with_prefix(dosage)
-
-                # Combine times and dose for this dosage
-                if formatted_times and dose_text:
-                    times_combined = ", ".join(formatted_times)
-                    time_dose_parts.append(f"{times_combined} — {dose_text}")
+                time_dose_parts.append(f"{formatted_time} — {dose_text}")
 
             # Combine all time-dose parts for this day
             if time_dose_parts:
@@ -902,7 +914,8 @@ class MedicationDosageTextGenerator:
 
                     for when_code in when_codes:
                         if when_code in day_to_patterns[day_code]:
-                            day_to_patterns[day_code][when_code] = dose_value
+                            # Sum doses per day+when to keep output stable if entries are reordered
+                            day_to_patterns[day_code][when_code] += dose_value
 
         if not day_to_patterns:
             return ""
