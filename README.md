@@ -1,4 +1,12 @@
 # dgMP-DosageTextgenerierung-Skript
+
+[![CI](https://github.com/hl7germany/dgMP-DosageTextgenerierung-Skript/actions/workflows/ci.yml/badge.svg)](https://github.com/hl7germany/dgMP-DosageTextgenerierung-Skript/actions/workflows/ci.yml)
+[![Release](https://github.com/hl7germany/dgMP-DosageTextgenerierung-Skript/actions/workflows/release.yml/badge.svg)](https://github.com/hl7germany/dgMP-DosageTextgenerierung-Skript/actions/workflows/release.yml)
+[![Release On Tag](https://github.com/hl7germany/dgMP-DosageTextgenerierung-Skript/actions/workflows/release-on-tag.yml/badge.svg)](https://github.com/hl7germany/dgMP-DosageTextgenerierung-Skript/actions/workflows/release-on-tag.yml)
+[![FHIR R4](https://img.shields.io/badge/FHIR-R4-0A4A8B)](https://hl7.org/fhir/R4/)
+[![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Python Referenzimplementierung des dgMP-DosageTextgenerierung-Skripts
 
 ## HAFTUNGSAUSSCHLUSS
