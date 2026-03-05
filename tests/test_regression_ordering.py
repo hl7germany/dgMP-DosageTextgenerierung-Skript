@@ -119,6 +119,38 @@ class RegressionOrderingTest(unittest.TestCase):
         self.assertIn("montags 2-0-0-0 Stueck", output_1)
         self.assertIn("montags 1-0-0-0 Stueck; montags 2-0-0-0 Stueck", output_1)
 
+    def test_day_when_combo_merges_different_slots_for_same_day(self):
+        dosage_a = {
+            "timing": {
+                "repeat": {
+                    "frequency": 1,
+                    "period": 1,
+                    "periodUnit": "d",
+                    "dayOfWeek": ["mon"],
+                    "when": ["MORN"],
+                }
+            },
+            "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stueck"}}],
+        }
+        dosage_b = {
+            "timing": {
+                "repeat": {
+                    "frequency": 1,
+                    "period": 1,
+                    "periodUnit": "d",
+                    "dayOfWeek": ["mon"],
+                    "when": ["EVE"],
+                }
+            },
+            "doseAndRate": [{"doseQuantity": {"value": 2, "unit": "Stueck"}}],
+        }
+
+        output_1 = self.generator.generate_dosage_text(self._resource([dosage_a, dosage_b]))
+        output_2 = self.generator.generate_dosage_text(self._resource([dosage_b, dosage_a]))
+
+        self.assertEqual(output_1, output_2)
+        self.assertEqual("montags 1-0-2-0 Stueck", output_1)
+
     def test_time_of_day_schema_is_order_independent(self):
         dosage_a = {
             "timing": {"repeat": {"frequency": 1, "period": 1, "periodUnit": "d", "timeOfDay": ["20:00"]}},
@@ -168,6 +200,51 @@ class RegressionOrderingTest(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             self.generator.generate_dosage_text(self._resource([dosage_a, dosage_b]))
+
+    def test_4_schema_when_without_dose_raises_value_error(self):
+        dosage_without_dose = {
+            "timing": {"repeat": {"frequency": 1, "period": 1, "periodUnit": "d", "when": ["MORN"]}},
+        }
+        dosage_with_dose = {
+            "timing": {"repeat": {"frequency": 1, "period": 1, "periodUnit": "d", "when": ["MORN"]}},
+            "doseAndRate": [{"doseQuantity": {"value": 2, "unit": "Stueck"}}],
+        }
+
+        with self.assertRaises(ValueError):
+            self.generator.generate_dosage_text(self._resource([dosage_without_dose, dosage_with_dose]))
+        with self.assertRaises(ValueError):
+            self.generator.generate_dosage_text(self._resource([dosage_with_dose, dosage_without_dose]))
+
+    def test_day_when_without_dose_raises_value_error(self):
+        dosage_without_dose = {
+            "timing": {
+                "repeat": {
+                    "frequency": 1,
+                    "period": 1,
+                    "periodUnit": "d",
+                    "dayOfWeek": ["mon"],
+                    "when": ["MORN"],
+                }
+            },
+        }
+
+        with self.assertRaises(ValueError):
+            self.generator.generate_dosage_text(self._resource([dosage_without_dose]))
+
+    def test_interval_when_without_dose_raises_value_error(self):
+        dosage_without_dose = {
+            "timing": {
+                "repeat": {
+                    "frequency": 1,
+                    "period": 2,
+                    "periodUnit": "d",
+                    "when": ["MORN"],
+                }
+            },
+        }
+
+        with self.assertRaises(ValueError):
+            self.generator.generate_dosage_text(self._resource([dosage_without_dose]))
 
     def test_interval_time_schema_without_valid_time_keys_returns_interval_only(self):
         dosage = {

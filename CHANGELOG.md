@@ -7,13 +7,18 @@ Alle relevanten Änderungen an diesem Projekt werden in dieser Datei dokumentier
 ### Added
 - GitHub Actions Workflows für CI, manuelles Release und tag-basiertes Release.
 - Regressionstests für stabile Sortierung der Dosage-Ausgabe.
+- Zusätzliche Regressionstests für `DayOfWeek + when` (Merge über unterschiedliche Slots) und Validierungsfehler bei `when` ohne Dosis.
 
 ### Changed
 - Deterministische Sortierung für `DayOfWeek + TimeOfDay`, `DayOfWeek + when`, `TimeOfDay` und `Interval + Time/when`.
 - Doppelte Einträge zum gleichen Zeitpunkt werden nacheinander ausgegeben (ohne Summierung) in den entsprechenden Schemata.
+- `DayOfWeek + when` merged wieder unterschiedliche `when`-Slots pro Tag in ein gemeinsames 4-Schema-Muster; echte Slot-Duplikate bleiben getrennte Einträge.
+- Release-Ablauf getrennt: manuelles Release taggt den getesteten Commit, Erstellung des GitHub-Releases erfolgt tag-basiert.
 
 ### Fixed
 - `4-Schema`: doppelte `when`-Belegung wird als Fehler (`ValueError`) behandelt.
+- `when` ohne Dosisangabe führt jetzt schemaübergreifend zu einem Fehler (`ValueError`) in allen `when`-basierten Schemata.
+- Bug behoben, bei dem ein `when` ohne Dosis fälschlich einen Slot belegte und dadurch Folgeeinträge blockierte.
 - `Interval + Time/when`: bei fehlenden gültigen Zeitkeys kein hängender Doppelpunkt mehr.
 - Docstrings/Beispiele an aktuelle Ausgabeformate angepasst.
 

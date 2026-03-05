@@ -123,7 +123,10 @@ class MedicationDosageTextGenerator:
         # Step 2: Determine which dosage schema applies (implements TimingOnlyOneType logic)
         schema_type = self._determine_dosage_schema(dosage_instructions)
 
-        # Step 3: Generate text using the appropriate schema-specific method
+        # Step 3: Validate cross-schema constraints
+        self._validate_when_requires_dose(dosage_instructions)
+
+        # Step 4: Generate text using the appropriate schema-specific method
         text_generators = {
             self.SCHEMA_FREE_TEXT: self._generate_freetext_schema_text,
             self.SCHEMA_4_PATTERN: self._generate_4_schema_text,
@@ -293,12 +296,6 @@ class MedicationDosageTextGenerator:
 
             # Validate that each when slot is used only once in 4-schema.
             valid_when_codes = [when_code for when_code in when_codes if when_code in dose_amounts]
-            for when_code in valid_when_codes:
-                if when_code in seen_when_codes:
-                    raise ValueError(
-                        f"Ungültiges 4-Schema: doppelter when-Wert '{when_code}'."
-                    )
-                seen_when_codes.add(when_code)
 
             # Extract dose quantity information
             dose_info = self._extract_dose_quantity(dosage)
@@ -306,6 +303,14 @@ class MedicationDosageTextGenerator:
                 dose_value, dose_unit = dose_info
                 if not unit_text:
                     unit_text = dose_unit
+
+                # Validate that each when slot with a valid dose is used only once in 4-schema.
+                for when_code in valid_when_codes:
+                    if when_code in seen_when_codes:
+                        raise ValueError(
+                            f"Ungültiges 4-Schema: doppelter when-Wert '{when_code}'."
+                        )
+                    seen_when_codes.add(when_code)
 
                 # Assign dose value to each specified time period
                 for when_code in valid_when_codes:
@@ -437,6 +442,25 @@ class MedicationDosageTextGenerator:
     # ============================================================================
     # UTILITY METHODS - Reusable functions for data extraction and formatting
     # ============================================================================
+
+    def _validate_when_requires_dose(self, dosage_instructions):
+        """
+        Validate that every dosage using when-codes provides a dose quantity.
+
+        Args:
+            dosage_instructions (list): List of dosage instruction objects
+
+        Raises:
+            ValueError: If when-codes are present but no dose is defined
+        """
+        for dosage in dosage_instructions:
+            timing = dosage.get('timing', {})
+            repeat_element = timing.get('repeat', {})
+            when_codes = repeat_element.get('when', [])
+            if when_codes and not self._extract_dose_quantity(dosage):
+                raise ValueError(
+                    "Ungültige Dosierung: when-Werte erfordern eine Dosisangabe."
+                )
 
     def _extract_dose_quantity(self, dosage):
         """
@@ -902,7 +926,9 @@ class MedicationDosageTextGenerator:
             return ""
 
         # Build day-pattern entries and sort by day + when to avoid order-dependent text.
-        day_entries = []
+        # Different when slots of the same day are merged into one pattern where possible.
+        # Duplicate day+slot entries stay separate as additional patterns.
+        day_to_patterns = {}  # day_code -> list of pattern dicts
         bounds_text = ""
 
         when_order = {
@@ -927,7 +953,11 @@ class MedicationDosageTextGenerator:
             timing = dosage.get('timing', {})
             repeat_element = timing.get('repeat', {})
 
-            day_codes = [str(day_code) for day_code in repeat_element.get('dayOfWeek', [])]
+            day_codes = sorted(
+                [str(day_code) for day_code in repeat_element.get('dayOfWeek', [])],
+                key=lambda day_code: self.DAY_ORDER.index(day_code)
+                if day_code in self.DAY_ORDER else 99
+            )
             when_codes = [str(when_code) for when_code in repeat_element.get('when', [])]
 
             # Extract bounds (should be consistent across dosages)
@@ -942,7 +972,7 @@ class MedicationDosageTextGenerator:
             dose_value, dose_unit = dose_info
             canonical_json = json.dumps(dosage, sort_keys=True, ensure_ascii=True)
 
-            # Keep duplicates as separate entries; only sort by day+when.
+            # Keep only known when codes in canonical order.
             sorted_when_codes = tuple(sorted(
                 [when_code for when_code in when_codes if when_code in when_order],
                 key=lambda when_code: when_order[when_code]
@@ -950,38 +980,72 @@ class MedicationDosageTextGenerator:
             if not sorted_when_codes:
                 continue
 
-            # Build one 4-pattern entry per dosage and day.
-            dose_values = []
-            for slot_code in self.WHEN_CODES_ORDER:
-                slot_value = dose_value if slot_code in sorted_when_codes else 0
-                dose_values.append(self._format_decimal_value(slot_value))
-            dose_pattern_text = "-".join(dose_values)
-
             for day_code in day_codes:
-                day_name = self.DAY_TRANSLATIONS.get(day_code, day_code)
-                if dose_unit:
-                    entry_text = f"{day_name} {dose_pattern_text} {dose_unit}"
-                else:
-                    entry_text = f"{day_name} {dose_pattern_text}"
+                if day_code not in day_to_patterns:
+                    day_to_patterns[day_code] = []
 
-                day_entries.append({
-                    "day_code": day_code,
-                    "when_codes": sorted_when_codes,
-                    "canonical_json": canonical_json,
-                    "text": entry_text
-                })
+                # Try to merge into existing pattern without slot conflicts.
+                merged = False
+                for pattern in day_to_patterns[day_code]:
+                    has_conflict = any(pattern["slot_values"][when_code] is not None for when_code in sorted_when_codes)
+                    unit_compatible = (
+                        pattern["unit"] == dose_unit or
+                        not pattern["unit"] or
+                        not dose_unit
+                    )
+                    if has_conflict or not unit_compatible:
+                        continue
 
-        if not day_entries:
+                    for when_code in sorted_when_codes:
+                        pattern["slot_values"][when_code] = dose_value
+                    if not pattern["unit"]:
+                        pattern["unit"] = dose_unit
+                    merged = True
+                    break
+
+                # No compatible pattern found: create a separate pattern entry.
+                if not merged:
+                    new_pattern = {
+                        "slot_values": {slot_code: None for slot_code in self.WHEN_CODES_ORDER},
+                        "unit": dose_unit,
+                        "canonical_json": canonical_json,
+                    }
+                    for when_code in sorted_when_codes:
+                        new_pattern["slot_values"][when_code] = dose_value
+                    day_to_patterns[day_code].append(new_pattern)
+
+        if not day_to_patterns:
             return ""
 
-        def entry_sort_key(entry):
-            day_index = self.DAY_ORDER.index(entry["day_code"]) if entry["day_code"] in self.DAY_ORDER else 99
-            when_tuple = tuple(when_order.get(code, 99) for code in entry["when_codes"])
-            return (day_index, when_tuple, entry["canonical_json"])
+        sorted_days = sorted(day_to_patterns.keys(),
+                             key=lambda day: self.DAY_ORDER.index(day) if day in self.DAY_ORDER else 99)
 
-        day_text_parts = [
-            entry["text"] for entry in sorted(day_entries, key=entry_sort_key)
-        ]
+        day_text_parts = []
+        for day_code in sorted_days:
+            day_name = self.DAY_TRANSLATIONS.get(day_code, day_code)
+            patterns = day_to_patterns[day_code]
+
+            def pattern_sort_key(pattern):
+                first_slot_index = 99
+                for slot_index, slot_code in enumerate(self.WHEN_CODES_ORDER):
+                    if pattern["slot_values"][slot_code] is not None:
+                        first_slot_index = slot_index
+                        break
+                return (first_slot_index, pattern["canonical_json"])
+
+            for pattern in sorted(patterns, key=pattern_sort_key):
+                dose_values = []
+                for slot_code in self.WHEN_CODES_ORDER:
+                    slot_value = pattern["slot_values"][slot_code]
+                    if slot_value is None:
+                        slot_value = 0
+                    dose_values.append(self._format_decimal_value(slot_value))
+
+                dose_pattern_text = "-".join(dose_values)
+                if pattern["unit"]:
+                    day_text_parts.append(f"{day_name} {dose_pattern_text} {pattern['unit']}")
+                else:
+                    day_text_parts.append(f"{day_name} {dose_pattern_text}")
 
         # Combine all days with semicolons (each day is a complete dosage instruction with unit)
         combined_days = "; ".join(day_text_parts)
