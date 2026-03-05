@@ -23,3 +23,5 @@ Die Nutzer:innen dieser Referenzimplementierung tragen die alleinige Verantwortu
 ## Beschreibung
 
 Dieses Skript wird im Rahmen des [Medication IG DE](https://ig.fhir.de/igs/medication/) verwendet. Die Beschreibung und Verwendung findet sich in diesem Implementation Guide.
+
+Änderungshistorie: siehe [CHANGELOG.md](CHANGELOG.md).
