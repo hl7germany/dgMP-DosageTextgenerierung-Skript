@@ -1019,18 +1019,18 @@ class MedicationDosageTextGenerator:
         sorted_days = sorted(day_to_patterns.keys(),
                              key=lambda day: self.DAY_ORDER.index(day) if day in self.DAY_ORDER else 99)
 
+        def pattern_sort_key(pattern):
+            first_slot_index = 99
+            for slot_index, slot_code in enumerate(self.WHEN_CODES_ORDER):
+                if pattern["slot_values"][slot_code] is not None:
+                    first_slot_index = slot_index
+                    break
+            return (first_slot_index, pattern["canonical_json"])
+
         day_text_parts = []
         for day_code in sorted_days:
             day_name = self.DAY_TRANSLATIONS.get(day_code, day_code)
             patterns = day_to_patterns[day_code]
-
-            def pattern_sort_key(pattern):
-                first_slot_index = 99
-                for slot_index, slot_code in enumerate(self.WHEN_CODES_ORDER):
-                    if pattern["slot_values"][slot_code] is not None:
-                        first_slot_index = slot_index
-                        break
-                return (first_slot_index, pattern["canonical_json"])
 
             for pattern in sorted(patterns, key=pattern_sort_key):
                 dose_values = []
