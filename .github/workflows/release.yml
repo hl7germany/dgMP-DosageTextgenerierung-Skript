@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   release:
-    name: Build And Release
+    name: Prepare And Tag Release
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -109,15 +109,6 @@ jobs:
       - name: Create and push tag
         shell: bash
         run: |
-          git fetch origin "$TARGET_BRANCH" --tags
-          git checkout "$TARGET_BRANCH"
-          git pull --ff-only origin "$TARGET_BRANCH"
+          # Tag exactly the commit that was tested in this workflow.
           git tag "v$VERSION"
           git push origin "v$VERSION"
-
-      - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ env.VERSION }}
-          target_commitish: ${{ env.TARGET_BRANCH }}
-          generate_release_notes: true
