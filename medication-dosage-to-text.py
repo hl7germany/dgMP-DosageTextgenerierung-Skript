@@ -277,6 +277,7 @@ class MedicationDosageTextGenerator:
         """
         # Initialize dose amounts for each time period (default to 0)
         dose_amounts = {code: 0 for code in self.WHEN_CODES_ORDER}
+        seen_when_codes = set()
         unit_text = ""
         bounds_text = ""
 
@@ -290,6 +291,15 @@ class MedicationDosageTextGenerator:
             if not bounds_text:
                 bounds_text = self._extract_bounds_text(dosage)
 
+            # Validate that each when slot is used only once in 4-schema.
+            valid_when_codes = [when_code for when_code in when_codes if when_code in dose_amounts]
+            for when_code in valid_when_codes:
+                if when_code in seen_when_codes:
+                    raise ValueError(
+                        f"Ungültiges 4-Schema: doppelter when-Wert '{when_code}'."
+                    )
+                seen_when_codes.add(when_code)
+
             # Extract dose quantity information
             dose_info = self._extract_dose_quantity(dosage)
             if dose_info:
@@ -298,9 +308,8 @@ class MedicationDosageTextGenerator:
                     unit_text = dose_unit
 
                 # Assign dose value to each specified time period
-                for when_code in when_codes:
-                    if when_code in dose_amounts:
-                        dose_amounts[when_code] = dose_value
+                for when_code in valid_when_codes:
+                    dose_amounts[when_code] = dose_value
 
         # Format as "morning-noon-evening-night" pattern
         dose_values = []
@@ -376,8 +385,18 @@ class MedicationDosageTextGenerator:
         time_dose_parts = []
         bounds_text = ""
 
-        # Process each dosage instruction
-        for dosage in dosage_instructions:
+        # Sort dosages deterministically by time list.
+        def dosage_sort_key(dosage):
+            timing = dosage.get('timing', {})
+            repeat_element = timing.get('repeat', {})
+            time_of_day_list = tuple(sorted(
+                str(time_value) for time_value in repeat_element.get('timeOfDay', [])
+            ))
+            canonical_json = json.dumps(dosage, sort_keys=True, ensure_ascii=True)
+            return (time_of_day_list, canonical_json)
+
+        # Process each dosage instruction in deterministic order.
+        for dosage in sorted(dosage_instructions, key=dosage_sort_key):
             timing = dosage.get('timing', {})
             repeat_element = timing.get('repeat', {})
             time_of_day_list = repeat_element.get('timeOfDay', [])
@@ -797,69 +816,67 @@ class MedicationDosageTextGenerator:
         if not dosage_instructions:
             return ""
 
-        # Group and aggregate dosages by day and time to ensure deterministic output
-        # independent from the input dosage order.
-        day_to_time_dose = {}  # day_code -> {time_key -> {'dose': total, 'unit': unit}}
+        # Group dosages by day and sort deterministically to avoid order-dependent text.
+        day_to_dosages = {}  # day_code -> list of dosage entries
         bounds_text = ""
 
         for dosage in dosage_instructions:
             timing = dosage.get('timing', {})
             repeat_element = timing.get('repeat', {})
             day_codes = repeat_element.get('dayOfWeek', [])
-            time_list = repeat_element.get('timeOfDay', [])
-
             # Extract bounds (should be consistent across dosages)
             if not bounds_text:
                 bounds_text = self._extract_bounds_text(dosage)
 
-            # Extract dose information
-            dose_info = self._extract_dose_quantity(dosage)
-            if not dose_info or not day_codes or not time_list:
-                continue
-
-            dose_value, dose_unit = dose_info
-
-            # Aggregate dose per day+time key
+            # Group dosages by day
             for day_code in day_codes:
-                if day_code not in day_to_time_dose:
-                    day_to_time_dose[day_code] = {}
+                if day_code not in day_to_dosages:
+                    day_to_dosages[day_code] = []
+                day_to_dosages[day_code].append(dosage)
 
-                for time_value in time_list:
-                    time_key = str(time_value)
-                    if time_key not in day_to_time_dose[day_code]:
-                        day_to_time_dose[day_code][time_key] = {
-                            'dose': 0,
-                            'unit': dose_unit
-                        }
-
-                    day_to_time_dose[day_code][time_key]['dose'] += dose_value
-                    if not day_to_time_dose[day_code][time_key]['unit']:
-                        day_to_time_dose[day_code][time_key]['unit'] = dose_unit
-
-        if not day_to_time_dose:
+        if not day_to_dosages:
             return ""
 
         # Format each day with its time-dose combinations
-        sorted_days = sorted(day_to_time_dose.keys(),
+        sorted_days = sorted(day_to_dosages.keys(),
                              key=lambda day: self.DAY_ORDER.index(day) if day in self.DAY_ORDER else 99)
 
         day_text_parts = []
         for day_code in sorted_days:
-            time_to_dose = day_to_time_dose[day_code]
+            day_dosages = day_to_dosages[day_code]
             day_name = self.DAY_TRANSLATIONS.get(day_code, day_code)
 
-            # Generate time-dose combinations for this day (sorted chronologically)
+            # Sort day dosages by timeOfDay (and then by content) for deterministic output.
+            def dosage_sort_key(dosage):
+                timing = dosage.get('timing', {})
+                repeat_element = timing.get('repeat', {})
+                time_list = tuple(sorted(str(time_value) for time_value in repeat_element.get('timeOfDay', [])))
+                canonical_json = json.dumps(dosage, sort_keys=True, ensure_ascii=True)
+                return (time_list, canonical_json)
+
+            # Generate time-dose combinations for this day
             time_dose_parts = []
-            for time_key in sorted(time_to_dose.keys()):
-                dose_entry = time_to_dose[time_key]
-                formatted_time = self._format_time_german(time_key)
-                formatted_dose = self._format_decimal_value(dose_entry['dose'])
+            for dosage in sorted(day_dosages, key=dosage_sort_key):
+                timing = dosage.get('timing', {})
+                repeat_element = timing.get('repeat', {})
+                time_list = repeat_element.get('timeOfDay', [])
 
-                dose_text = f"je {formatted_dose}"
-                if dose_entry['unit']:
-                    dose_text += f" {dose_entry['unit']}"
+                if not time_list:
+                    continue
 
-                time_dose_parts.append(f"{formatted_time} — {dose_text}")
+                # Format times (sort chronologically)
+                formatted_times = []
+                for time_value in sorted(time_list):
+                    formatted_time = self._format_time_german(time_value)
+                    formatted_times.append(formatted_time)
+
+                # Extract dose information
+                dose_text = self._extract_dose_text_with_prefix(dosage)
+
+                # Combine times and dose for this dosage
+                if formatted_times and dose_text:
+                    times_combined = ", ".join(formatted_times)
+                    time_dose_parts.append(f"{times_combined} — {dose_text}")
 
             # Combine all time-dose parts for this day
             if time_dose_parts:
@@ -884,17 +901,34 @@ class MedicationDosageTextGenerator:
         if not dosage_instructions:
             return ""
 
-        # Group dosages by day and build 4-schema pattern for each day
-        day_to_patterns = {}  # day_code -> {MORN: dose, NOON: dose, EVE: dose, NIGHT: dose}
+        # Build day-pattern entries and sort by day + when to avoid order-dependent text.
+        day_entries = []
         bounds_text = ""
-        unit_text = ""
 
-        for dosage in dosage_instructions:
+        when_order = {
+            when_code: index for index, when_code in enumerate(self.WHEN_CODES_ORDER)
+        }
+
+        # Sort dosages deterministically, independent from input order.
+        def dosage_sort_key(dosage):
+            timing = dosage.get('timing', {})
+            repeat_element = timing.get('repeat', {})
+            day_codes = tuple(sorted(
+                str(day_code) for day_code in repeat_element.get('dayOfWeek', [])
+            ))
+            when_codes = tuple(sorted(
+                [str(when_code) for when_code in repeat_element.get('when', [])],
+                key=lambda when_code: when_order.get(when_code, 99)
+            ))
+            canonical_json = json.dumps(dosage, sort_keys=True, ensure_ascii=True)
+            return (day_codes, when_codes, canonical_json)
+
+        for dosage in sorted(dosage_instructions, key=dosage_sort_key):
             timing = dosage.get('timing', {})
             repeat_element = timing.get('repeat', {})
 
-            day_codes = repeat_element.get('dayOfWeek', [])
-            when_codes = repeat_element.get('when', [])
+            day_codes = [str(day_code) for day_code in repeat_element.get('dayOfWeek', [])]
+            when_codes = [str(when_code) for when_code in repeat_element.get('when', [])]
 
             # Extract bounds (should be consistent across dosages)
             if not bounds_text:
@@ -902,47 +936,52 @@ class MedicationDosageTextGenerator:
 
             # Extract dose information
             dose_info = self._extract_dose_quantity(dosage)
-            if dose_info:
-                dose_value, dose_unit = dose_info
-                if not unit_text:
-                    unit_text = dose_unit
+            if not dose_info or not day_codes or not when_codes:
+                continue
 
-                # For each day and each when code, set the dose
-                for day_code in day_codes:
-                    if day_code not in day_to_patterns:
-                        day_to_patterns[day_code] = {code: 0 for code in self.WHEN_CODES_ORDER}
+            dose_value, dose_unit = dose_info
+            canonical_json = json.dumps(dosage, sort_keys=True, ensure_ascii=True)
 
-                    for when_code in when_codes:
-                        if when_code in day_to_patterns[day_code]:
-                            # Sum doses per day+when to keep output stable if entries are reordered
-                            day_to_patterns[day_code][when_code] += dose_value
+            # Keep duplicates as separate entries; only sort by day+when.
+            sorted_when_codes = tuple(sorted(
+                [when_code for when_code in when_codes if when_code in when_order],
+                key=lambda when_code: when_order[when_code]
+            ))
+            if not sorted_when_codes:
+                continue
 
-        if not day_to_patterns:
+            # Build one 4-pattern entry per dosage and day.
+            dose_values = []
+            for slot_code in self.WHEN_CODES_ORDER:
+                slot_value = dose_value if slot_code in sorted_when_codes else 0
+                dose_values.append(self._format_decimal_value(slot_value))
+            dose_pattern_text = "-".join(dose_values)
+
+            for day_code in day_codes:
+                day_name = self.DAY_TRANSLATIONS.get(day_code, day_code)
+                if dose_unit:
+                    entry_text = f"{day_name} {dose_pattern_text} {dose_unit}"
+                else:
+                    entry_text = f"{day_name} {dose_pattern_text}"
+
+                day_entries.append({
+                    "day_code": day_code,
+                    "when_codes": sorted_when_codes,
+                    "canonical_json": canonical_json,
+                    "text": entry_text
+                })
+
+        if not day_entries:
             return ""
 
-        # Format each day with its 4-schema pattern
-        sorted_days = sorted(day_to_patterns.keys(),
-                             key=lambda day: self.DAY_ORDER.index(day) if day in self.DAY_ORDER else 99)
+        def entry_sort_key(entry):
+            day_index = self.DAY_ORDER.index(entry["day_code"]) if entry["day_code"] in self.DAY_ORDER else 99
+            when_tuple = tuple(when_order.get(code, 99) for code in entry["when_codes"])
+            return (day_index, when_tuple, entry["canonical_json"])
 
-        day_text_parts = []
-        for day_code in sorted_days:
-            dose_pattern = day_to_patterns[day_code]
-            day_name = self.DAY_TRANSLATIONS.get(day_code, day_code)
-
-            # Format doses as "1-2-1-0" pattern
-            dose_values = []
-            for when_code in self.WHEN_CODES_ORDER:
-                dose_value = dose_pattern[when_code]
-                formatted_dose = self._format_decimal_value(dose_value)
-                dose_values.append(formatted_dose)
-
-            dose_pattern_text = "-".join(dose_values)
-            
-            # Add unit to each day if available
-            if unit_text:
-                day_text_parts.append(f"{day_name} {dose_pattern_text} {unit_text}")
-            else:
-                day_text_parts.append(f"{day_name} {dose_pattern_text}")
+        day_text_parts = [
+            entry["text"] for entry in sorted(day_entries, key=entry_sort_key)
+        ]
 
         # Combine all days with semicolons (each day is a complete dosage instruction with unit)
         combined_days = "; ".join(day_text_parts)
@@ -975,8 +1014,30 @@ class MedicationDosageTextGenerator:
         if not dosage_instructions:
             return ""
 
-        # Extract interval information from first dosage
-        first_dosage = dosage_instructions[0]
+        # Sort dosages deterministically by timing keys.
+        def dosage_sort_key(dosage):
+            timing = dosage.get('timing', {})
+            repeat_element = timing.get('repeat', {})
+            when_codes = tuple(sorted(
+                [str(when_code) for when_code in repeat_element.get('when', [])
+                 if when_code in self.WHEN_CODE_TRANSLATIONS],
+                key=lambda when_code: self.WHEN_CODES_ORDER.index(when_code)
+                if when_code in self.WHEN_CODES_ORDER else 99
+            ))
+            time_of_day = tuple(sorted(
+                str(time_value) for time_value in repeat_element.get('timeOfDay', [])
+            ))
+            canonical_json = json.dumps(dosage, sort_keys=True, ensure_ascii=True)
+            if when_codes:
+                return (0, when_codes, canonical_json)
+            if time_of_day:
+                return (1, time_of_day, canonical_json)
+            return (2, (), canonical_json)
+
+        sorted_dosages = sorted(dosage_instructions, key=dosage_sort_key)
+
+        # Extract interval information from first dosage (timing should be consistent).
+        first_dosage = sorted_dosages[0]
         timing = first_dosage.get('timing', {})
         repeat_element = timing.get('repeat', {})
 
@@ -1004,30 +1065,8 @@ class MedicationDosageTextGenerator:
             formatted_period = self._format_decimal_value(period)
             interval_text = f"alle {formatted_period} {period_unit}"
 
-        # Group dosages by time or when code
-        time_to_dosages = {}  # time_key -> list of dosages
-
-        for dosage in dosage_instructions:
-            timing = dosage.get('timing', {})
-            repeat_element = timing.get('repeat', {})
-
-            # Process timeOfDay entries
-            if 'timeOfDay' in repeat_element and repeat_element['timeOfDay']:
-                for time_of_day in repeat_element['timeOfDay']:
-                    if time_of_day not in time_to_dosages:
-                        time_to_dosages[time_of_day] = []
-                    time_to_dosages[time_of_day].append(dosage)
-
-            # Process when code entries  
-            elif 'when' in repeat_element and repeat_element['when']:
-                for when_code in repeat_element['when']:
-                    if when_code in self.WHEN_CODE_TRANSLATIONS:
-                        if when_code not in time_to_dosages:
-                            time_to_dosages[when_code] = []
-                        time_to_dosages[when_code].append(dosage)
-
-        # Generate time-dose text parts
-        time_dose_parts = []
+        # Build one output part per dosage+time/when key (duplicates stay separate).
+        time_dose_parts_with_keys = []
 
         # Sort times: when codes first (in logical order), then timeOfDay chronologically
         def time_sort_key(time_key):
@@ -1038,38 +1077,66 @@ class MedicationDosageTextGenerator:
                 # TimeOfDay: sort chronologically by time string
                 return (1, time_key)
 
-        sorted_times = sorted(time_to_dosages.keys(), key=time_sort_key)
+        for dosage in sorted_dosages:
+            timing = dosage.get('timing', {})
+            repeat_element = timing.get('repeat', {})
+            canonical_json = json.dumps(dosage, sort_keys=True, ensure_ascii=True)
 
-        for time_key in sorted_times:
-            dosages_at_time = time_to_dosages[time_key]
-
-            # Format time display
-            if time_key in self.WHEN_CODE_TRANSLATIONS:
-                # This is a when code - use German translation
-                time_display = self.WHEN_CODE_TRANSLATIONS[time_key]
+            # Extract dose for this dosage entry.
+            dose_info = self._extract_dose_quantity(dosage)
+            if dose_info:
+                dose_value, dose_unit = dose_info
             else:
-                # This is a timeOfDay - format as German time
-                time_display = self._format_time_german(time_key)
+                dose_value, dose_unit = 0, ""
 
-            # Calculate total dose at this time
-            total_dose_value = 0
-            unit_text = ""
+            # Process timeOfDay entries
+            if 'timeOfDay' in repeat_element and repeat_element['timeOfDay']:
+                time_keys = sorted(
+                    [str(time_of_day) for time_of_day in repeat_element['timeOfDay']]
+                )
 
-            for dosage in dosages_at_time:
-                dose_info = self._extract_dose_quantity(dosage)
-                if dose_info:
-                    dose_value, dose_unit = dose_info
-                    total_dose_value += dose_value
-                    if not unit_text:
-                        unit_text = dose_unit
+            # Process when code entries  
+            elif 'when' in repeat_element and repeat_element['when']:
+                time_keys = sorted(
+                    [str(when_code) for when_code in repeat_element['when']
+                     if when_code in self.WHEN_CODE_TRANSLATIONS],
+                    key=lambda when_code: self.WHEN_CODES_ORDER.index(when_code)
+                    if when_code in self.WHEN_CODES_ORDER else 99
+                )
+            else:
+                time_keys = []
 
-            # Format dose text
-            formatted_dose = self._format_decimal_value(total_dose_value)
-            dose_text = f"je {formatted_dose}"
-            if unit_text:
-                dose_text += f" {unit_text}"
+            for time_key in time_keys:
+            # Format time display
+                if time_key in self.WHEN_CODE_TRANSLATIONS:
+                    # This is a when code - use German translation
+                    time_display = self.WHEN_CODE_TRANSLATIONS[time_key]
+                else:
+                    # This is a timeOfDay - format as German time
+                    time_display = self._format_time_german(time_key)
 
-            time_dose_parts.append(f"{time_display} — {dose_text}")
+                # Format dose text without aggregation.
+                formatted_dose = self._format_decimal_value(dose_value)
+                dose_text = f"je {formatted_dose}"
+                if dose_unit:
+                    dose_text += f" {dose_unit}"
+
+                time_dose_parts_with_keys.append({
+                    'time_key': time_key,
+                    'canonical_json': canonical_json,
+                    'text': f"{time_display} — {dose_text}"
+                })
+
+        if not time_dose_parts_with_keys:
+            return f"{interval_text}: "
+
+        time_dose_parts = [
+            entry['text']
+            for entry in sorted(
+                time_dose_parts_with_keys,
+                key=lambda entry: (time_sort_key(entry['time_key']), entry['canonical_json'])
+            )
+        ]
 
         # Combine all time-dose parts
         combined_times = "; ".join(time_dose_parts)
