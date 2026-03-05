@@ -169,6 +169,15 @@ class RegressionOrderingTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.generator.generate_dosage_text(self._resource([dosage_a, dosage_b]))
 
+    def test_interval_time_schema_without_valid_time_keys_returns_interval_only(self):
+        dosage = {
+            "timing": {"repeat": {"frequency": 1, "period": 2, "periodUnit": "d", "when": ["XYZ"]}},
+            "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stueck"}}],
+        }
+
+        output = self.generator.generate_dosage_text(self._resource([dosage]))
+        self.assertEqual("alle 2 Tage", output)
+
 
 if __name__ == "__main__":
     unittest.main()

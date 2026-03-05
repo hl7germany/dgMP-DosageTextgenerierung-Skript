@@ -583,13 +583,13 @@ class MedicationDosageTextGenerator:
             dosage_instructions (list): List with dayOfWeek specifications
             
         Returns:
-            str: Formatted text like "montags — je 1 Stück, mittwochs — je 2 Stück"
+            str: Formatted text like "montags — je 1 Stück; mittwochs — je 2 Stück"
             
         Example FHIR input:
             - timing.repeat.dayOfWeek = ["mon", "wed"]
             - doseQuantity = {value: 1, unit: "Stück"}
             
-        Example output: "montags — je 1 Stück, mittwochs — je 2 Stück"
+            Example output: "montags — je 1 Stück; mittwochs — je 2 Stück"
         """
         if not dosage_instructions:
             return ""
@@ -784,8 +784,8 @@ class MedicationDosageTextGenerator:
             str: Formatted combination text
             
         Sub-types:
-        - DayOfWeek + TimeOfDay: "montags 08:00 Uhr — je 1 Stück, mittwochs 20:00 Uhr — je 2 Stück"
-        - DayOfWeek + When: "montags 1-0-1-0, mittwochs 2-1-2-0 Stück"
+        - DayOfWeek + TimeOfDay: "montags 08:00 Uhr — je 1 Stück; mittwochs 20:00 Uhr — je 2 Stück"
+        - DayOfWeek + When: "montags 1-0-1-0 Stück; mittwochs 2-1-2-0 Stück"
         """
         if not dosage_instructions:
             return ""
@@ -811,7 +811,7 @@ class MedicationDosageTextGenerator:
         """
         Generate text for DayOfWeek + TimeOfDay combination.
         
-        Example output: "montags 08:00 Uhr — je 1 Stück, mittwochs 20:00 Uhr — je 2 Stück"
+        Example output: "montags 08:00 Uhr — je 1 Stück; mittwochs 20:00 Uhr — je 2 Stück"
         """
         if not dosage_instructions:
             return ""
@@ -896,7 +896,7 @@ class MedicationDosageTextGenerator:
         """
         Generate text for DayOfWeek + When combination (4-Schema pattern per day).
         
-        Example output: "montags 1-0-1-0, mittwochs 2-1-2-0 Stück"
+        Example output: "montags 1-0-1-0 Stück; mittwochs 2-1-2-0 Stück"
         """
         if not dosage_instructions:
             return ""
@@ -1128,7 +1128,9 @@ class MedicationDosageTextGenerator:
                 })
 
         if not time_dose_parts_with_keys:
-            return f"{interval_text}: "
+            if bounds_text:
+                return f"{bounds_text} {interval_text}"
+            return interval_text
 
         time_dose_parts = [
             entry['text']
