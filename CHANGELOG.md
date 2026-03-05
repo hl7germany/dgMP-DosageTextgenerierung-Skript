@@ -27,7 +27,7 @@ Full Changelog: [1.0.1...1.0.2]
 ## [1.0.1] - 2025-12-01
 
 ### Changed
-- fix: update dosage formatting to use German decimal separator, add weekday to every dosage, consistant usage of semikolon and colons by @patrick-werner in #5
+- fix: update dosage formatting to use German decimal separator, add weekday to every dosage, consistent usage of semikolon and colons by @patrick-werner in #5
 
 Full Changelog: [1.0.0...1.0.1]
 
