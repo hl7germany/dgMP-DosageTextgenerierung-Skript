@@ -31,6 +31,14 @@ import os
 __version__ = "1.0.2"
 __language__ = "de-DE"
 
+# CLI exit codes
+EXIT_OK = 0
+EXIT_USAGE = 2
+EXIT_FILE_NOT_FOUND = 3
+EXIT_INVALID_JSON = 4
+EXIT_VALIDATION_ERROR = 5
+EXIT_UNEXPECTED_ERROR = 10
+
 class MedicationDosageTextGenerator:
     """
     Converts FHIR medication dosage instructions to German text.
@@ -1229,12 +1237,12 @@ def main():
         print('', file=sys.stderr)
         print('Dieses Skript konvertiert FHIR-Medikationsdosierungen in deutschen Text.', file=sys.stderr)
         print('Unterstützte Ressourcentypen: MedicationRequest, MedicationDispense, MedicationStatement', file=sys.stderr)
-        sys.exit(1)
+        sys.exit(EXIT_USAGE)
 
     file_path = sys.argv[1]
     if not os.path.exists(file_path):
         print(f"Fehler: Datei '{file_path}' nicht gefunden.", file=sys.stderr)
-        sys.exit(1)
+        sys.exit(EXIT_FILE_NOT_FOUND)
 
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
@@ -1247,13 +1255,13 @@ def main():
     except json.JSONDecodeError as e:
         print(f"Fehler: Ungültiges JSON in Datei '{file_path}'.", file=sys.stderr)
         print(f"JSON-Details: {e}", file=sys.stderr)
-        sys.exit(1)
+        sys.exit(EXIT_INVALID_JSON)
     except ValueError as e:
         print(f"Fehler: {e}", file=sys.stderr)
-        sys.exit(1)
+        sys.exit(EXIT_VALIDATION_ERROR)
     except Exception as e:
         print(f"Unerwarteter Fehler beim Verarbeiten der Datei: {e}", file=sys.stderr)
-        sys.exit(1)
+        sys.exit(EXIT_UNEXPECTED_ERROR)
 
 if __name__ == "__main__":
     main()
