@@ -865,18 +865,17 @@ class MedicationDosageTextGenerator:
         sorted_days = sorted(day_to_dosages.keys(),
                              key=lambda day: self.DAY_ORDER.index(day) if day in self.DAY_ORDER else 99)
 
+        def dosage_sort_key(dosage):
+            timing = dosage.get('timing', {})
+            repeat_element = timing.get('repeat', {})
+            time_list = tuple(sorted(str(time_value) for time_value in repeat_element.get('timeOfDay', [])))
+            canonical_json = json.dumps(dosage, sort_keys=True, ensure_ascii=True)
+            return (time_list, canonical_json)
+
         day_text_parts = []
         for day_code in sorted_days:
             day_dosages = day_to_dosages[day_code]
             day_name = self.DAY_TRANSLATIONS.get(day_code, day_code)
-
-            # Sort day dosages by timeOfDay (and then by content) for deterministic output.
-            def dosage_sort_key(dosage):
-                timing = dosage.get('timing', {})
-                repeat_element = timing.get('repeat', {})
-                time_list = tuple(sorted(str(time_value) for time_value in repeat_element.get('timeOfDay', [])))
-                canonical_json = json.dumps(dosage, sort_keys=True, ensure_ascii=True)
-                return (time_list, canonical_json)
 
             # Generate time-dose combinations for this day
             time_dose_parts = []
