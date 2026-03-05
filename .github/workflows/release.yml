@@ -14,7 +14,7 @@ on:
         type: string
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.version }}
   cancel-in-progress: false
 
 jobs:
@@ -114,21 +114,26 @@ jobs:
           git tag "$VERSION"
           git push origin "$VERSION"
 
-      - name: Check if release already exists
-        id: release_exists
+      - name: Create or reuse GitHub release
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if gh release view "$VERSION" >/dev/null 2>&1; then
-            echo "value=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "value=false" >> "$GITHUB_OUTPUT"
+            echo "Release $VERSION existiert bereits."
+            exit 0
           fi
 
-      - name: Create GitHub release
-        if: steps.release_exists.outputs.value == 'false'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ env.VERSION }}
-          generate_release_notes: true
+          if gh release create "$VERSION" --generate-notes; then
+            echo "Release $VERSION wurde erstellt."
+            exit 0
+          fi
+
+          # Handle races: another workflow may have created the release in parallel.
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Release $VERSION wurde parallel erstellt."
+            exit 0
+          fi
+
+          echo "Release $VERSION konnte nicht erstellt werden."
+          exit 1

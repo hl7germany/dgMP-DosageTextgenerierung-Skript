@@ -9,7 +9,7 @@ on:
       - "*.*.*-*+*"
 
 concurrency:
-  group: release-tag-${{ github.ref }}
+  group: release-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -76,21 +76,26 @@ jobs:
           python -m py_compile medication-dosage-to-text.py tests/test_regression_ordering.py
           python -m unittest discover -s tests -p "test_*.py" -v
 
-      - name: Check if release already exists
-        id: release_exists
+      - name: Create or reuse GitHub release
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if gh release view "${TAG_NAME}" >/dev/null 2>&1; then
-            echo "value=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "value=false" >> "$GITHUB_OUTPUT"
+            echo "Release ${TAG_NAME} existiert bereits."
+            exit 0
           fi
 
-      - name: Create GitHub release
-        if: steps.release_exists.outputs.value == 'false'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ env.TAG_NAME }}
-          generate_release_notes: true
+          if gh release create "${TAG_NAME}" --generate-notes; then
+            echo "Release ${TAG_NAME} wurde erstellt."
+            exit 0
+          fi
+
+          # Handle races: another workflow may have created the release in parallel.
+          if gh release view "${TAG_NAME}" >/dev/null 2>&1; then
+            echo "Release ${TAG_NAME} wurde parallel erstellt."
+            exit 0
+          fi
+
+          echo "Release ${TAG_NAME} konnte nicht erstellt werden."
+          exit 1
