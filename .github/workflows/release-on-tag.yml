@@ -3,7 +3,10 @@ name: Release On Tag
 on:
   push:
     tags:
-      - "v*"
+      - "*.*.*"
+      - "*.*.*-*"
+      - "*.*.*+*"
+      - "*.*.*-*+*"
 
 concurrency:
   group: release-tag-${{ github.ref }}
@@ -33,9 +36,10 @@ jobs:
         id: version
         shell: bash
         run: |
-          VERSION="${TAG_NAME#v}"
-          if [[ -z "$VERSION" ]]; then
-            echo "Konnte Version nicht aus Tag ableiten: $TAG_NAME"
+          VERSION="${TAG_NAME}"
+          SEMVER_REGEX='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?(\+([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$'
+          if [[ ! "$VERSION" =~ $SEMVER_REGEX ]]; then
+            echo "Tag ist kein gueltiges SemVer: $TAG_NAME"
             exit 1
           fi
           echo "value=$VERSION" >> "$GITHUB_OUTPUT"
@@ -69,7 +73,20 @@ jobs:
           python -m py_compile medication-dosage-to-text.py tests/test_regression_ordering.py
           python -m unittest discover -s tests -p "test_*.py" -v
 
+      - name: Check if release already exists
+        id: release_exists
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "${TAG_NAME}" >/dev/null 2>&1; then
+            echo "value=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create GitHub release
+        if: steps.release_exists.outputs.value == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG_NAME }}

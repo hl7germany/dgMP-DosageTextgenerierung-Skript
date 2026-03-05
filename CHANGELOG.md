@@ -13,7 +13,7 @@ Alle relevanten Änderungen an diesem Projekt werden in dieser Datei dokumentier
 - Deterministische Sortierung für `DayOfWeek + TimeOfDay`, `DayOfWeek + when`, `TimeOfDay` und `Interval + Time/when`.
 - Doppelte Einträge zum gleichen Zeitpunkt werden nacheinander ausgegeben (ohne Summierung) in den entsprechenden Schemata.
 - `DayOfWeek + when` merged wieder unterschiedliche `when`-Slots pro Tag in ein gemeinsames 4-Schema-Muster; echte Slot-Duplikate bleiben getrennte Einträge.
-- Release-Ablauf getrennt: manuelles Release taggt den getesteten Commit, Erstellung des GitHub-Releases erfolgt tag-basiert.
+- Release-Ablauf stabilisiert: manuelles Release taggt den getesteten Commit und erstellt das GitHub-Release direkt; tag-basierter Flow bleibt für direkte Tag-Pushes erhalten.
 
 ### Fixed
 - `4-Schema`: doppelte `when`-Belegung wird als Fehler (`ValueError`) behandelt.
