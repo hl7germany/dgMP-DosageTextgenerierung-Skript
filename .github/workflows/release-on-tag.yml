@@ -1,0 +1,76 @@
+name: Release On Tag
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: release-tag-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Validate And Publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG_NAME: ${{ github.ref_name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Derive version from tag
+        id: version
+        shell: bash
+        run: |
+          VERSION="${TAG_NAME#v}"
+          if [[ -z "$VERSION" ]]; then
+            echo "Konnte Version nicht aus Tag ableiten: $TAG_NAME"
+            exit 1
+          fi
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Validate __version__ matches tag
+        shell: bash
+        run: |
+          python - <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          expected = "${{ steps.version.outputs.value }}"
+          text = pathlib.Path("medication-dosage-to-text.py").read_text(encoding="utf-8")
+          match = re.search(r'__version__\s*=\s*"([^"]+)"', text)
+          if not match:
+              print("Konnte __version__ nicht finden.")
+              sys.exit(1)
+          actual = match.group(1)
+          if actual != expected:
+              print(
+                  f"Version-Mismatch: Tag={expected}, __version__={actual}. "
+                  "Nutze den manuellen Release-Workflow, um __version__ automatisch zu setzen."
+              )
+              sys.exit(1)
+          PY
+
+      - name: Run checks
+        shell: bash
+        run: |
+          python -m py_compile medication-dosage-to-text.py tests/test_regression_ordering.py
+          python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          generate_release_notes: true
