@@ -46,13 +46,16 @@ jobs:
 
       - name: Validate __version__ matches tag
         shell: bash
+        env:
+          EXPECTED_VERSION: ${{ steps.version.outputs.value }}
         run: |
           python - <<'PY'
+          import os
           import pathlib
           import re
           import sys
 
-          expected = "${{ steps.version.outputs.value }}"
+          expected = os.environ["EXPECTED_VERSION"]
           text = pathlib.Path("medication-dosage-to-text.py").read_text(encoding="utf-8")
           match = re.search(r'__version__\s*=\s*"([^"]+)"', text)
           if not match:
