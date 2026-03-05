@@ -1170,7 +1170,7 @@ class MedicationDosageTextGenerator:
                 time_keys = []
 
             for time_key in time_keys:
-            # Format time display
+                # Format time display
                 if time_key in self.WHEN_CODE_TRANSLATIONS:
                     # This is a when code - use German translation
                     time_display = self.WHEN_CODE_TRANSLATIONS[time_key]
