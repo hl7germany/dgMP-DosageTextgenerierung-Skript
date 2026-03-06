@@ -1,0 +1,101 @@
+name: Release On Tag
+
+on:
+  push:
+    tags:
+      - "*.*.*"
+      - "*.*.*-*"
+      - "*.*.*+*"
+      - "*.*.*-*+*"
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Validate And Publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG_NAME: ${{ github.ref_name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Derive version from tag
+        id: version
+        shell: bash
+        run: |
+          VERSION="${TAG_NAME}"
+          SEMVER_REGEX='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?(\+([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$'
+          if [[ ! "$VERSION" =~ $SEMVER_REGEX ]]; then
+            echo "Tag ist kein gueltiges SemVer: $TAG_NAME"
+            exit 1
+          fi
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Validate __version__ matches tag
+        shell: bash
+        env:
+          EXPECTED_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+          import re
+          import sys
+
+          expected = os.environ["EXPECTED_VERSION"]
+          text = pathlib.Path("medication-dosage-to-text.py").read_text(encoding="utf-8")
+          match = re.search(r'__version__\s*=\s*"([^"]+)"', text)
+          if not match:
+              print("Konnte __version__ nicht finden.")
+              sys.exit(1)
+          actual = match.group(1)
+          if actual != expected:
+              print(
+                  f"Version-Mismatch: Tag={expected}, __version__={actual}. "
+                  "Nutze den manuellen Release-Workflow, um __version__ automatisch zu setzen."
+              )
+              sys.exit(1)
+          PY
+
+      - name: Run checks
+        shell: bash
+        run: |
+          python -m py_compile medication-dosage-to-text.py tests/test_regression_ordering.py
+          python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Create or reuse GitHub release
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "${TAG_NAME}" >/dev/null 2>&1; then
+            echo "Release ${TAG_NAME} existiert bereits."
+            exit 0
+          fi
+
+          if gh release create "${TAG_NAME}" --generate-notes; then
+            echo "Release ${TAG_NAME} wurde erstellt."
+            exit 0
+          fi
+
+          # Handle races: another workflow may have created the release in parallel.
+          if gh release view "${TAG_NAME}" >/dev/null 2>&1; then
+            echo "Release ${TAG_NAME} wurde parallel erstellt."
+            exit 0
+          fi
+
+          echo "Release ${TAG_NAME} konnte nicht erstellt werden."
+          exit 1

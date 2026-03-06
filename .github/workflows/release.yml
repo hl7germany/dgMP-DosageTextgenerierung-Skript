@@ -1,0 +1,139 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release-Version ohne v-Prefix (z. B. 1.2.3)"
+        required: true
+        type: string
+      target_branch:
+        description: "Branch, auf dem released wird"
+        required: false
+        default: "main"
+        type: string
+
+concurrency:
+  group: release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Prepare And Tag Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ inputs.version }}
+      TARGET_BRANCH: ${{ inputs.target_branch }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 0
+
+      - name: Validate version format
+        shell: bash
+        run: |
+          SEMVER_REGEX='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?(\+([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$'
+          if [[ ! "$VERSION" =~ $SEMVER_REGEX ]]; then
+            echo "Ungueltige Version: $VERSION"
+            echo "Erwartet wird striktes SemVer 2.0.0, z. B. 1.2.3, 1.2.3-rc.1 oder 1.2.3+build.5"
+            exit 1
+          fi
+
+      - name: Check if tag already exists
+        shell: bash
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null 2>&1; then
+            echo "Tag $VERSION existiert bereits."
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Sync __version__
+        id: sync_version
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+          import re
+          import sys
+
+          version = os.environ["VERSION"]
+          path = pathlib.Path("medication-dosage-to-text.py")
+          text = path.read_text(encoding="utf-8")
+          updated, replaced = re.subn(
+              r'__version__\s*=\s*"[^"]+"',
+              f'__version__ = "{version}"',
+              text,
+              count=1,
+          )
+
+          if replaced != 1:
+              print("Konnte __version__ nicht eindeutig ersetzen.")
+              sys.exit(1)
+
+          changed = updated != text
+          if changed:
+              path.write_text(updated, encoding="utf-8")
+
+          output_file = pathlib.Path(os.environ["GITHUB_OUTPUT"])
+          with output_file.open("a", encoding="utf-8") as f:
+              f.write(f"changed={'true' if changed else 'false'}\n")
+          PY
+
+      - name: Run checks
+        shell: bash
+        run: |
+          python -m py_compile medication-dosage-to-text.py tests/test_regression_ordering.py
+          python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Commit version update if needed
+        shell: bash
+        run: |
+          if [[ "${{ steps.sync_version.outputs.changed }}" == "true" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add medication-dosage-to-text.py
+            git commit -m "chore: release $VERSION"
+            git push origin "HEAD:$TARGET_BRANCH"
+          fi
+
+      - name: Create and push tag
+        shell: bash
+        run: |
+          # Tag exactly the commit that was tested in this workflow.
+          git tag "$VERSION"
+          git push origin "$VERSION"
+
+      - name: Create or reuse GitHub release
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Release $VERSION existiert bereits."
+            exit 0
+          fi
+
+          if gh release create "$VERSION" --generate-notes; then
+            echo "Release $VERSION wurde erstellt."
+            exit 0
+          fi
+
+          # Handle races: another workflow may have created the release in parallel.
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Release $VERSION wurde parallel erstellt."
+            exit 0
+          fi
+
+          echo "Release $VERSION konnte nicht erstellt werden."
+          exit 1
