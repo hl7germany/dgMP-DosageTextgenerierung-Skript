@@ -22,10 +22,10 @@ The script supports various dosage schemas:
 Algorithm Priority (TimingOnlyOneType constraint):
 1. FreeText (has text, no timing, no doseAndRate)
 2. AsNeeded (asNeededBoolean=true, no timing)
-3. 4-Schema ('when' codes, no timeOfDay/dayOfWeek)
+3. 4-Schema ('when' codes, no timeOfDay/dayOfWeek, and no period or exactly 1 d)
 4. DayOfWeek (has dayOfWeek, no when/timeOfDay)
 5. DayOfWeek + Time/4-Schema (has dayOfWeek + timeOfDay OR when)
-6. TimeOfDay (daily period with timeOfDay, no dayOfWeek/when)
+6. TimeOfDay (daily or no period with timeOfDay, no dayOfWeek/when)
 7. Interval + Time/4-Schema (non-daily period with timeOfDay OR when)
 8. Interval (pure interval without when/timeOfDay/dayOfWeek)
 
@@ -262,8 +262,8 @@ class MedicationDosageTextGenerator:
         # doseAndRate wird mitgeprüft: andernfalls würde bei widersprüchlichen Angaben
         # der Freitext gewinnen und die strukturierte Dosis kommentarlos entfallen.
         if (first_dosage.get('text')
-            and not first_dosage.get('timing')
-            and not first_dosage.get('doseAndRate')):
+                and not first_dosage.get('timing')
+                and not first_dosage.get('doseAndRate')):
             return self.SCHEMA_FREE_TEXT
 
         # Extract timing information for further analysis
@@ -291,8 +291,11 @@ class MedicationDosageTextGenerator:
         is_pure_interval = (has_frequency and has_period and has_period_unit and
                             not has_when_codes and not has_time_of_day and not has_day_of_week)
 
-        # Schema 3: 4-Schema - 'when' codes only (frequency/period optional)
-        if (has_when_codes and not has_time_of_day and not has_day_of_week):
+        # Schema 3: 4-Schema - 'when' codes without a non-daily period.
+        # frequency is optional and does not affect schema selection. A non-daily
+        # period together with when belongs to the interval combination schema.
+        if (has_when_codes and not has_time_of_day and not has_day_of_week and
+                (is_daily_pattern or (not has_period and not has_period_unit))):
             return self.SCHEMA_4_PATTERN
 
         # Schema 4: DayOfWeek - specific weekdays, no timing details
@@ -306,7 +309,7 @@ class MedicationDosageTextGenerator:
         # Schema 6: TimeOfDay - specific times only. If no period is specified,
         # the time-of-day pattern is still interpreted as a daily schedule.
         if (has_time_of_day and not has_day_of_week and not has_when_codes and
-            (is_daily_pattern or (not has_frequency and not has_period and not has_period_unit))):
+                (is_daily_pattern or (not has_period and not has_period_unit))):
             return self.SCHEMA_TIME_OF_DAY
 
         # Schema 7: Interval + Time/4-Schema - non-daily period with timing
@@ -563,6 +566,8 @@ class MedicationDosageTextGenerator:
                 raise ValueError("doseQuantity.value ist für die Textgenerierung erforderlich.")
             if not unit:
                 raise ValueError("doseQuantity.unit ist für die Textgenerierung erforderlich.")
+            if not isinstance(dose_value, str) and dose_value <= 0:
+                raise ValueError("doseQuantity.value muss größer als 0 sein.")
             return (dose_value, unit)
 
         if 'doseRange' in first_dose:
@@ -574,12 +579,16 @@ class MedicationDosageTextGenerator:
                 raise ValueError("doseRange.high.value ist für die Textgenerierung erforderlich.")
             if not high.get('unit'):
                 raise ValueError("doseRange.high.unit ist für die Textgenerierung erforderlich.")
+            if not isinstance(high.get('value'), str) and high.get('value') <= 0:
+                raise ValueError("doseRange.high.value muss größer als 0 sein.")
 
             if low:
                 if low.get('value') is None:
                     raise ValueError("doseRange.low.value ist für die Textgenerierung erforderlich.")
                 if not low.get('unit'):
                     raise ValueError("doseRange.low.unit ist für die Textgenerierung erforderlich.")
+                if not isinstance(low.get('value'), str) and low.get('value') <= 0:
+                    raise ValueError("doseRange.low.value muss größer als 0 sein.")
                 if low.get('unit') != high.get('unit'):
                     raise ValueError("doseRange.low.unit und doseRange.high.unit müssen übereinstimmen.")
                 value = (
@@ -666,9 +675,14 @@ class MedicationDosageTextGenerator:
         Nicht-Bedarf: [{Zeitrahmen} ][{middle}]: {core}
           - der Doppelpunkt trennt Zeitrahmen/Intervall (links) von der Dosis (rechts).
 
-        Bedarf: [{Zeitrahmen} ]bei {Einnahmeanlass}: [{Mindestabstand} ][{middle} ]{core}
-          - der Doppelpunkt steht direkt hinter dem Einnahmeanlass; Mindestabstand,
-            Intervall/Marker und Kern folgen rechts ohne weiteren Doppelpunkt.
+        Bedarf ohne strukturierten Rhythmus:
+          [{Zeitrahmen} ]bei {Einnahmeanlass}: [{Mindestabstand} ]{core}
+        Bedarf mit strukturiertem Rhythmus:
+          [{Zeitrahmen} ]bei {Einnahmeanlass}: {middle} {core}
+          [, mit mindestens {Mindestabstand} Abstand]
+          - der Doppelpunkt steht direkt hinter dem Einnahmeanlass.
+          - bei einem strukturierten Rhythmus wird der Mindestabstand nachgestellt,
+            damit Rhythmus und Mindestabstand sprachlich klar getrennt sind.
         """
         bounds_text = self._extract_bounds_text(dosage)
 
@@ -678,15 +692,17 @@ class MedicationDosageTextGenerator:
             anlass = f"bei {reason_text}" if reason_text else "bei Bedarf"
             left = " ".join(part for part in [bounds_text, anlass] if part)
 
-            right_parts = []
             minimum_interval = self._extract_minimum_interval_text(dosage)
-            if minimum_interval:
+            right_parts = []
+            if minimum_interval and not middle:
                 right_parts.append(f"im Abstand von mindestens {minimum_interval}")
             if middle:
                 right_parts.append(middle)
             if core:
                 right_parts.append(core)
             right = " ".join(right_parts)
+            if minimum_interval and middle:
+                right = f"{right}, mit mindestens {minimum_interval} Abstand"
             return f"{left}: {right}" if right else left
 
         # Nicht-Bedarf: Zeitrahmen und Intervall/Marker links, Kern rechts.
@@ -731,8 +747,8 @@ class MedicationDosageTextGenerator:
         if duration_value is None:
             raise ValueError(f"{field_name}.value ist für die Textgenerierung erforderlich.")
         if (isinstance(duration_value, bool) or
-            not isinstance(duration_value, (int, float)) or
-            duration_value <= 0):
+                not isinstance(duration_value, (int, float)) or
+                duration_value <= 0):
             raise ValueError(f"{field_name}.value muss größer als 0 sein.")
         if not duration_unit:
             raise ValueError(f"{field_name}.code ist für die Textgenerierung erforderlich.")
@@ -900,6 +916,9 @@ class MedicationDosageTextGenerator:
 
             # Associate this dose with each specified day
             for day_code in day_codes:
+                if day_code in day_to_dose and day_to_dose[day_code] != dose_value:
+                    raise ValueError(
+                        f"Doppelte Belegung des Wochentags '{day_code}' mit unterschiedlicher Dosis.")
                 day_to_dose[day_code] = dose_value
 
         if not day_to_dose:
@@ -1006,6 +1025,13 @@ class MedicationDosageTextGenerator:
             else:
                 return f"{self._format_range_value(frequency, frequency_max)} x wöchentlich"
 
+        # Monthly patterns (periodUnit='mo', period=1)
+        if period_unit == 'mo' and period == 1:
+            if frequency == 1 and frequency_max is None:
+                return "monatlich"
+            else:
+                return f"{self._format_range_value(frequency, frequency_max)} x monatlich"
+
         # Kurzform nur für eine feste Frequenz von genau 1.
         if frequency == 1 and frequency_max is None:
             period_description = self._format_period_description(period, period_unit, period_max)
@@ -1031,6 +1057,17 @@ class MedicationDosageTextGenerator:
         unit_basis = period_max if period_max is not None else period
         unit_name = self._format_time_unit_german(unit_basis, period_unit)
         return f"{formatted_period} {unit_name}"
+
+    def _format_period_only_rhythm(self, period, period_unit, period_max=None):
+        """Formatiert einen Einnahmerhythmus ohne Frequenzangabe."""
+        if period_max is None and period == 1:
+            if period_unit == 'd':
+                return "täglich"
+            if period_unit == 'wk':
+                return "wöchentlich"
+            if period_unit == 'mo':
+                return "monatlich"
+        return f"alle {self._format_period_description(period, period_unit, period_max)}"
 
     def _format_range_value(self, value, max_value=None):
         formatted_value = self._format_decimal_value(value)
@@ -1152,6 +1189,11 @@ class MedicationDosageTextGenerator:
                     if when_code not in day_to_patterns[day_code]:
                         raise ValueError(
                             f"Nicht unterstützter Tagesabschnitt (when): '{when_code}'.")
+                    existing = day_to_patterns[day_code][when_code]
+                    if existing != 0 and existing != dose_value:
+                        raise ValueError(
+                            f"Doppelte Belegung der Kombination aus Wochentag '{day_code}' "
+                            f"und Zeit-/Tagesabschnitt '{when_code}' mit unterschiedlicher Dosis.")
                     day_to_patterns[day_code][when_code] = dose_value
 
         if not day_to_patterns:
@@ -1196,7 +1238,7 @@ class MedicationDosageTextGenerator:
             str: Formatted text like "alle 2 Tage: 08:00 Uhr — je 1 Stück, 18:00 Uhr — je 2 Stück"
 
         Example FHIR input:
-            - timing.repeat.frequency = 1, period = 2, periodUnit = "d"
+            - timing.repeat.period = 2, periodUnit = "d"
             - timing.repeat.timeOfDay = ["08:00", "18:00"]
             - doseQuantity = {value: 1, unit: "Stück"}
 
@@ -1205,12 +1247,24 @@ class MedicationDosageTextGenerator:
         if not dosage_instructions:
             return ""
 
-        # Extract interval information from first dosage
+        # Extract the shared non-daily period from the first dosage. In an
+        # interval combination, explicit timeOfDay/when segments already state
+        # how often the dose is administered. An optional frequency is therefore
+        # deliberately not included in the common text prefix.
         first_dosage = dosage_instructions[0]
         timing = first_dosage.get('timing', {})
         repeat_element = timing.get('repeat', {})
 
-        interval_text = self._generate_frequency_description(first_dosage)
+        period = repeat_element.get('period')
+        period_max = repeat_element.get('periodMax')
+        period_unit = repeat_element.get('periodUnit')
+        if period is None or period_unit is None:
+            raise ValueError(
+                "Intervall-Kombinationen erfordern period und periodUnit."
+            )
+        interval_text = self._format_period_only_rhythm(
+            period, period_unit, period_max
+        )
 
         # Group dosages by time or when code
         time_to_dosages = {}  # time_key -> list of dosages
@@ -1222,7 +1276,11 @@ class MedicationDosageTextGenerator:
             # Process timeOfDay entries
             if 'timeOfDay' in repeat_element and repeat_element['timeOfDay']:
                 for time_of_day in repeat_element['timeOfDay']:
-                    if time_of_day not in time_to_dosages:
+                    if time_of_day in time_to_dosages:
+                        if self._extract_dose_quantity(time_to_dosages[time_of_day][0]) != self._extract_dose_quantity(dosage):
+                            raise ValueError(
+                                f"Doppelte Belegung des Zeit-Schlüssels '{time_of_day}' mit unterschiedlicher Dosis.")
+                    else:
                         time_to_dosages[time_of_day] = []
                     time_to_dosages[time_of_day].append(dosage)
 
@@ -1233,7 +1291,11 @@ class MedicationDosageTextGenerator:
                     if when_code not in self.WHEN_CODE_TRANSLATIONS:
                         raise ValueError(
                             f"Nicht unterstützter Tagesabschnitt (when): '{when_code}'.")
-                    if when_code not in time_to_dosages:
+                    if when_code in time_to_dosages:
+                        if self._extract_dose_quantity(time_to_dosages[when_code][0]) != self._extract_dose_quantity(dosage):
+                            raise ValueError(
+                                f"Doppelte Belegung des Zeit-Schlüssels '{when_code}' mit unterschiedlicher Dosis.")
+                    else:
                         time_to_dosages[when_code] = []
                     time_to_dosages[when_code].append(dosage)
 
@@ -1279,10 +1341,11 @@ class MedicationDosageTextGenerator:
         {Mindestabstand} ]je {Dosis}[ — nicht mehr als {Maximalmenge} {Zeitraum}]
         ({Zeitraum} = "in 24 Stunden" bei 24 h bzw. "pro Tag" bei 1 d)
 
-        Der Doppelpunkt hinter dem Einnahmeanlass, Zeitrahmen und Mindestabstand
-        werden von _assemble gesetzt; die Maximalmenge und der Großbuchstabe am
-        Zeilenanfang werden zentral ergänzt (_append_trailing_instructions /
-        _finalize_text).
+        Bei strukturiertem Bedarf wird der Mindestabstand stattdessen nach dem
+        Schema-Kern als ", mit mindestens ... Abstand" ausgegeben. Der Doppelpunkt
+        hinter dem Einnahmeanlass, Zeitrahmen und Mindestabstand werden von
+        _assemble gesetzt; die Maximalmenge und der Großbuchstabe am Zeilenanfang
+        werden zentral ergänzt (_append_trailing_instructions / _finalize_text).
         """
         if not dosage_instructions:
             return ""
@@ -1344,7 +1407,7 @@ class MedicationDosageTextGenerator:
                 "Textgenerierung erforderlich."
             )
         if (isinstance(value, bool) or
-            not isinstance(value, (int, float))):
+                not isinstance(value, (int, float))):
             raise ValueError(
                 "maxDosePerPeriod.numerator.value muss numerisch sein."
             )
@@ -1418,9 +1481,9 @@ class MedicationDosageTextGenerator:
 def main():
     """
     Command line interface for the dosage text generator.
-
+    
     Usage: python medication-dosage-to-text.py <medication-resource.json>
-
+    
     Reads a FHIR medication resource from JSON file and outputs German dosage text.
     """
     if len(sys.argv) < 2:
