@@ -4,10 +4,19 @@
 [![Release](https://github.com/hl7germany/dgMP-DosageTextgenerierung-Skript/actions/workflows/release.yml/badge.svg)](https://github.com/hl7germany/dgMP-DosageTextgenerierung-Skript/actions/workflows/release.yml)
 [![Release On Tag](https://github.com/hl7germany/dgMP-DosageTextgenerierung-Skript/actions/workflows/release-on-tag.yml/badge.svg)](https://github.com/hl7germany/dgMP-DosageTextgenerierung-Skript/actions/workflows/release-on-tag.yml)
 [![FHIR R4](https://img.shields.io/badge/FHIR-R4-0A4A8B)](https://hl7.org/fhir/R4/)
-[![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Python Referenzimplementierung des dgMP-DosageTextgenerierung-Skripts
+Spezifikation und Python-Referenzimplementierung des Algorithmus zur Dosierungstext-Generierung im Rahmen des [Medication IG DE](https://ig.fhir.de/igs/medication/).
+
+## Inhalt
+
+| Datei | Beschreibung |
+|-------|--------------|
+| [dosage-text-algorithm-spec.md](dosage-text-algorithm-spec.md) | **Normative Spezifikation** des Algorithmus — verbindlich für alle Implementierungen |
+| [medication-dosage-to-text.py](medication-dosage-to-text.py) | Python-Referenzimplementierung — dient der Veranschaulichung, nicht als Standard |
+
+**Die Spezifikation ist führend.** Weicht das Skript von ihr ab, gilt die Spezifikation. Die in `__version__` geführte Versionsnummer des Skripts bezeichnet die umgesetzte Algorithmus-Version und entspricht der in der Spezifikation angegebenen.
 
 ## HAFTUNGSAUSSCHLUSS
 
@@ -20,8 +29,8 @@ In keinem Fall haften die Autor:innen, Mitwirkenden oder bereitstellenden Organi
 
 Die Nutzer:innen dieser Referenzimplementierung tragen die alleinige Verantwortung dafür, deren Eignung, Korrektheit und Konformität mit relevanten rechtlichen, regulatorischen und sicherheitsrelevanten Anforderungen vor jeglicher Nutzung über Demonstrations- oder Testzwecke hinaus zu prüfen.
 
-## Beschreibung
-
-Dieses Skript wird im Rahmen des [Medication IG DE](https://ig.fhir.de/igs/medication/) verwendet. Die Beschreibung und Verwendung findet sich in diesem Implementation Guide.
+## Weitere Informationen
 
 Änderungshistorie: siehe [CHANGELOG.md](CHANGELOG.md).
+
+Alle veröffentlichten Versionen: [GitHub Releases](https://github.com/hl7germany/dgMP-DosageTextgenerierung-Skript/releases)
