@@ -10,6 +10,8 @@ Alle relevanten Änderungen an diesem Projekt werden in dieser Datei dokumentier
 - Unit-Tests für die Textgenerierung (`tests/test_medication_dosage_to_text.py`).
 
 ### Changed
+- Release läuft über `gh release`; die beiden Release-Workflows entfallen. Bei einem Tag-Push prüft die CI zusätzlich, dass `__version__` mit dem Tag übereinstimmt.
+- CI testet nur noch die älteste und die neueste unterstützte Python-Version. Das Skript nutzt ausschließlich die Standardbibliothek.
 - Wochentagsschemata dulden `frequency` sowie das redundante Paar `period = 1`, `periodUnit = wk` als Legacy-Angaben; sie ändern den erzeugten Text nicht. Jede andere Periode ist mit `dayOfWeek` nicht mehr kombinierbar.
 - Eine variable Frequenz (`frequencyMax`) ist der reinen Intervallangabe vorbehalten.
 - `doseQuantity.value` und `doseRange.high.value` müssen größer als 0 sein; `0` bleibt ausschließlich als `doseRange.low.value` zulässig.
@@ -18,6 +20,8 @@ Alle relevanten Änderungen an diesem Projekt werden in dieser Datei dokumentier
 - Nicht numerische Dosiswerte werden abgewiesen (`<Feld> muss numerisch sein.`) statt unverändert in den Text übernommen zu werden; numerische Strings werden wie Zahlen geprüft.
 
 ### Fixed
+- Der Tag-Release-Workflow lief bei jedem Branch-Push und scheiterte nach 0 Sekunden ohne Job, weil seine Tag-Muster `*.*.*+*` und `*.*.*-*+*` das Sonderzeichen `+` unescaped enthielten. Dadurch war jeder Lauf im Repository rot.
+- Der Syntax-Check deckte `tests/test_medication_dosage_to_text.py` nicht ab; er prüft jetzt das gesamte `tests/`-Verzeichnis.
 - `tests/test_medication_dosage_to_text.py` konnte das Modul nicht laden und ließ dadurch die gesamte Test-Discovery und damit die CI scheitern.
 - Regressionstests kombinierten `dayOfWeek` mit `periodUnit = d`; zwei davon prüften dadurch nur noch die Schema-Erkennung statt der benannten Regel.
 
