@@ -566,6 +566,10 @@ Die Version des verwendeten Algorithmus MUSS über die Extension [GeneratedDosag
 
 Diese Seite beschreibt die Algorithmus-Version **2.0.0**. Die Nummer bezeichnet den hier festgelegten Algorithmus, nicht ein einzelnes Programm: Die Beispielimplementierung führt sie in `__version__` und gibt sie beim Erzeugen der Beispiele in `algorithmVersion` weiter. Eine eigene Implementierung trägt dieselbe Nummer ein, sobald sie diesen Algorithmus umsetzt.
 
+Damit bestimmt dieses Dokument die Versionsfolge: **Eine neue Versionsnummer entsteht genau dann, wenn sich diese Spezifikation ändert.** Korrekturen, die ausschließlich die Referenzimplementierung, ihre Tests oder die CI betreffen, ändern das festgelegte Verhalten nicht und lassen die Nummer unberührt. Die Versionshistorie führt [CHANGELOG.md](CHANGELOG.md); dort trennt jeder Eintrag beides voneinander.
+
+Ob eine Änderung die Haupt- oder die Nebenversion erhöht, richtet sich danach, ob sich bereits erzeugte Texte ändern können: Ein geänderter oder entfallener Baustein und jede Verschärfung der Eingabeprüfung erhöhen die Hauptversion, weil bestehende Ausgaben davon abweichen. Ein zusätzliches Schema oder eine gelockerte Prüfung, die vorhandene Ausgaben unberührt lässt, erhöht die Nebenversion.
+
 ## Quellen / weiterführende Hinweise
 
 * UK Core Implementation Guide for Medicines (Dose to Text Translation)

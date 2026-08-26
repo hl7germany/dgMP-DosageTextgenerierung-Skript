@@ -1,28 +1,57 @@
 # Changelog
 
-Alle relevanten Änderungen an diesem Projekt werden in dieser Datei dokumentiert.
+Die Versionsnummern in dieser Datei sind **Algorithmus-Versionen**: sie bezeichnen
+den in [dosage-text-algorithm-spec.md](dosage-text-algorithm-spec.md) festgelegten
+Algorithmus, nicht den Stand dieses Repositories. Eine eigene Implementierung
+trägt dieselbe Nummer, sobald sie diese Spezifikation umsetzt, und gibt sie als
+`algorithmVersion` weiter.
+
+Daraus folgt für jeden Eintrag:
+
+- Abschnitt **Algorithmus** — Änderungen an der Spezifikation. Sie sind für jede
+  Implementierung verbindlich und nur sie rechtfertigen eine neue Versionsnummer.
+- Abschnitt **Referenzimplementierung und Repository** — Änderungen an Skript,
+  Tests oder CI, die das festgelegte Verhalten nicht berühren. Sie erscheinen
+  unter der Version, mit der sie ausgeliefert wurden, begründen aber keine.
+
+Ändert sich nur die Referenzimplementierung, bleibt die Versionsnummer stehen.
 
 ## [2.0.0] - 2026-08-26
 
-### Added
-- Normative Algorithmusspezifikation `dosage-text-algorithm-spec.md`; sie ist gegenüber der Referenzimplementierung führend.
-- Schema „Kombination von Zeitintervallen“: eine nicht tägliche Periode (`d`, `wk` oder `mo`) zusammen mit `when` oder `timeOfDay`.
+### Algorithmus
+
+#### Added
+
+- Normative Spezifikation [dosage-text-algorithm-spec.md](dosage-text-algorithm-spec.md). Sie ist gegenüber der Referenzimplementierung führend; weicht das Skript ab, gilt die Spezifikation.
+- Schema „Kombination von Zeitintervallen": eine nicht tägliche Periode (`d`, `wk` oder `mo`) zusammen mit `when` oder `timeOfDay`. Damit sind wöchentliche und monatliche Rhythmen mit konkreten Zeitpunkten abbildbar.
+
+#### Changed
+
+- Wochentagsschemata dulden `frequency` sowie das redundante Paar `period = 1`, `periodUnit = wk` als Legacy-Angaben; sie ändern den erzeugten Text nicht. Jede andere Periode ist mit `dayOfWeek` nicht mehr kombinierbar.
+- Eine variable Frequenz (`frequencyMax`) ist der reinen Intervallangabe vorbehalten. Konkrete Zeitpunkte und Wochentage legen die Zahl der Gaben bereits fest.
+- Jeder erzeugte Text ist durchgehend ein kleingeschriebenes Fragment. Die Großschreibung des ersten Zeichens bei Bedarfsmedikation und die großgeschriebenen `boundsPeriod`-Literale entfallen; die Schreibweise am Satzanfang entscheidet das anzeigende System. Freitext wird weiterhin unverändert durchgereicht.
+- `doseQuantity.value` und `doseRange.high.value` müssen größer als `0` sein; `0` bleibt ausschließlich als `doseRange.low.value` zulässig — als Untergrenze einer variablen Dosis wie „0 bis 2 Stück".
+- Nicht numerische Dosiswerte werden mit `<Feld> muss numerisch sein.` abgewiesen statt unverändert in den Text übernommen; numerische Strings werden wie Zahlen geprüft.
+- Doppelte Belegung desselben Zeitpunkts mit unterschiedlicher Dosis führt schemaübergreifend zum Abbruch.
+
+> **Hinweis für lesende Systeme:** Die durchgehende Kleinschreibung ändert bestehende Ausgaben. Wer den Text unverändert anzeigt, muss die Großschreibung am Satzanfang künftig selbst setzen.
+
+### Referenzimplementierung und Repository
+
+#### Added
+
 - Unit-Tests für die Textgenerierung (`tests/test_medication_dosage_to_text.py`).
 
-### Changed
-- Release läuft über `gh release`; die beiden Release-Workflows entfallen. Bei einem Tag-Push prüft die CI zusätzlich, dass `__version__` mit dem Tag übereinstimmt.
-- CI testet nur noch die älteste und die neueste unterstützte Python-Version. Das Skript nutzt ausschließlich die Standardbibliothek.
-- Wochentagsschemata dulden `frequency` sowie das redundante Paar `period = 1`, `periodUnit = wk` als Legacy-Angaben; sie ändern den erzeugten Text nicht. Jede andere Periode ist mit `dayOfWeek` nicht mehr kombinierbar.
-- Eine variable Frequenz (`frequencyMax`) ist der reinen Intervallangabe vorbehalten.
-- `doseQuantity.value` und `doseRange.high.value` müssen größer als 0 sein; `0` bleibt ausschließlich als `doseRange.low.value` zulässig.
-- Doppelte Belegung desselben Zeitpunkts mit unterschiedlicher Dosis führt schemaübergreifend zum Abbruch.
-- Jeder erzeugte Text ist durchgehend ein kleingeschriebenes Fragment. Die bisherige Großschreibung des ersten Zeichens bei Bedarfsmedikation und die großgeschriebenen `boundsPeriod`-Literale entfallen; die Schreibweise am Satzanfang entscheidet das anzeigende System. Freitext wird weiterhin unverändert durchgereicht.
-- Nicht numerische Dosiswerte werden abgewiesen (`<Feld> muss numerisch sein.`) statt unverändert in den Text übernommen zu werden; numerische Strings werden wie Zahlen geprüft.
+#### Changed
 
-### Fixed
-- Der Tag-Release-Workflow lief bei jedem Branch-Push und scheiterte nach 0 Sekunden ohne Job, weil seine Tag-Muster `*.*.*+*` und `*.*.*-*+*` das Sonderzeichen `+` unescaped enthielten. Dadurch war jeder Lauf im Repository rot.
+- Release läuft über `gh release`; die beiden Release-Workflows entfallen. Bei einem Tag-Push prüft die CI, dass `__version__` mit dem Tag übereinstimmt — beide Angaben landen als `algorithmVersion` beim Konsumenten und dürfen nicht auseinanderlaufen.
+- CI testet nur noch die älteste und die neueste unterstützte Python-Version. Das Skript nutzt ausschließlich die Standardbibliothek.
+
+#### Fixed
+
+- `tests/test_medication_dosage_to_text.py` konnte das Modul nicht laden und ließ dadurch die gesamte Test-Discovery und damit jeden CI-Lauf scheitern.
+- Der Tag-Release-Workflow lief bei jedem Branch-Push und scheiterte nach 0 Sekunden ohne Job, weil seine Tag-Muster `*.*.*+*` und `*.*.*-*+*` das Sonderzeichen `+` unescaped enthielten.
 - Der Syntax-Check deckte `tests/test_medication_dosage_to_text.py` nicht ab; er prüft jetzt das gesamte `tests/`-Verzeichnis.
-- `tests/test_medication_dosage_to_text.py` konnte das Modul nicht laden und ließ dadurch die gesamte Test-Discovery und damit die CI scheitern.
 - Regressionstests kombinierten `dayOfWeek` mit `periodUnit = d`; zwei davon prüften dadurch nur noch die Schema-Erkennung statt der benannten Regel.
 
 ## [1.0.2] - 2026-03-05
