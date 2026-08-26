@@ -259,7 +259,7 @@ class SchemaOutputTest(unittest.TestCase):
             "asNeededBoolean": True,
             "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
         }
-        self.assertEqual("Bei Bedarf: je 1 Stück",
+        self.assertEqual("bei Bedarf: je 1 Stück",
                          self.generator.generate_dosage_text(self._resource([dosage])))
 
     def test_as_needed_with_single_reason(self):
@@ -269,7 +269,7 @@ class SchemaOutputTest(unittest.TestCase):
                            "valueCodeableConcept": {"text": "Kopfschmerzen"}}],
             "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
         }
-        self.assertEqual("Bei Kopfschmerzen: je 1 Stück",
+        self.assertEqual("bei Kopfschmerzen: je 1 Stück",
                          self.generator.generate_dosage_text(self._resource([dosage])))
 
     def test_as_needed_with_two_reasons(self):
@@ -281,7 +281,7 @@ class SchemaOutputTest(unittest.TestCase):
             ],
             "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
         }
-        self.assertEqual("Bei Kopfschmerzen oder Fieber: je 1 Stück",
+        self.assertEqual("bei Kopfschmerzen oder Fieber: je 1 Stück",
                          self.generator.generate_dosage_text(self._resource([dosage])))
 
     def test_as_needed_with_three_reasons(self):
@@ -294,7 +294,7 @@ class SchemaOutputTest(unittest.TestCase):
             ],
             "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
         }
-        self.assertEqual("Bei Kopfschmerzen, Fieber oder Gliederschmerzen: je 1 Stück",
+        self.assertEqual("bei Kopfschmerzen, Fieber oder Gliederschmerzen: je 1 Stück",
                          self.generator.generate_dosage_text(self._resource([dosage])))
 
     def test_as_needed_with_max_dose_24h(self):
@@ -306,7 +306,7 @@ class SchemaOutputTest(unittest.TestCase):
                 "denominator": {"value": 24, "code": "h"},
             },
         }
-        self.assertEqual("Bei Bedarf: je 1 Stück — nicht mehr als 4 Stück in 24 Stunden",
+        self.assertEqual("bei Bedarf: je 1 Stück — nicht mehr als 4 Stück in 24 Stunden",
                          self.generator.generate_dosage_text(self._resource([dosage])))
 
     def test_as_needed_with_max_dose_1d(self):
@@ -318,7 +318,7 @@ class SchemaOutputTest(unittest.TestCase):
                 "denominator": {"value": 1, "code": "d"},
             },
         }
-        self.assertEqual("Bei Bedarf: je 1 Stück — nicht mehr als 4 Stück pro Tag",
+        self.assertEqual("bei Bedarf: je 1 Stück — nicht mehr als 4 Stück pro Tag",
                          self.generator.generate_dosage_text(self._resource([dosage])))
 
     def test_as_needed_with_mindestabstand(self):
@@ -328,7 +328,7 @@ class SchemaOutputTest(unittest.TestCase):
                                     "valueDuration": {"value": 4, "code": "h"}}],
             "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
         }
-        self.assertEqual("Bei Bedarf: im Abstand von mindestens 4 Stunden je 1 Stück",
+        self.assertEqual("bei Bedarf: im Abstand von mindestens 4 Stunden je 1 Stück",
                          self.generator.generate_dosage_text(self._resource([dosage])))
 
     def test_as_needed_multiple_elements_raises_value_error(self):

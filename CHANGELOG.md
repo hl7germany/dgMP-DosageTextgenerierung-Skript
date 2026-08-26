@@ -14,6 +14,7 @@ Alle relevanten Änderungen an diesem Projekt werden in dieser Datei dokumentier
 - Eine variable Frequenz (`frequencyMax`) ist der reinen Intervallangabe vorbehalten.
 - `doseQuantity.value` und `doseRange.high.value` müssen größer als 0 sein; `0` bleibt ausschließlich als `doseRange.low.value` zulässig.
 - Doppelte Belegung desselben Zeitpunkts mit unterschiedlicher Dosis führt schemaübergreifend zum Abbruch.
+- Jeder erzeugte Text ist durchgehend ein kleingeschriebenes Fragment. Die bisherige Großschreibung des ersten Zeichens bei Bedarfsmedikation und die großgeschriebenen `boundsPeriod`-Literale entfallen; die Schreibweise am Satzanfang entscheidet das anzeigende System. Freitext wird weiterhin unverändert durchgereicht.
 - Nicht numerische Dosiswerte werden abgewiesen (`<Feld> muss numerisch sein.`) statt unverändert in den Text übernommen zu werden; numerische Strings werden wie Zahlen geprüft.
 
 ### Fixed

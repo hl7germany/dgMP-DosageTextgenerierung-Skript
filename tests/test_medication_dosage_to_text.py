@@ -200,7 +200,7 @@ class MedicationDosageTextTest(unittest.TestCase):
             self.generator.generate_dosage_text(
                 self.medication_request(dosage)
             ),
-            "Bei Kopfschmerzen: alle 8 Stunden je 1 Stück, "
+            "bei Kopfschmerzen: alle 8 Stunden je 1 Stück, "
             "mit mindestens 6 Stunden Abstand — "
             "nicht mehr als 4 Stück in 24 Stunden",
         )
@@ -314,7 +314,7 @@ class MedicationDosageTextTest(unittest.TestCase):
             self.generator.generate_dosage_text(
                 self.medication_request(dosage)
             ),
-            "Bei Kopfschmerzen: im Abstand von mindestens 4 Stunden "
+            "bei Kopfschmerzen: im Abstand von mindestens 4 Stunden "
             "je 1 Stück — nicht mehr als 6 Stück in 24 Stunden",
         )
 
@@ -354,7 +354,7 @@ class MedicationDosageTextTest(unittest.TestCase):
 
         self.assertEqual(
             self.generator.generate_dosage_text(resource),
-            "Vom 05.06.2026 bis zum 05.07.2026: 1-0-0-0 Stück",
+            "vom 05.06.2026 bis zum 05.07.2026: 1-0-0-0 Stück",
         )
 
     def test_dose_range_is_rendered_with_bis(self):
@@ -421,6 +421,26 @@ class MedicationDosageTextTest(unittest.TestCase):
                     self.generator.generate_dosage_text(
                         self.medication_request(dosage)
                     )
+
+    def test_generated_text_is_always_a_lowercase_fragment(self):
+        """Auch Bedarfsmedikation wird nicht grossgeschrieben - es gibt keine Ausnahme."""
+        bounds = {"boundsPeriod": {"start": "2026-06-05"}, "when": ["MORN"]}
+
+        self.assertEqual(
+            self.generator.generate_dosage_text(
+                self.medication_request(self.dosage(1, bounds))
+            ),
+            "ab dem 05.06.2026: 1-0-0-0 Stück",
+        )
+
+        as_needed = self.dosage(1, bounds)
+        as_needed["asNeededBoolean"] = True
+        self.assertEqual(
+            self.generator.generate_dosage_text(
+                self.medication_request(as_needed)
+            ),
+            "ab dem 05.06.2026 bei Bedarf: 1-0-0-0 Stück",
+        )
 
     def test_non_numeric_dose_values_are_rejected(self):
         cases = (

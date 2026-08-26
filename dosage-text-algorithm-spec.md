@@ -48,8 +48,6 @@ text = erzeugeSchemaspezifischenText(schema, dosierungen)
 wenn schema = Freitext: return text
 
 text = normalisiere(text)
-wenn dosierungen[0].asNeededBoolean = true:
-  text = großschreibenNurDesErstenZeichens(text)
 return text
 ```
 
@@ -91,15 +89,15 @@ Eine begrenzte Anwendungsdauer wird vorangestellt als `für {Wert} {Einheit}`. D
 
 Start- und/oder Endzeitpunkt werden vorangestellt:
 
-* nur Start (offenes Ende): `Ab dem {Startdatum}[ um {Uhrzeit}]`
-* Start und Ende: `Vom {Startdatum}[ um {Uhrzeit}] bis zum {Enddatum}[ um {Uhrzeit}]`
-* nur Ende: `Bis zum {Enddatum}[ um {Uhrzeit}]`
+* nur Start (offenes Ende): `ab dem {Startdatum}[ um {Uhrzeit}]`
+* Start und Ende: `vom {Startdatum}[ um {Uhrzeit}] bis zum {Enddatum}[ um {Uhrzeit}]`
+* nur Ende: `bis zum {Enddatum}[ um {Uhrzeit}]`
 
 Das Datum wird im Format `TT.MM.JJJJ`, eine vorhandene Uhrzeit im Format `HH:MM Uhr` ausgegeben. Sekunden werden nicht dargestellt.
 
 `boundsPeriod` und `boundsDuration` dürfen nicht gleichzeitig vorhanden sein. Andernfalls bricht die Textgenerierung ab. Ein vorhandenes `boundsPeriod` muss `start` und/oder `end` enthalten. Jeder vorhandene Wert muss als FHIR-`dateTime` mit vollständigem Datum `JJJJ-MM-TT` parsebar sein. Bei einer reinen Datumsangabe erfolgt keine Zeitzonenverarbeitung. Enthält der Wert eine Uhrzeit, muss gemäß FHIR eine Zeitzone als `Z` oder Offset vorhanden sein. Der Zeitpunkt wird in die verbindliche IANA-Zielzeitzone `Europe/Berlin` umgerechnet; erst danach werden das gegebenenfalls verschobene Datum sowie Stunde und Minute formatiert. Die Umrechnung berücksichtigt automatisch Sommer- und Winterzeit.
 
-*Beispiel:* `2026-06-05T23:30:45Z` wird in `Europe/Berlin` zu `06.06.2026 um 01:30 Uhr`.
+*Beispiel:* `2026-06-05T23:30:45Z` wird in `Europe/Berlin` zu `06.06.2026 um 01:30 Uhr`, im Text also `ab dem 06.06.2026 um 01:30 Uhr`.
 
 ### Einnahmerhythmus (`frequency` / `period` / `periodUnit`)
 
@@ -440,16 +438,16 @@ Bei einer **reinen Bedarfsdosierung** muss die Ressource genau ein `Dosage`-Elem
 
 * Sofern vorhanden, steht der **Zeitrahmen** am Anfang, gefolgt vom **Einnahmeanlass** und einem **Doppelpunkt**. Der Doppelpunkt steht damit direkt hinter dem Einnahmeanlass.
 * Ist kein Einnahmeanlass angegeben, wird generisch `bei Bedarf` gesetzt.
-* Das **erste Zeichen der Zeile** wird großgeschrieben (`Bei Kopfschmerzen: …`, `Bei Bedarf: …`).
+* Auch hier wird **nicht** großgeschrieben; `bei Kopfschmerzen: …` und `bei Bedarf: …` bleiben Fragmente wie jeder andere erzeugte Text.
 * Ein optionaler **Mindestabstand** (`modifierExtension[MindestabstandZwischenGaben]`) und – bei strukturiertem Bedarf – das jeweilige Schema (Intervall, 4‑Schema …) folgen rechts des Doppelpunkts. Bei einer reinen Bedarfsdosierung steht der Mindestabstand vor der Dosis. Bei strukturiertem Bedarf steht er nach dem Schemakern als `, mit mindestens … Abstand`, damit beispielsweise `alle 8 Stunden` und `mindestens 6 Stunden Abstand` nicht unmittelbar und missverständlich aufeinanderfolgen.
   Die **Maximalmenge** wird genau einmal am Ende der Dosierungsanweisung angefügt. Enthält die Anweisung mehrere Uhrzeit-, Tagesabschnitts- oder Wochentagssegmente, steht die Maximalmenge nach dem letzten Segment. Sie gilt für die Gesamtmenge im angegebenen Zeitraum. Ein anschließender `Hinweis: ` folgt erst danach.
 
 *Beispiele:*
 
-* `Bei Kopfschmerzen: im Abstand von mindestens 4 Stunden je 1 Stück — nicht mehr als 6 Stück in 24 Stunden`
-* `Bei Bedarf: täglich 08:00 Uhr — je 1 Stück, 20:00 Uhr — je 2 Stück — nicht mehr als 6 Stück pro Tag`
-* `Bei Kopfschmerzen: alle 8 Stunden je 1 Stück, mit mindestens 6 Stunden Abstand — nicht mehr als 4 Stück in 24 Stunden`
-* `Bei Bedarf: 1-0-2-0 Stück`
+* `bei Kopfschmerzen: im Abstand von mindestens 4 Stunden je 1 Stück — nicht mehr als 6 Stück in 24 Stunden`
+* `bei Bedarf: täglich 08:00 Uhr — je 1 Stück, 20:00 Uhr — je 2 Stück — nicht mehr als 6 Stück pro Tag`
+* `bei Kopfschmerzen: alle 8 Stunden je 1 Stück, mit mindestens 6 Stunden Abstand — nicht mehr als 4 Stück in 24 Stunden`
+* `bei Bedarf: 1-0-2-0 Stück`
 
 ### Freitext-Dosierung
 

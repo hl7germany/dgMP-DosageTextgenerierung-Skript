@@ -195,7 +195,7 @@ class MedicationDosageTextGenerator:
         # FreeText wird unverändert übernommen; alle anderen Schemata werden
         # abschließend normalisiert (Leerzeichen) und bei Bedarf großgeschrieben.
         if schema_type != self.SCHEMA_FREE_TEXT:
-            result = self._finalize_text(result, dosage_instructions[0])
+            result = self._finalize_text(result)
         return result
 
     # ============================================================================
@@ -743,19 +743,19 @@ class MedicationDosageTextGenerator:
             return f"{left}: {core}"
         return left or core
 
-    def _finalize_text(self, text, dosage):
+    def _finalize_text(self, text):
         """
         Abschließende Aufbereitung eines generierten Textes (außer Freitext):
-        Leerzeichen normalisieren und bei Bedarfsmedikation den Zeilenanfang
-        großschreiben.
+        Leerzeichen normalisieren.
+
+        Der erzeugte Text ist durchgehend ein kleingeschriebenes Fragment. Die
+        Groß-/Kleinschreibung am Satzanfang bleibt dem anzeigenden System
+        überlassen, das den Text in seinen eigenen Kontext einbettet.
         """
         if not text:
             return text
 
-        text = self._normalize_whitespace(text)
-        if text and self._is_as_needed(dosage):
-            text = text[0].upper() + text[1:]
-        return text
+        return self._normalize_whitespace(text)
 
     def _normalize_whitespace(self, text):
         """
@@ -803,11 +803,13 @@ class MedicationDosageTextGenerator:
             self._format_datetime_german(bounds_period.get('end'), "boundsPeriod.end")
             if has_end else ""
         )
+        # Kleinschreibung wie bei allen uebrigen Bausteinen: der erzeugte Text
+        # ist durchgehend ein Fragment, kein Satz.
         if has_start and has_end:
-            return f"Vom {start_text} bis zum {end_text}"
+            return f"vom {start_text} bis zum {end_text}"
         if has_start:
-            return f"Ab dem {start_text}"
-        return f"Bis zum {end_text}"
+            return f"ab dem {start_text}"
+        return f"bis zum {end_text}"
 
     def _format_datetime_german(self, value, field_name="dateTime"):
         error_message = (
