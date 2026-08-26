@@ -2,11 +2,15 @@ name: CI
 
 on:
   push:
+    branches: ["main"]
+    tags: ["*"]
   pull_request:
   workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  # head_ref fuer Pull Requests, ref sonst: verhindert, dass ein Push auf einen
+  # PR-Branch zwei Laeufe erzeugt, die sich nicht gegenseitig abbrechen.
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -18,7 +22,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        # Aeltestes und neuestes unterstuetztes Python. Das Skript nutzt
+        # ausschliesslich die Standardbibliothek; die Versionen dazwischen
+        # koennen nichts finden, was diese beiden nicht auch finden.
+        python-version: ["3.10", "3.13"]
 
     steps:
       - name: Checkout
@@ -33,7 +40,54 @@ jobs:
         run: python --version
 
       - name: Syntax check
-        run: python -m py_compile medication-dosage-to-text.py tests/test_regression_ordering.py
+        # Ganzes tests/-Verzeichnis, nicht einzelne Dateien: eine nicht
+        # aufgefuehrte Testdatei blieb sonst monatelang unbemerkt kaputt.
+        run: python -m compileall -q medication-dosage-to-text.py tests/
 
       - name: Run tests
         run: python -m unittest discover -s tests -p "test_*.py" -v
+
+  version-matches-tag:
+    name: __version__ matches tag
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Compare __version__ with tag
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import ast, os, pathlib, sys
+
+          tag = os.environ["TAG_NAME"]
+          tree = ast.parse(pathlib.Path("medication-dosage-to-text.py").read_text(encoding="utf-8"))
+          version = next(
+              (
+                  node.value.value
+                  for node in tree.body
+                  if isinstance(node, ast.Assign)
+                  for target in node.targets
+                  if isinstance(target, ast.Name) and target.id == "__version__"
+              ),
+              None,
+          )
+          if version is None:
+              sys.exit("__version__ nicht gefunden.")
+          if version != tag:
+              sys.exit(
+                  f"Version-Mismatch: Tag={tag}, __version__={version}. "
+                  "Der Medication IG DE schreibt __version__ als algorithmVersion "
+                  "in jede Ressource; beide muessen uebereinstimmen."
+              )
+          print(f"__version__ == {tag}")
+          PY

@@ -23,9 +23,6 @@ class RegressionOrderingTest(unittest.TestCase):
         dosage_a = {
             "timing": {
                 "repeat": {
-                    "frequency": 1,
-                    "period": 1,
-                    "periodUnit": "d",
                     "dayOfWeek": ["mon"],
                     "timeOfDay": ["20:00"],
                 }
@@ -35,9 +32,6 @@ class RegressionOrderingTest(unittest.TestCase):
         dosage_b = {
             "timing": {
                 "repeat": {
-                    "frequency": 1,
-                    "period": 1,
-                    "periodUnit": "d",
                     "dayOfWeek": ["mon"],
                     "timeOfDay": ["08:00"],
                 }
@@ -56,9 +50,6 @@ class RegressionOrderingTest(unittest.TestCase):
         dosage_a = {
             "timing": {
                 "repeat": {
-                    "frequency": 1,
-                    "period": 1,
-                    "periodUnit": "d",
                     "dayOfWeek": ["mon"],
                     "timeOfDay": ["08:00"],
                 }
@@ -68,9 +59,6 @@ class RegressionOrderingTest(unittest.TestCase):
         dosage_b = {
             "timing": {
                 "repeat": {
-                    "frequency": 1,
-                    "period": 1,
-                    "periodUnit": "d",
                     "dayOfWeek": ["mon"],
                     "timeOfDay": ["08:00"],
                 }
@@ -89,9 +77,6 @@ class RegressionOrderingTest(unittest.TestCase):
         dosage_a = {
             "timing": {
                 "repeat": {
-                    "frequency": 1,
-                    "period": 1,
-                    "periodUnit": "d",
                     "dayOfWeek": ["mon"],
                     "when": ["MORN"],
                 }
@@ -101,9 +86,6 @@ class RegressionOrderingTest(unittest.TestCase):
         dosage_b = {
             "timing": {
                 "repeat": {
-                    "frequency": 1,
-                    "period": 1,
-                    "periodUnit": "d",
                     "dayOfWeek": ["mon"],
                     "when": ["MORN"],
                 }
@@ -111,18 +93,14 @@ class RegressionOrderingTest(unittest.TestCase):
             "doseAndRate": [{"doseQuantity": {"value": 2, "unit": "Stueck"}}],
         }
 
-        with self.assertRaises(ValueError):
-            self.generator.generate_dosage_text(self._resource([dosage_a, dosage_b]))
-        with self.assertRaises(ValueError):
-            self.generator.generate_dosage_text(self._resource([dosage_b, dosage_a]))
+        for order in ([dosage_a, dosage_b], [dosage_b, dosage_a]):
+            with self.assertRaisesRegex(ValueError, "Doppelte Belegung der Kombination"):
+                self.generator.generate_dosage_text(self._resource(order))
 
     def test_day_when_combo_merges_different_slots_for_same_day(self):
         dosage_a = {
             "timing": {
                 "repeat": {
-                    "frequency": 1,
-                    "period": 1,
-                    "periodUnit": "d",
                     "dayOfWeek": ["mon"],
                     "when": ["MORN"],
                 }
@@ -132,9 +110,6 @@ class RegressionOrderingTest(unittest.TestCase):
         dosage_b = {
             "timing": {
                 "repeat": {
-                    "frequency": 1,
-                    "period": 1,
-                    "periodUnit": "d",
                     "dayOfWeek": ["mon"],
                     "when": ["EVE"],
                 }
@@ -213,16 +188,13 @@ class RegressionOrderingTest(unittest.TestCase):
         dosage_without_dose = {
             "timing": {
                 "repeat": {
-                    "frequency": 1,
-                    "period": 1,
-                    "periodUnit": "d",
                     "dayOfWeek": ["mon"],
                     "when": ["MORN"],
                 }
             },
         }
 
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(ValueError, "doseAndRate ist für die Textgenerierung erforderlich"):
             self.generator.generate_dosage_text(self._resource([dosage_without_dose]))
 
     def test_interval_when_without_dose_raises_value_error(self):
@@ -287,7 +259,7 @@ class SchemaOutputTest(unittest.TestCase):
             "asNeededBoolean": True,
             "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
         }
-        self.assertEqual("Bei Bedarf: je 1 Stück",
+        self.assertEqual("bei Bedarf: je 1 Stück",
                          self.generator.generate_dosage_text(self._resource([dosage])))
 
     def test_as_needed_with_single_reason(self):
@@ -297,7 +269,7 @@ class SchemaOutputTest(unittest.TestCase):
                            "valueCodeableConcept": {"text": "Kopfschmerzen"}}],
             "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
         }
-        self.assertEqual("Bei Kopfschmerzen: je 1 Stück",
+        self.assertEqual("bei Kopfschmerzen: je 1 Stück",
                          self.generator.generate_dosage_text(self._resource([dosage])))
 
     def test_as_needed_with_two_reasons(self):
@@ -309,7 +281,7 @@ class SchemaOutputTest(unittest.TestCase):
             ],
             "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
         }
-        self.assertEqual("Bei Kopfschmerzen oder Fieber: je 1 Stück",
+        self.assertEqual("bei Kopfschmerzen oder Fieber: je 1 Stück",
                          self.generator.generate_dosage_text(self._resource([dosage])))
 
     def test_as_needed_with_three_reasons(self):
@@ -322,7 +294,7 @@ class SchemaOutputTest(unittest.TestCase):
             ],
             "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
         }
-        self.assertEqual("Bei Kopfschmerzen, Fieber oder Gliederschmerzen: je 1 Stück",
+        self.assertEqual("bei Kopfschmerzen, Fieber oder Gliederschmerzen: je 1 Stück",
                          self.generator.generate_dosage_text(self._resource([dosage])))
 
     def test_as_needed_with_max_dose_24h(self):
@@ -334,7 +306,7 @@ class SchemaOutputTest(unittest.TestCase):
                 "denominator": {"value": 24, "code": "h"},
             },
         }
-        self.assertEqual("Bei Bedarf: je 1 Stück — nicht mehr als 4 Stück in 24 Stunden",
+        self.assertEqual("bei Bedarf: je 1 Stück — nicht mehr als 4 Stück in 24 Stunden",
                          self.generator.generate_dosage_text(self._resource([dosage])))
 
     def test_as_needed_with_max_dose_1d(self):
@@ -346,7 +318,7 @@ class SchemaOutputTest(unittest.TestCase):
                 "denominator": {"value": 1, "code": "d"},
             },
         }
-        self.assertEqual("Bei Bedarf: je 1 Stück — nicht mehr als 4 Stück pro Tag",
+        self.assertEqual("bei Bedarf: je 1 Stück — nicht mehr als 4 Stück pro Tag",
                          self.generator.generate_dosage_text(self._resource([dosage])))
 
     def test_as_needed_with_mindestabstand(self):
@@ -356,7 +328,7 @@ class SchemaOutputTest(unittest.TestCase):
                                     "valueDuration": {"value": 4, "code": "h"}}],
             "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
         }
-        self.assertEqual("Bei Bedarf: im Abstand von mindestens 4 Stunden je 1 Stück",
+        self.assertEqual("bei Bedarf: im Abstand von mindestens 4 Stunden je 1 Stück",
                          self.generator.generate_dosage_text(self._resource([dosage])))
 
     def test_as_needed_multiple_elements_raises_value_error(self):
