@@ -16,24 +16,7 @@ Daraus folgt für jeden Eintrag:
 
 Ändert sich nur die Referenzimplementierung, bleibt die Versionsnummer stehen.
 
-## [Unreleased]
-
-### Algorithmus
-
-#### Changed
-
-- Ein Mindestabstand zwischen zwei Gaben ist nur noch bei einer **reinen** Bedarfsdosierung zulässig (`asNeededBoolean = true` ohne `timing`). Tritt er zusammen mit einem strukturierten Rhythmus auf, bricht der Algorithmus ab. Bisher wurde er dort als `, mit mindestens {Wert} {Einheit} Abstand` nachgestellt; dieser Baustein entfällt ersatzlos. Ein Rhythmus legt den Abstand zwischen zwei Gaben bereits fest — `alle 8 Stunden, mit mindestens 6 Stunden Abstand` ließ offen, welche Angabe gilt.
-- Die kanonische URL der Extension lautet jetzt `…/StructureDefinition/MinimumIntervalBetweenAdministrations` statt `…/MindestabstandZwischenGaben`. Der Medication IG DE hat die Extension vor der Ballot-Veröffentlichung umbenannt, weil sie als einzige eine deutsche Bezeichnung trug.
-
-> **Hinweis für lesende Systeme:** Beide Änderungen betreffen die Eingabe, nicht nur den Text. Wer die alte URL schreibt, wird nicht mehr erkannt; wer Mindestabstand und Rhythmus kombiniert, erhält einen Fehler statt eines Textes.
-
-### Referenzimplementierung und Repository
-
-#### Changed
-
-- `MindestabstandIdentical` ist aus der Liste der Invarianten entfernt, die die Konsistenz der Rahmen-Angaben über mehrere `Dosage`-Elemente sichern. Sie ist nicht mehr erreichbar: Ein Mindestabstand setzt eine reine Bedarfsdosierung voraus, und für die erlaubt `AsNeededSingleDosageOnly` genau ein `Dosage`-Element.
-
-## [2.0.0] - 2026-08-26
+## [2.0.0] - tbd
 
 ### Algorithmus
 
@@ -44,6 +27,8 @@ Daraus folgt für jeden Eintrag:
 
 #### Changed
 
+- Ein Mindestabstand zwischen zwei Gaben ist nur bei einer **reinen** Bedarfsdosierung zulässig (`asNeededBoolean = true` ohne `timing`). Tritt er zusammen mit einem strukturierten Rhythmus auf, bricht der Algorithmus ab. Der bisherige Baustein `, mit mindestens {Wert} {Einheit} Abstand` entfällt ersatzlos: Ein Rhythmus legt den Abstand zwischen zwei Gaben bereits fest, `alle 8 Stunden, mit mindestens 6 Stunden Abstand` ließ offen, welche Angabe gilt.
+- Die kanonische URL der Extension für den Mindestabstand lautet `…/StructureDefinition/MinimumIntervalBetweenAdministrations` statt `…/MindestabstandZwischenGaben`.
 - Wochentagsschemata dulden `frequency` sowie das redundante Paar `period = 1`, `periodUnit = wk` als Legacy-Angaben; sie ändern den erzeugten Text nicht. Jede andere Periode ist mit `dayOfWeek` nicht mehr kombinierbar.
 - Eine variable Frequenz (`frequencyMax`) ist der reinen Intervallangabe vorbehalten. Konkrete Zeitpunkte und Wochentage legen die Zahl der Gaben bereits fest.
 - Jeder erzeugte Text ist durchgehend ein kleingeschriebenes Fragment. Die Großschreibung des ersten Zeichens bei Bedarfsmedikation und die großgeschriebenen `boundsPeriod`-Literale entfallen; die Schreibweise am Satzanfang entscheidet das anzeigende System. Freitext wird weiterhin unverändert durchgereicht.
@@ -51,13 +36,16 @@ Daraus folgt für jeden Eintrag:
 - Nicht numerische Dosiswerte werden mit `<Feld> muss numerisch sein.` abgewiesen statt unverändert in den Text übernommen; numerische Strings werden wie Zahlen geprüft.
 - Doppelte Belegung desselben Zeitpunkts mit unterschiedlicher Dosis führt schemaübergreifend zum Abbruch.
 
-> **Hinweis für lesende Systeme:** Die durchgehende Kleinschreibung ändert bestehende Ausgaben. Wer den Text unverändert anzeigt, muss die Großschreibung am Satzanfang künftig selbst setzen.
 
 ### Referenzimplementierung und Repository
 
 #### Added
 
 - Unit-Tests für die Textgenerierung (`tests/test_medication_dosage_to_text.py`).
+
+#### Removed
+
+- `MindestabstandIdentical` aus der Aufzählung der Invarianten, die die Konsistenz der Rahmen-Angaben über mehrere `Dosage`-Elemente sichern. Sie ist nicht erreichbar: Ein Mindestabstand setzt eine reine Bedarfsdosierung voraus, und dafür erlaubt `AsNeededSingleDosageOnly` genau ein `Dosage`-Element.
 
 #### Changed
 
