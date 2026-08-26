@@ -105,7 +105,7 @@ class MedicationDosageTextGenerator:
 
     # Kanonische Extension-URLs (exakter Vergleich, kein Teilstring-Match)
     URL_AS_NEEDED_FOR = 'http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor'
-    URL_MINDESTABSTAND = 'http://ig.fhir.de/igs/medication/StructureDefinition/MindestabstandZwischenGaben'
+    URL_MINDESTABSTAND = 'http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations'
 
     # Verbindliche IANA-Zielzeitzone für die Darstellung von boundsPeriod.
     OUTPUT_TIMEZONE_NAME = "Europe/Berlin"
@@ -707,14 +707,11 @@ class MedicationDosageTextGenerator:
         Nicht-Bedarf: [{Zeitrahmen} ][{middle}]: {core}
           - der Doppelpunkt trennt Zeitrahmen/Intervall (links) von der Dosis (rechts).
 
-        Bedarf ohne strukturierten Rhythmus:
-          [{Zeitrahmen} ]bei {Einnahmeanlass}: [{Mindestabstand} ]{core}
-        Bedarf mit strukturiertem Rhythmus:
-          [{Zeitrahmen} ]bei {Einnahmeanlass}: {middle} {core}
-          [, mit mindestens {Mindestabstand} Abstand]
-          - der Doppelpunkt steht direkt hinter dem Einnahmeanlass.
-          - bei einem strukturierten Rhythmus wird der Mindestabstand nachgestellt,
-            damit Rhythmus und Mindestabstand sprachlich klar getrennt sind.
+        Bedarf:
+          [{Zeitrahmen} ]bei {Anlass}: [{Mindestabstand} ][{middle} ]{core}
+          - der Doppelpunkt steht direkt hinter dem Anlass.
+          - ein Mindestabstand ist nur bei reiner Bedarfsmedikation zulaessig,
+            also ohne strukturierten Rhythmus; sonst bricht der Algorithmus ab.
         """
         bounds_text = self._extract_bounds_text(dosage)
 
@@ -726,15 +723,22 @@ class MedicationDosageTextGenerator:
 
             minimum_interval = self._extract_minimum_interval_text(dosage)
             right_parts = []
-            if minimum_interval and not middle:
+            if minimum_interval:
+                # Ein strukturierter Rhythmus legt den Abstand zwischen zwei Gaben
+                # bereits fest. Den Mindestabstand daneben auszugeben ergaebe eine
+                # widerspruechliche Anweisung, ihn stillschweigend zu unterschlagen
+                # eine sicherheitsrelevante Auslassung - deshalb Abbruch.
+                if middle:
+                    raise ValueError(
+                        "Ein Mindestabstand ist nur bei reiner Bedarfsmedikation "
+                        "zulaessig, nicht zusammen mit einem strukturierten Rhythmus."
+                    )
                 right_parts.append(f"im Abstand von mindestens {minimum_interval}")
             if middle:
                 right_parts.append(middle)
             if core:
                 right_parts.append(core)
             right = " ".join(right_parts)
-            if minimum_interval and middle:
-                right = f"{right}, mit mindestens {minimum_interval} Abstand"
             return f"{left}: {right}" if right else left
 
         # Nicht-Bedarf: Zeitrahmen und Intervall/Marker links, Kern rechts.

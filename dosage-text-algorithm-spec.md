@@ -132,7 +132,7 @@ der Schema-Regeln und die Verarbeitung bricht ab (siehe
 
 Es sind zwei Arten von Einheiten zu unterscheiden:
 
-**1. Zeit-Einheiten** (aus `periodUnit`, `boundsDuration.code`, `MindestabstandZwischenGaben`): Sie werden über eine **feste Tabelle** in ihre deutsche Bezeichnung übersetzt. Die Form richtet sich ausschließlich nach dem für die Einheit verwendeten Bezugswert: **Singular genau dann, wenn dieser Wert gleich `1` ist**, sonst **Plural**. Bei einem Periodenbereich ist `periodMax` der Bezugswert; ohne `periodMax` ist es `period`. Bei `boundsDuration` und beim Mindestabstand ist es der jeweilige `value` (`boundsDuration` mit `1 d` ergibt daher `für 1 Tag`).
+**1. Zeit-Einheiten** (aus `periodUnit`, `boundsDuration.code`, `MinimumIntervalBetweenAdministrations`): Sie werden über eine **feste Tabelle** in ihre deutsche Bezeichnung übersetzt. Die Form richtet sich ausschließlich nach dem für die Einheit verwendeten Bezugswert: **Singular genau dann, wenn dieser Wert gleich `1` ist**, sonst **Plural**. Bei einem Periodenbereich ist `periodMax` der Bezugswert; ohne `periodMax` ist es `period`. Bei `boundsDuration` und beim Mindestabstand ist es der jeweilige `value` (`boundsDuration` mit `1 d` ergibt daher `für 1 Tag`).
 
 | Code | Singular (Wert = 1) | Plural (sonst) |
 |------|---------------------|----------------|
@@ -210,7 +210,7 @@ Ausgewertet werden nur Extensions mit der exakten kanonischen URL aus der [Feldr
 
 ### Mindestabstand zwischen Gaben
 
-Der Mindestabstand wird nur im Bedarfsfall ausgegeben. Bei einer reinen Bedarfsdosierung lautet der Baustein `im Abstand von mindestens {Wert} {Zeiteinheit}` und steht vor der Dosis. Ist zusätzlich ein strukturierter Einnahmerhythmus vorhanden, wird der Mindestabstand zur klaren Abgrenzung vom Rhythmus nach dem Schemakern als `, mit mindestens {Wert} {Zeiteinheit} Abstand` ausgegeben. Der Algorithmus durchsucht `modifierExtension` nach der exakten kanonischen URL `MindestabstandZwischenGaben` und verwendet die erste passende Extension. `valueDuration`, `valueDuration.value` und `valueDuration.code` sind verpflichtend — im Profil auf `1..1` gesetzt und zusätzlich vom Algorithmus geprüft; der Wert muss numerisch und größer als `0` sein. Andernfalls bricht der Algorithmus mit einem Fehler ab. Die Formatierung des Wertes und der Einheit entspricht `boundsDuration`, jedoch ohne das Wort `für`.
+Der Mindestabstand ist **ausschließlich bei einer reinen Bedarfsdosierung** zulässig, also bei `asNeededBoolean = true` ohne `timing` (Invariante `MindestabstandOnlyPureAsNeeded`). Der Baustein lautet `im Abstand von mindestens {Wert} {Zeiteinheit}` und steht vor der Dosis. Tritt er zusammen mit einem strukturierten Rhythmus auf, bricht der Algorithmus ab: Der Rhythmus legt den Abstand zwischen zwei Gaben bereits fest, eine zweite und schwächere Untergrenze daneben ließe offen, welche Angabe gilt — und den Mindestabstand stillschweigend zu übergehen wäre eine sicherheitsrelevante Auslassung. Der Algorithmus durchsucht `modifierExtension` nach der exakten kanonischen URL `MinimumIntervalBetweenAdministrations` und verwendet die erste passende Extension. `valueDuration`, `valueDuration.value` und `valueDuration.code` sind verpflichtend — im Profil auf `1..1` gesetzt und zusätzlich vom Algorithmus geprüft; der Wert muss numerisch und größer als `0` sein. Andernfalls bricht der Algorithmus mit einem Fehler ab. Die Formatierung des Wertes und der Einheit entspricht `boundsDuration`, jedoch ohne das Wort `für`.
 
 Als Zeiteinheit sind **ausschließlich Minuten (`min`) und Stunden (`h`)** zulässig; `valueDuration.code` ist required an `MindestabstandUnitsOfTimeDgMPVS` gebunden, `valueDuration.system` ist auf UCUM festgelegt. Die Anzeigeeinheit `valueDuration.unit` muss zum Code passen (Invariante `MindestabstandUnitMatchesCode`) — der erzeugte Text leitet die Einheit aus `.code` ab, sodass ein abweichendes `.unit` sonst der Ressource widerspräche.
 
@@ -439,14 +439,14 @@ Bei einer **reinen Bedarfsdosierung** muss die Ressource genau ein `Dosage`-Elem
 * Sofern vorhanden, steht der **Zeitrahmen** am Anfang, gefolgt vom **Einnahmeanlass** und einem **Doppelpunkt**. Der Doppelpunkt steht damit direkt hinter dem Einnahmeanlass.
 * Ist kein Einnahmeanlass angegeben, wird generisch `bei Bedarf` gesetzt.
 * Auch hier wird **nicht** großgeschrieben; `bei Kopfschmerzen: …` und `bei Bedarf: …` bleiben Fragmente wie jeder andere erzeugte Text.
-* Ein optionaler **Mindestabstand** (`modifierExtension[MindestabstandZwischenGaben]`) und – bei strukturiertem Bedarf – das jeweilige Schema (Intervall, 4‑Schema …) folgen rechts des Doppelpunkts. Bei einer reinen Bedarfsdosierung steht der Mindestabstand vor der Dosis. Bei strukturiertem Bedarf steht er nach dem Schemakern als `, mit mindestens … Abstand`, damit beispielsweise `alle 8 Stunden` und `mindestens 6 Stunden Abstand` nicht unmittelbar und missverständlich aufeinanderfolgen.
+* Ein optionaler **Mindestabstand** (`modifierExtension[MinimumIntervalBetweenAdministrations]`) steht rechts des Doppelpunkts vor der Dosis. Er ist nur bei reiner Bedarfsdosierung zulässig; bei strukturiertem Bedarf folgt dort stattdessen das jeweilige Schema (Intervall, 4‑Schema …).
   Die **Maximalmenge** wird genau einmal am Ende der Dosierungsanweisung angefügt. Enthält die Anweisung mehrere Uhrzeit-, Tagesabschnitts- oder Wochentagssegmente, steht die Maximalmenge nach dem letzten Segment. Sie gilt für die Gesamtmenge im angegebenen Zeitraum. Ein anschließender `Hinweis: ` folgt erst danach.
 
 *Beispiele:*
 
 * `bei Kopfschmerzen: im Abstand von mindestens 4 Stunden je 1 Stück — nicht mehr als 6 Stück in 24 Stunden`
 * `bei Bedarf: täglich 08:00 Uhr — je 1 Stück, 20:00 Uhr — je 2 Stück — nicht mehr als 6 Stück pro Tag`
-* `bei Kopfschmerzen: alle 8 Stunden je 1 Stück, mit mindestens 6 Stunden Abstand — nicht mehr als 4 Stück in 24 Stunden`
+* `bei Kopfschmerzen: alle 8 Stunden je 1 Stück — nicht mehr als 4 Stück in 24 Stunden`
 * `bei Bedarf: 1-0-2-0 Stück`
 
 ### Freitext-Dosierung
@@ -486,7 +486,7 @@ Die folgende Tabelle nennt für jeden dynamischen Baustein den genauen Lese-Pfad
 | Tagesabschnitt | `timing.repeat.when` | Code-Liste |
 | Bedarfskennzeichen | `asNeededBoolean` | `true` |
 | Einnahmeanlass | `extension` mit URL `…/extension-Dosage.asNeededFor` → `valueCodeableConcept.text` | Freitext |
-| Mindestabstand | `modifierExtension` mit URL `…/MindestabstandZwischenGaben` → `valueDuration` | `.value`, Einheit aus `.code` |
+| Mindestabstand | `modifierExtension` mit URL `…/MinimumIntervalBetweenAdministrations` → `valueDuration` | `.value`, Einheit aus `.code` |
 | Maximalmenge | `maxDosePerPeriod` | `numerator.value`, `numerator.unit`; `denominator.value` + `denominator.code` (nur `1 d` oder `24 h`) |
 | Hinweis | `patientInstruction` | einzelner String (`0..1`) |
 | Freitext | `text` | String |
@@ -494,7 +494,7 @@ Die folgende Tabelle nennt für jeden dynamischen Baustein den genauen Lese-Pfad
 **Extension-URLs (kanonisch):**
 
 * Einnahmeanlass: `http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor`
-* Mindestabstand: `http://ig.fhir.de/igs/medication/StructureDefinition/MindestabstandZwischenGaben`
+* Mindestabstand: `http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations`
 
 > Beide Extensions werden über ihre **exakte kanonische `url`** identifiziert.
 
@@ -507,7 +507,7 @@ Die folgende Tabelle nennt für jeden dynamischen Baustein den genauen Lese-Pfad
 Für **unterschiedliche** Dosierungen, die sich nicht in einem einzelnen `Dosage`-Element abbilden lassen (z. B. unterschiedliche Dosis je Wochentag oder je Uhrzeit), werden **mehrere** `Dosage`-Elemente verwendet. Invarianten (z. B. `TimingSingleDosageForTimeOfDay`, `TimingSingleDosageForWhen`) verhindern dabei eine **unnötige** Aufteilung: Mehrere Elemente sind nur zulässig, wenn jedes Element eine eindeutige vollständige Dosis einschließlich ihres Datentyps (`Quantity` oder `Range`) trägt. Für die Textgenerierung gilt:
 
 * **Segmente** (Uhrzeit-, Tagesabschnitts- und Wochentagssegmente) werden über **alle** `Dosage`-Elemente eingesammelt und gemeinsam sortiert. Ein Segment kann daher aus demselben oder aus verschiedenen `Dosage`-Einträgen stammen; im erzeugten Text erscheinen sie zusammengeführt (siehe Trennzeichen-Regeln). Dies betrifft die Schemata 4‑Schema, Uhrzeiten, Wochentage, Wochentag-Kombinationen und Intervall-Kombinationen.
-* Die **Rahmen-Angaben** – Zeitrahmen (Dauer/Start-Ende), Bedarfskennzeichen inkl. Einnahmeanlass, Mindestabstand und Maximalmenge sowie der abschließende Hinweis – werden **ausschließlich aus dem ersten** `Dosage`-Element gelesen. Dass sie über alle Elemente konsistent sind, ist keine bloße Annahme, sondern wird durch Invarianten erzwungen: `TimingOnlyOneBounds` (Dauer sowie Start/Ende), `AsNeededIdentical`, `AsNeededForIdentical`, `MindestabstandIdentical`, `MaxDosePerPeriodIdentical` und `PatientInstructionIdentical`. Ohne sie könnte eine abweichende Angabe in einem späteren Element unbemerkt entfallen — bei Maximalmenge, Mindestabstand oder Bedarfskennzeichen mit unmittelbarer Auswirkung auf die Arzneimittelsicherheit.
+* Die **Rahmen-Angaben** – Zeitrahmen (Dauer/Start-Ende), Bedarfskennzeichen inkl. Einnahmeanlass, Mindestabstand und Maximalmenge sowie der abschließende Hinweis – werden **ausschließlich aus dem ersten** `Dosage`-Element gelesen. Dass sie über alle Elemente konsistent sind, ist keine bloße Annahme, sondern wird durch Invarianten erzwungen: `TimingOnlyOneBounds` (Dauer sowie Start/Ende), `AsNeededIdentical`, `AsNeededForIdentical`, `MaxDosePerPeriodIdentical` und `PatientInstructionIdentical`. Ohne sie könnte eine abweichende Angabe in einem späteren Element unbemerkt entfallen — bei Maximalmenge, Mindestabstand oder Bedarfskennzeichen mit unmittelbarer Auswirkung auf die Arzneimittelsicherheit.
 * Bei den Schemata **wiederkehrende Intervalle** und **reine Bedarfsmedikation** ist jeweils genau ein `Dosage`-Element zulässig. Dies erzwingen `TimingIntervalOnlyOneFrequency` beziehungsweise `AsNeededSingleDosageOnly`; eine Segment-Aggregation findet daher nicht statt.
 
 Bei profilkonformem Input ist die resultierende Reihenfolge der Segmente **deterministisch** und hängt nicht von der Reihenfolge der `Dosage`-Elemente ab (Uhrzeiten aufsteigend, Tagesabschnitte in fester Reihenfolge, Wochentage kanonisch).
@@ -544,7 +544,7 @@ Die formale Definition zulässiger Felder und Kombinationen liegt in den Timing-
 * nicht parsebares oder unvollständiges `boundsPeriod.start` beziehungsweise `.end` sowie eine Uhrzeit ohne Zeitzone: Abbruch mit einer Meldung, dass das Feld ein parsebares FHIR-`dateTime` mit vollständigem Datum sein und eine Uhrzeit eine Zeitzone enthalten muss
 * nicht parsebares oder außerhalb des zulässigen Bereichs liegendes `timeOfDay`: Abbruch mit `ValueError("timeOfDay muss im Format HH:MM oder HH:MM:SS[.Bruchteile] angegeben sein.")`
 * `asNeededFor` ohne nicht leeres `valueCodeableConcept.text`: Abbruch mit `ValueError("asNeededFor.valueCodeableConcept.text ist für die Textgenerierung erforderlich.")`
-* Extension `MindestabstandZwischenGaben` ohne `valueDuration`: Abbruch mit `ValueError("MindestabstandZwischenGaben.valueDuration ist für die Textgenerierung erforderlich.")`; für fehlende Unterfelder und Werte `<= 0` gelten die entsprechenden Meldungen mit dem Pfad `MindestabstandZwischenGaben.valueDuration`
+* Extension `MinimumIntervalBetweenAdministrations` ohne `valueDuration`: Abbruch mit `ValueError("MinimumIntervalBetweenAdministrations.valueDuration ist für die Textgenerierung erforderlich.")`; für fehlende Unterfelder und Werte `<= 0` gelten die entsprechenden Meldungen mit dem Pfad `MinimumIntervalBetweenAdministrations.valueDuration`
 * `maxDosePerPeriod` ohne `numerator.value`, `numerator.unit`, `denominator.value` oder `denominator.code`: Abbruch mit einer entsprechenden Pflichtfeldmeldung
 * nicht numerisches `maxDosePerPeriod.numerator.value`: Abbruch mit `ValueError("maxDosePerPeriod.numerator.value muss numerisch sein.")`
 * anderer Nenner als `1 d` oder `24 h`: Abbruch mit `ValueError("maxDosePerPeriod.denominator muss 1 d oder 24 h sein.")`

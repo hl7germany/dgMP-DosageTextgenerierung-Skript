@@ -173,7 +173,7 @@ class MedicationDosageTextTest(unittest.TestCase):
             "monatlich: je 1 Stück",
         )
 
-    def test_structured_as_needed_places_minimum_interval_after_core(self):
+    def test_minimum_interval_with_structured_rhythm_is_rejected(self):
         dosage = self.dosage(
             1,
             {
@@ -196,12 +196,18 @@ class MedicationDosageTextTest(unittest.TestCase):
             "denominator": {"value": 24, "code": "h"},
         }
 
+        # Der Rhythmus legt den Abstand bereits fest; ein Mindestabstand daneben
+        # waere widerspruechlich und darf nicht stillschweigend entfallen.
+        with self.assertRaises(ValueError):
+            self.generator.generate_dosage_text(self.medication_request(dosage))
+
+        # Ohne Rhythmus ist derselbe Mindestabstand die einzige zeitliche Schranke.
+        del dosage["timing"]
         self.assertEqual(
             self.generator.generate_dosage_text(
                 self.medication_request(dosage)
             ),
-            "bei Kopfschmerzen: alle 8 Stunden je 1 Stück, "
-            "mit mindestens 6 Stunden Abstand — "
+            "bei Kopfschmerzen: im Abstand von mindestens 6 Stunden je 1 Stück — "
             "nicht mehr als 4 Stück in 24 Stunden",
         )
 

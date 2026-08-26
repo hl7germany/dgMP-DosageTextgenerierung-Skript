@@ -16,6 +16,23 @@ Daraus folgt für jeden Eintrag:
 
 Ändert sich nur die Referenzimplementierung, bleibt die Versionsnummer stehen.
 
+## [Unreleased]
+
+### Algorithmus
+
+#### Changed
+
+- Ein Mindestabstand zwischen zwei Gaben ist nur noch bei einer **reinen** Bedarfsdosierung zulässig (`asNeededBoolean = true` ohne `timing`). Tritt er zusammen mit einem strukturierten Rhythmus auf, bricht der Algorithmus ab. Bisher wurde er dort als `, mit mindestens {Wert} {Einheit} Abstand` nachgestellt; dieser Baustein entfällt ersatzlos. Ein Rhythmus legt den Abstand zwischen zwei Gaben bereits fest — `alle 8 Stunden, mit mindestens 6 Stunden Abstand` ließ offen, welche Angabe gilt.
+- Die kanonische URL der Extension lautet jetzt `…/StructureDefinition/MinimumIntervalBetweenAdministrations` statt `…/MindestabstandZwischenGaben`. Der Medication IG DE hat die Extension vor der Ballot-Veröffentlichung umbenannt, weil sie als einzige eine deutsche Bezeichnung trug.
+
+> **Hinweis für lesende Systeme:** Beide Änderungen betreffen die Eingabe, nicht nur den Text. Wer die alte URL schreibt, wird nicht mehr erkannt; wer Mindestabstand und Rhythmus kombiniert, erhält einen Fehler statt eines Textes.
+
+### Referenzimplementierung und Repository
+
+#### Changed
+
+- `MindestabstandIdentical` ist aus der Liste der Invarianten entfernt, die die Konsistenz der Rahmen-Angaben über mehrere `Dosage`-Elemente sichern. Sie ist nicht mehr erreichbar: Ein Mindestabstand setzt eine reine Bedarfsdosierung voraus, und für die erlaubt `AsNeededSingleDosageOnly` genau ein `Dosage`-Element.
+
 ## [2.0.0] - 2026-08-26
 
 ### Algorithmus
