@@ -239,7 +239,7 @@ Der Hinweis wird als **eigener Satz** angehängt. Der bisherige strukturierte Do
 
 > `additionalInstruction` wird **nicht** verwendet und ist im Profil `DosageDgMP` auf `0..0` gestrichen; es bleibt für künftige strukturierte Zusatzangaben reserviert.
 
-Auch `route` wird vom Algorithmus nicht gelesen oder ausgegeben; es steht in der Liste zukünftig unterstützter Dosierkonfigurationen (siehe [Beispiele von erzeugten Dosiertexten](./dosierung-beispiele.html)).
+Auch `route` wird vom Algorithmus nicht gelesen oder ausgegeben; es steht in der Liste zukünftig unterstützter Dosierkonfigurationen (siehe [Beispiele von erzeugten Dosiertexten](https://ig.fhir.de/igs/medication/dosierung-beispiele.html)).
 
 `doseAndRate.rateQuantity`, `.rateRatio` und `.rateRange` werden vom Algorithmus nicht gelesen; sie stehen ebenfalls in der Liste zukünftig unterstützter Dosierkonfigurationen.
 
@@ -302,12 +302,17 @@ Bevor die Bausteine zusammengesetzt werden, wird genau **ein** Darstellungsschem
 | `hatWochentag` | `repeat.dayOfWeek` ist vorhanden **und** nicht leer |
 | `hatWhenCodes` | `repeat.when` ist vorhanden **und** nicht leer |
 | `hatUhrzeit` | `repeat.timeOfDay` ist vorhanden **und** nicht leer |
+| `hatFrequenzMax` | der Schlüssel `repeat.frequencyMax` ist vorhanden |
+| `hatPeriodenMax` | der Schlüssel `repeat.periodMax` ist vorhanden |
 
 Abgeleitete Hilfsbedingungen:
 
-* `istTagesmuster` = `repeat.period = 1` **und** `repeat.periodUnit = 'd'`
+* `istTagesmuster` = `repeat.period = 1` **und** `repeat.periodUnit = 'd'` **und nicht** `hatPeriodenMax`
 * `istNichtTagesmuster` = `hatPeriode` **und** `hatPeriodeneinheit` **und nicht** `istTagesmuster`
 * `istReinesIntervall` = `hatFrequenz` **und** `hatPeriode` **und** `hatPeriodeneinheit` **und nicht** (`hatWhenCodes` oder `hatUhrzeit` oder `hatWochentag`)
+* `hatZulaessigeLegacyFelder` = **nicht** `hatFrequenzMax` **und nicht** `hatPeriodenMax` **und** ((**nicht** `hatPeriode` **und nicht** `hatPeriodeneinheit`) **oder** (`repeat.period = 1` **und** `repeat.periodUnit = 'wk'`))
+
+Zu `hatZulaessigeLegacyFelder`: Wochentagsschemata wiederholen sich implizit wöchentlich. `frequency` und das vollständige Paar `period = 1`, `periodUnit = wk` dürfen aus Gründen der Rückwärtskompatibilität redundant mitgeführt werden und ändern die Ausgabe nicht. Jede andere Periode beschreibt ein echtes Intervall und ist mit `dayOfWeek` nicht kombinierbar; eine variable Frequenz oder Periode ebenfalls nicht, weil Wochentage die Zahl der Anwendungen bereits festlegen.
 
 ### Prioritätsreihenfolge
 
@@ -318,10 +323,10 @@ Die Regeln werden **von oben nach unten** geprüft; die **erste** zutreffende Re
 | 1 | **Freitext-Dosierung** | `hatText` **und nicht** `hatTiming` **und nicht** `hatDosis` |
 | 2 | **Bedarfsmedikation (rein)** | `istBedarf` **und nicht** `hatTiming` |
 | 3 | **4-Schema** (Tageszeiten) | `hatWhenCodes` **und nicht** `hatUhrzeit` **und nicht** `hatWochentag` **und** (`istTagesmuster` **oder** (nicht `hatPeriode` **und** nicht `hatPeriodeneinheit`)) |
-| 4 | **Wochentags-Bezug** | `hatWochentag` **und nicht** `hatWhenCodes` **und nicht** `hatUhrzeit` |
-| 5 | **Kombination von Wochentagen** | `hatWochentag` **und** (`hatUhrzeit` **oder** `hatWhenCodes`) |
+| 4 | **Wochentags-Bezug** | `hatWochentag` **und nicht** `hatWhenCodes` **und nicht** `hatUhrzeit` **und** `hatZulaessigeLegacyFelder` |
+| 5 | **Kombination von Wochentagen** | `hatWochentag` **und** (`hatUhrzeit` **oder** `hatWhenCodes`) **und** `hatZulaessigeLegacyFelder` |
 | 6 | **Uhrzeiten-Bezug** | `hatUhrzeit` **und nicht** `hatWochentag` **und nicht** `hatWhenCodes` **und** (`istTagesmuster` **oder** (nicht `hatPeriode` **und** nicht `hatPeriodeneinheit`)) |
-| 7 | **Kombination von Zeitintervallen** | `istNichtTagesmuster` **und** (`hatUhrzeit` **oder** `hatWhenCodes`) |
+| 7 | **Kombination von Zeitintervallen** | `istNichtTagesmuster` **und** (`hatUhrzeit` **oder** `hatWhenCodes`) **und nicht** `hatWochentag` **und** `repeat.periodUnit` ∈ {`d`, `wk`, `mo`} |
 | 8 | **Wiederkehrende Intervalle** | `istReinesIntervall` |
 | – | **Abbruch** | trifft keine Regel zu |
 
@@ -419,13 +424,13 @@ Jeder belegte Tag bildet mit seinen Uhrzeiten oder seinem Tagesabschnitts-Muster
 * `montags 08:00 Uhr — je 1 Stück, 12:00 Uhr — je 2 Stück; mittwochs 20:00 Uhr — je 1 Stück`
 * `montags 1-0-1-0 Stück; mittwochs 2-1-2-0 Stück`
 
-Bei der Kombination mit Tagesabschnitten stammt die gemeinsame Einheit aus dem ersten Element mit auswertbarer Dosis. Wird bei nicht profilkonformem Input dieselbe Kombination aus Wochentag und Tagesabschnitt mehrfach mit unterschiedlicher Dosis belegt, bricht der Algorithmus ab: `ValueError("Doppelte Belegung der Kombination aus Wochentag '{code}' und Zeit-/Tagesabschnitt '{zeit}' mit unterschiedlicher Dosis.")` Wie beim reinen Wochentags-Schema beeinflussen `frequency`, `frequencyMax`, `period`, `periodMax` und `periodUnit` die Ausgabe nicht.
+Bei der Kombination mit Tagesabschnitten stammt die gemeinsame Einheit aus dem ersten Element mit auswertbarer Dosis. Wird bei nicht profilkonformem Input dieselbe Kombination aus Wochentag und Tagesabschnitt mehrfach mit unterschiedlicher Dosis belegt, bricht der Algorithmus ab: `ValueError("Doppelte Belegung der Kombination aus Wochentag '{code}' und Zeit-/Tagesabschnitt '{zeit}' mit unterschiedlicher Dosis.")` Wie beim reinen Wochentags-Schema beeinflussen `frequency` sowie das redundante Paar `period = 1`, `periodUnit = wk` die Ausgabe nicht. `frequencyMax`, `periodMax` und jede andere Periode sind in diesem Schema nicht zulässig (siehe [Schema-Erkennung](#schema-erkennung)).
 
 > **Variabilität:** Enthält **irgendein** Tag einen variablen Wert (Bereich), wird die ausgeschriebene Segmentform für **alle** Tage verwendet, damit die Notation über den gesamten Text einheitlich bleibt — z. B. `montags morgens — je 1 bis 2 Stück; mittwochs abends — je 2 Stück`. Sind alle Werte fest, bleiben alle Tage kompakt (`montags 1-0-1-0 Stück; mittwochs 2-1-2-0 Stück`).
 
 ### Schema für Bedarfsmedikation
 
-Eine Bedarfsmedikation liegt vor, wenn auf Ebene der `Dosage` `asNeededBoolean = true` gesetzt ist. Sie kann als **reine Bedarfsdosierung** (ohne `timing`) oder als **Kennzeichnung eines strukturierten Dosierschemas** auftreten (siehe [Bedarfsmedikation](./schema-bedarfsmedikation.html)).
+Eine Bedarfsmedikation liegt vor, wenn auf Ebene der `Dosage` `asNeededBoolean = true` gesetzt ist. Sie kann als **reine Bedarfsdosierung** (ohne `timing`) oder als **Kennzeichnung eines strukturierten Dosierschemas** auftreten (siehe [Bedarfsmedikation](https://ig.fhir.de/igs/medication/schema-bedarfsmedikation.html)).
 
 Bei einer **reinen Bedarfsdosierung** muss die Ressource genau ein `Dosage`-Element enthalten (Invariante `AsNeededSingleDosageOnly`). Mehrere Dosen ohne zeitliche Zuordnung wären nicht eindeutig zu einem gemeinsamen Text zusammenführbar. Der Algorithmus bricht deshalb auch bei nicht vorab validiertem Input mit mehreren `Dosage`-Elementen ab.
 
@@ -469,7 +474,7 @@ Zwei Hinweise zum Verhalten bei nicht profilkonformem Input — hier bricht der 
 
 ### Feldreferenz
 
-Die folgende Tabelle nennt für jeden dynamischen Baustein den genauen Lese-Pfad relativ zum `Dosage`-Element. Maßgeblich für Kardinalität und Definition sind die Profil- und Extension-Seiten dieses IG; diese Tabelle beschreibt, welchen Unterpfad der Algorithmus tatsächlich ausliest.
+Die folgende Tabelle nennt für jeden dynamischen Baustein den genauen Lese-Pfad relativ zum `Dosage`-Element. Maßgeblich für Kardinalität und Definition sind die Profil- und Extension-Seiten des [Medication IG DE](https://ig.fhir.de/igs/medication/); diese Tabelle beschreibt, welchen Unterpfad der Algorithmus tatsächlich ausliest.
 
 | Baustein | Lese-Pfad (relativ zu `Dosage`) | Ausgelesene Werte |
 |----------|--------------------------------|-------------------|
@@ -497,7 +502,7 @@ Die folgende Tabelle nennt für jeden dynamischen Baustein den genauen Lese-Pfad
 
 > Zur `asNeededFor`-Extension: Die kanonische URL `http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor` stammt aus FHIR R5, wird hier aber gemäß dem Cross-Version-Extension-Pattern bewusst für ein R4-Profil (FHIR 4.0.1) zurückportiert. Das ist ein im FHIR-Ökosystem etabliertes Vorgehen, um R5-Konzepte in R4-Implementierungen vorwegzunehmen.
 
-> Alle vom Algorithmus nicht ausgewerteten `Timing`- und `Dosage`-Felder (z. B. Count, CountMax, Method, Site, Rate\*, MaxDosePerAdministration, MaxDosePerLifetime, Offset, BoundsRange, Event) sind in der vollständigen Liste der zukünftig unterstützten Dosierkonfigurationen auf [Beispiele von erzeugten Dosiertexten](./dosierung-beispiele.html) aufgeführt.
+> Alle vom Algorithmus nicht ausgewerteten `Timing`- und `Dosage`-Felder (z. B. Count, CountMax, Method, Site, Rate\*, MaxDosePerAdministration, MaxDosePerLifetime, Offset, BoundsRange, Event) sind in der vollständigen Liste der zukünftig unterstützten Dosierkonfigurationen auf [Beispiele von erzeugten Dosiertexten](https://ig.fhir.de/igs/medication/dosierung-beispiele.html) aufgeführt.
 
 ### Aggregation mehrerer Dosage-Elemente
 
@@ -515,11 +520,11 @@ Die gemeinsame Dosis-Einheit aggregierender 4‑ und Wochentagsschemata wird aus
 
 ## Zusammensetzung typischer Muster
 
-Für eine Übersicht der in diesem IG bereitgestellten Beispiele siehe [Beispiele von erzeugten Dosiertexten](./dosierung-beispiele.html).
+Für eine Übersicht der im Medication IG DE bereitgestellten Beispiele siehe [Beispiele von erzeugten Dosiertexten](https://ig.fhir.de/igs/medication/dosierung-beispiele.html).
 
 ## Fehler und Validierung
 
-Die formale Definition zulässiger Felder und Kombinationen liegt in den Timing- und Dosierungs-Invarianten dieses IG (siehe [Constraints](./dosierung-constraints.html)). Der Algorithmus führt **keine vollständige Validierung** und keine Auflistung unzulässiger Felder durch. Sein konkretes Fehlerverhalten lautet:
+Die formale Definition zulässiger Felder und Kombinationen liegt in den Timing- und Dosierungs-Invarianten des Medication IG DE (siehe [Constraints](https://ig.fhir.de/igs/medication/dosierung-constraints.html)). Der Algorithmus führt **keine vollständige Validierung** und keine Auflistung unzulässiger Felder durch. Sein konkretes Fehlerverhalten lautet:
 
 * nicht unterstützter `resourceType`: Abbruch mit `ValueError("Unsupported resource type: {resourceType}")`
 * nicht klassifizierbare Merkmalskombination: Abbruch mit `ValueError("Die Dosierung entspricht keinem unterstützten Dosierungsschema.")`. Es wird **kein** Ersatztext zurückgegeben — ein solcher würde als generierte Dosieranweisung publiziert und dort eine Aussage vortäuschen, die der Algorithmus nicht treffen kann.
@@ -528,11 +533,12 @@ Die formale Definition zulässiger Felder und Kombinationen liegt in den Timing-
 * fehlendes oder leeres `doseAndRate`: Abbruch mit `ValueError("doseAndRate ist für die Textgenerierung erforderlich.")`
 * `doseAndRate[0]` ohne `doseQuantity` oder `doseRange`: Abbruch mit `ValueError("Dosisangabe in doseAndRate[0] fehlt.")`
 * `doseQuantity` ohne `.value` oder `.unit`: Abbruch mit `ValueError("doseQuantity.value ist für die Textgenerierung erforderlich.")` beziehungsweise `ValueError("doseQuantity.unit ist für die Textgenerierung erforderlich.")`
+* nicht numerischer Dosiswert in `doseQuantity.value`, `doseRange.low.value` oder `doseRange.high.value`: Abbruch mit `ValueError("<Feld> muss numerisch sein.")`. Zahlen und numerische Strings werden akzeptiert, Boolesche Werte nicht
 * `doseQuantity.value <= 0`: Abbruch mit `ValueError("doseQuantity.value muss größer als 0 sein.")`
 * `doseRange` ohne erforderliche obere Grenze: Abbruch mit `ValueError("doseRange.high.value ist für die Textgenerierung erforderlich.")`; eine fehlende Einheit führt entsprechend zu `ValueError("doseRange.high.unit ist für die Textgenerierung erforderlich.")`
 * `doseRange.high.value <= 0`: Abbruch mit `ValueError("doseRange.high.value muss größer als 0 sein.")`
 * vorhandenes `doseRange.low` ohne `.value` oder `.unit`: Abbruch mit der entsprechenden Fehlermeldung für `doseRange.low.value` beziehungsweise `doseRange.low.unit`
-* vorhandenes `doseRange.low.value <= 0`: Abbruch mit `ValueError("doseRange.low.value muss größer als 0 sein.")`
+* vorhandenes `doseRange.low.value < 0`: Abbruch mit `ValueError("doseRange.low.value darf nicht negativ sein.")`. Der Wert `0` ist hier — anders als bei `doseQuantity` und `doseRange.high` — zulässig, weil er die Untergrenze einer variablen Dosis wie „0 bis 2 Stück“ bildet
 * unterschiedliche Einheiten in `doseRange.low` und `doseRange.high`: Abbruch mit `ValueError("doseRange.low.unit und doseRange.high.unit müssen übereinstimmen.")`
 * vorhandenes `boundsDuration` ohne `.value` oder `.code`: Abbruch mit einer entsprechenden Pflichtfeldmeldung; ein nicht numerischer Wert oder ein Wert `<= 0` führt zu `ValueError("boundsDuration.value muss größer als 0 sein.")`
 * gleichzeitig vorhandenes `boundsPeriod` und `boundsDuration`: Abbruch mit `ValueError("boundsPeriod und boundsDuration dürfen nicht gleichzeitig vorhanden sein.")`
@@ -544,6 +550,7 @@ Die formale Definition zulässiger Felder und Kombinationen liegt in den Timing-
 * `maxDosePerPeriod` ohne `numerator.value`, `numerator.unit`, `denominator.value` oder `denominator.code`: Abbruch mit einer entsprechenden Pflichtfeldmeldung
 * nicht numerisches `maxDosePerPeriod.numerator.value`: Abbruch mit `ValueError("maxDosePerPeriod.numerator.value muss numerisch sein.")`
 * anderer Nenner als `1 d` oder `24 h`: Abbruch mit `ValueError("maxDosePerPeriod.denominator muss 1 d oder 24 h sein.")`
+* Intervall-Kombination ohne `period` oder `periodUnit`: Abbruch mit `ValueError("Intervall-Kombinationen erfordern period und periodUnit.")`
 * `when`-Code außerhalb der [Tagesabschnitts-Tabelle](#tagesabschnitt-when-codes): Abbruch mit `ValueError("Nicht unterstützter Tagesabschnitt (when): '{code}'.")`
 * doppelte Belegung eines Tagesabschnitts im reinen 4‑Schema: Abbruch mit `ValueError("Doppelte Belegung des Tagesabschnitts '{code}' im 4-Schema.")`
 * doppelte Belegung desselben Wochentags mit unterschiedlicher Dosis im Wochentags-Schema: Abbruch mit `ValueError("Doppelte Belegung des Wochentags '{code}' mit unterschiedlicher Dosis.")`
@@ -551,13 +558,13 @@ Die formale Definition zulässiger Felder und Kombinationen liegt in den Timing-
 * doppelte Belegung desselben Zeit-Schlüssels mit unterschiedlicher Dosis in einer Intervall-Kombination: Abbruch mit `ValueError("Doppelte Belegung des Zeit-Schlüssels '{zeit}' mit unterschiedlicher Dosis.")`
 * Zeiteinheit außerhalb der [Einheiten-Tabelle](#einheiten-und-pluralisierung) in `periodUnit`, `boundsDuration.code` oder beim Mindestabstand: Abbruch mit `ValueError("Nicht unterstützte Zeiteinheit: '{code}'.")`
 
-Der Algorithmus ist so ausgelegt, dass er im Zweifel **abbricht, statt einen zweifelhaften Text zu erzeugen**: Eine Angabe, die er nicht eindeutig darstellen kann, führt zum Fehler und nicht zu einem Ersatz- oder Teiltext. Die wenigen dokumentierten Ausnahmen betreffen Konstellationen, die `DosageDE` lediglich als Warnung führt (mehrere Freitext-Elemente, Freitext neben strukturierten Angaben) — dort würde ein Abbruch auch gültige DE-Instanzen treffen.
+Der Algorithmus ist so ausgelegt, dass er im Zweifel **abbricht, statt einen zweifelhaften Text zu erzeugen**: Eine Angabe, die er nicht eindeutig darstellen kann, führt zum Fehler und nicht zu einem Ersatz- oder Teiltext. Die wenigen dokumentierten Ausnahmen betreffen Konstellationen, die das Profil `DosageDE` lediglich als Warnung führt (mehrere Freitext-Elemente, Freitext neben strukturierten Angaben) — dort würde ein Abbruch auch gültige DE-Instanzen treffen.
 
 Andere Profilverletzungen können je nach fehlendem Feld dennoch zu einem unvollständigen Text oder zu einem Laufzeitfehler führen. Die Profilvalidierung muss deshalb vor der Textgenerierung erfolgen.
 
 ## Versionierung
 
-Die Version des verwendeten Algorithmus MUSS über die Extension [GeneratedDosageInstructionsMeta](./StructureDefinition-GeneratedDosageInstructionsMeta.html) gesetzt werden. So lassen sich Textinhalt und verwendete Algorithmus-Version nachvollziehbar prüfen.
+Die Version des verwendeten Algorithmus MUSS über die Extension [GeneratedDosageInstructionsMeta](https://ig.fhir.de/igs/medication/StructureDefinition-GeneratedDosageInstructionsMeta.html) gesetzt werden. So lassen sich Textinhalt und verwendete Algorithmus-Version nachvollziehbar prüfen.
 
 Diese Seite beschreibt die Algorithmus-Version **2.0.0**. Die Nummer bezeichnet den hier festgelegten Algorithmus, nicht ein einzelnes Programm: Die Beispielimplementierung führt sie in `__version__` und gibt sie beim Erzeugen der Beispiele in `algorithmVersion` weiter. Eine eigene Implementierung trägt dieselbe Nummer ein, sobald sie diesen Algorithmus umsetzt.
 

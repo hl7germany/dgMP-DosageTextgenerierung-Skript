@@ -2,6 +2,24 @@
 
 Alle relevanten Änderungen an diesem Projekt werden in dieser Datei dokumentiert.
 
+## [2.0.0] - 2026-08-26
+
+### Added
+- Normative Algorithmusspezifikation `dosage-text-algorithm-spec.md`; sie ist gegenüber der Referenzimplementierung führend.
+- Schema „Kombination von Zeitintervallen“: eine nicht tägliche Periode (`d`, `wk` oder `mo`) zusammen mit `when` oder `timeOfDay`.
+- Unit-Tests für die Textgenerierung (`tests/test_medication_dosage_to_text.py`).
+
+### Changed
+- Wochentagsschemata dulden `frequency` sowie das redundante Paar `period = 1`, `periodUnit = wk` als Legacy-Angaben; sie ändern den erzeugten Text nicht. Jede andere Periode ist mit `dayOfWeek` nicht mehr kombinierbar.
+- Eine variable Frequenz (`frequencyMax`) ist der reinen Intervallangabe vorbehalten.
+- `doseQuantity.value` und `doseRange.high.value` müssen größer als 0 sein; `0` bleibt ausschließlich als `doseRange.low.value` zulässig.
+- Doppelte Belegung desselben Zeitpunkts mit unterschiedlicher Dosis führt schemaübergreifend zum Abbruch.
+- Nicht numerische Dosiswerte werden abgewiesen (`<Feld> muss numerisch sein.`) statt unverändert in den Text übernommen zu werden; numerische Strings werden wie Zahlen geprüft.
+
+### Fixed
+- `tests/test_medication_dosage_to_text.py` konnte das Modul nicht laden und ließ dadurch die gesamte Test-Discovery und damit die CI scheitern.
+- Regressionstests kombinierten `dayOfWeek` mit `periodUnit = d`; zwei davon prüften dadurch nur noch die Schema-Erkennung statt der benannten Regel.
+
 ## [1.0.2] - 2026-03-05
 
 ### Added
