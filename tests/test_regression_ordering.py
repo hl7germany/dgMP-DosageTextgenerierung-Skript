@@ -227,7 +227,7 @@ class SchemaOutputTest(unittest.TestCase):
     """Schema-spezifische Ausgabeformat-Tests gegen die normative Spec."""
 
     URL_AS_NEEDED_FOR = "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor"
-    URL_MINDESTABSTAND = "http://ig.fhir.de/igs/medication/StructureDefinition/MindestabstandZwischenGaben"
+    URL_MINDESTABSTAND = "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations"
 
     def setUp(self):
         self.generator = MODULE.MedicationDosageTextGenerator()
