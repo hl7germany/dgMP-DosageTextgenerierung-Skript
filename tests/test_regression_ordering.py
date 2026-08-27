@@ -697,3 +697,38 @@ class MixedSchemaTest(unittest.TestCase):
             ),
             "1-0-2-0 Stück",
         )
+
+
+class MaxDosePureAsNeededTest(unittest.TestCase):
+    """Eine Maximalmenge ist nur bei reiner Bedarfsdosierung zulaessig."""
+
+    def setUp(self):
+        self.generator = MODULE.MedicationDosageTextGenerator()
+
+    def _dosage(self, timing=None):
+        dosage = {
+            "asNeededBoolean": True,
+            "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
+            "maxDosePerPeriod": {
+                "numerator": {"value": 4, "unit": "Stück"},
+                "denominator": {"value": 24, "code": "h"},
+            },
+        }
+        if timing:
+            dosage["timing"] = {"repeat": timing}
+        return dosage
+
+    def _text(self, dosage):
+        return self.generator.generate_dosage_text(
+            {"resourceType": "MedicationRequest", "dosageInstruction": [dosage]}
+        )
+
+    def test_max_dose_with_structured_rhythm_is_rejected(self):
+        with self.assertRaises(ValueError):
+            self._text(self._dosage({"frequency": 1, "period": 8, "periodUnit": "h"}))
+
+    def test_max_dose_without_timing_is_rendered(self):
+        self.assertEqual(
+            self._text(self._dosage()),
+            "bei Bedarf: je 1 Stück — nicht mehr als 4 Stück in 24 Stunden",
+        )

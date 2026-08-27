@@ -1514,10 +1514,18 @@ class MedicationDosageTextGenerator:
         )
 
     def _append_trailing_instructions(self, text, dosage):
-        # Maximalmenge (nur Bedarfsmedikation): der Dosis mit Gedankenstrich nachgestellt.
+        # Maximalmenge (nur reine Bedarfsmedikation): der Dosis mit Gedankenstrich
+        # nachgestellt. Ein strukturierter Rhythmus legt die Menge im
+        # Bezugszeitraum bereits fest; die Angabe daneben stillschweigend zu
+        # uebergehen waere eine sicherheitsrelevante Auslassung.
         if self._is_as_needed(dosage):
             max_dose_text = self._extract_max_dose_text(dosage)
             if max_dose_text:
+                if dosage.get('timing'):
+                    raise ValueError(
+                        "Eine Maximalmenge ist nur bei reiner Bedarfsmedikation "
+                        "zulaessig, nicht zusammen mit einem strukturierten Rhythmus."
+                    )
                 text = f"{text} — {max_dose_text}"
 
         # Verabreichungsweg (route) ist im dgMP-Profil 0..0 und wird nicht dargestellt.
