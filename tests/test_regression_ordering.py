@@ -600,3 +600,47 @@ class SchemaOutputTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DailyLegacyFieldsTest(unittest.TestCase):
+    """Variable Angaben sind in den taeglichen Schemata unzulaessig.
+
+    Frueher wurden frequencyMax und periodMax dort stillschweigend uebergangen:
+    "when + frequencyMax" ergab 1-0-0-0 Stueck und unterschlug die Spanne. Das
+    Profil verbietet die Kombination ueber TimingOnlyOneType; der Algorithmus
+    bricht jetzt ebenfalls ab.
+    """
+
+    def setUp(self):
+        self.generator = MODULE.MedicationDosageTextGenerator()
+
+    def _resource(self, dosage_instructions):
+        return {"resourceType": "MedicationRequest",
+                "dosageInstruction": dosage_instructions}
+
+    def _dosage(self, **repeat):
+        return {
+            "timing": {"repeat": repeat},
+            "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
+        }
+
+    def test_variable_frequency_or_period_is_rejected_in_daily_schemas(self):
+        for repeat in (
+            {"when": ["MORN"], "frequencyMax": 3},
+            {"when": ["MORN"], "periodMax": 3},
+            {"timeOfDay": ["08:00:00"], "frequencyMax": 3},
+            {"timeOfDay": ["08:00:00"], "periodMax": 3},
+        ):
+            with self.subTest(repeat=repeat):
+                with self.assertRaises(ValueError):
+                    self.generator.generate_dosage_text(
+                        self._resource([self._dosage(**repeat)])
+                    )
+
+    def test_daily_legacy_pair_still_produces_the_same_text(self):
+        ohne = self._dosage(when=["MORN", "EVE"])
+        mit = self._dosage(when=["MORN", "EVE"], frequency=2, period=1, periodUnit="d")
+        self.assertEqual(
+            self.generator.generate_dosage_text(self._resource([ohne])),
+            self.generator.generate_dosage_text(self._resource([mit])),
+        )

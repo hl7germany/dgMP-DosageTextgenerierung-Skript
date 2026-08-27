@@ -307,21 +307,21 @@ Bevor die Bausteine zusammengesetzt werden, wird genau **ein** Darstellungsschem
 
 Abgeleitete Hilfsbedingungen:
 
-* `istTagesmuster` = `repeat.period = 1` **und** `repeat.periodUnit = 'd'` **und nicht** `hatPeriodenMax`
+* `istTagesmuster` = `repeat.period = 1` **und** `repeat.periodUnit = 'd'` **und nicht** `hatPeriodenMax` — dient nur der Abgrenzung von `istNichtTagesmuster` in Regel 7
 * `istNichtTagesmuster` = `hatPeriode` **und** `hatPeriodeneinheit` **und nicht** `istTagesmuster`
 * `istReinesIntervall` = `hatFrequenz` **und** `hatPeriode` **und** `hatPeriodeneinheit` **und nicht** (`hatWhenCodes` oder `hatUhrzeit` oder `hatWochentag`)
-* `hatZulaessigeLegacyFelder` = **nicht** `hatFrequenzMax` **und nicht** `hatPeriodenMax` **und** ((**nicht** `hatPeriode` **und nicht** `hatPeriodeneinheit`) **oder** (`repeat.period = 1` **und** `repeat.periodUnit = 'wk'`))
+* `hatZulaessigeLegacyFelder(einheit)` = **nicht** `hatFrequenzMax` **und nicht** `hatPeriodenMax` **und** ((**nicht** `hatPeriode` **und nicht** `hatPeriodeneinheit`) **oder** (`repeat.period = 1` **und** `repeat.periodUnit = einheit`))
 
 #### Legacy-Angaben
 
 In früheren Fassungen des Medication IG DE waren `frequency`, `period` und `periodUnit` in **allen** Dosierschemata verpflichtend — auch dort, wo sie nur wiederholen, was Wochentage, Tagesabschnitte oder Uhrzeiten bereits ausdrücken. Sie sind heute nur noch dort erforderlich, wo sie tatsächlich ein Intervall beschreiben. Damit bestehende Verordnungsdaten gültig bleiben, werden sie weiterhin geduldet. Sie begründen kein Intervallschema und **ändern die Ausgabe nicht**: Eine Ressource mit und eine ohne diese Felder erzeugen denselben Text.
 
-Zwei der oben genannten Hilfsbedingungen beschreiben denselben Sachverhalt für unterschiedliche Schemata und unterscheiden sich nur in der Periodeneinheit:
+Die Bedingung `hatZulaessigeLegacyFelder` gilt für alle vier betroffenen Schemata; sie unterscheiden sich nur in der Periodeneinheit, die sich aus der impliziten Wiederholung des Schemas ergibt:
 
-| Bedingung | geduldetes Paar | verwendet in |
+| Aufruf | geduldetes Paar | verwendet in |
 |---|---|---|
-| `hatZulaessigeLegacyFelder` | `period = 1`, `periodUnit = wk` | Regel 4 und 5 (Wochentage) |
-| `istTagesmuster` | `period = 1`, `periodUnit = d` | Regel 3 und 6 (Tagesabschnitte, Uhrzeiten) |
+| `hatZulaessigeLegacyFelder('wk')` | `period = 1`, `periodUnit = wk` | Regel 4 und 5 (Wochentage) |
+| `hatZulaessigeLegacyFelder('d')` | `period = 1`, `periodUnit = d` | Regel 3 und 6 (Tagesabschnitte, Uhrzeiten) |
 
 `frequency` wird in keiner der beiden Bedingungen geprüft: In diesen Schemata beeinflusst es die Schema-Erkennung nicht und wird nicht ausgegeben, weil die konkreten Zeitpunkte die Zahl der Gaben bereits festlegen. Die Invariante `TimingFrequencyCount` des Profils stellt sicher, dass ein angegebener Wert dieser Anzahl entspricht. Nur bei **wiederkehrenden Intervallen** (Regel 8) ist `frequency` keine Legacy-Angabe: Dort ist es konstituierend und erscheint im Text, etwa als `2 x alle 8 Stunden`.
 
@@ -337,10 +337,10 @@ Die Regeln werden **von oben nach unten** geprüft; die **erste** zutreffende Re
 |---|--------|-----------|
 | 1 | **Freitext-Dosierung** | `hatText` **und nicht** `hatTiming` **und nicht** `hatDosis` |
 | 2 | **Bedarfsmedikation (rein)** | `istBedarf` **und nicht** `hatTiming` |
-| 3 | **4-Schema** (Tageszeiten) | `hatWhenCodes` **und nicht** `hatUhrzeit` **und nicht** `hatWochentag` **und** (`istTagesmuster` **oder** (nicht `hatPeriode` **und** nicht `hatPeriodeneinheit`)) |
-| 4 | **Wochentags-Bezug** | `hatWochentag` **und nicht** `hatWhenCodes` **und nicht** `hatUhrzeit` **und** `hatZulaessigeLegacyFelder` |
-| 5 | **Kombination von Wochentagen** | `hatWochentag` **und** (`hatUhrzeit` **oder** `hatWhenCodes`) **und** `hatZulaessigeLegacyFelder` |
-| 6 | **Uhrzeiten-Bezug** | `hatUhrzeit` **und nicht** `hatWochentag` **und nicht** `hatWhenCodes` **und** (`istTagesmuster` **oder** (nicht `hatPeriode` **und** nicht `hatPeriodeneinheit`)) |
+| 3 | **4-Schema** (Tageszeiten) | `hatWhenCodes` **und nicht** `hatUhrzeit` **und nicht** `hatWochentag` **und** `hatZulaessigeLegacyFelder('d')` |
+| 4 | **Wochentags-Bezug** | `hatWochentag` **und nicht** `hatWhenCodes` **und nicht** `hatUhrzeit` **und** `hatZulaessigeLegacyFelder('wk')` |
+| 5 | **Kombination von Wochentagen** | `hatWochentag` **und** (`hatUhrzeit` **oder** `hatWhenCodes`) **und** `hatZulaessigeLegacyFelder('wk')` |
+| 6 | **Uhrzeiten-Bezug** | `hatUhrzeit` **und nicht** `hatWochentag` **und nicht** `hatWhenCodes` **und** `hatZulaessigeLegacyFelder('d')` |
 | 7 | **Kombination von Zeitintervallen** | `istNichtTagesmuster` **und** (`hatUhrzeit` **oder** `hatWhenCodes`) **und nicht** `hatWochentag` **und** `repeat.periodUnit` ∈ {`d`, `wk`, `mo`} |
 | 8 | **Wiederkehrende Intervalle** | `istReinesIntervall` |
 | – | **Abbruch** | trifft keine Regel zu |

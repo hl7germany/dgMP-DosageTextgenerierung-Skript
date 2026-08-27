@@ -29,6 +29,7 @@ Daraus folgt für jeden Eintrag:
 
 #### Changed
 
+- Eine variable Frequenz (`frequencyMax`) oder Periode (`periodMax`) führt in den täglichen Schemata mit `when` oder `timeOfDay` jetzt zum Abbruch. Bisher wurde sie dort stillschweigend übergangen — `when = MORN` mit `frequencyMax = 3` ergab `1-0-0-0 Stück` und unterschlug die Spanne. Das Profil verbietet die Kombination über `TimingOnlyOneType`; die Schema-Erkennung bildet diese Bedingung jetzt vollständig ab.
 - Ein Mindestabstand zwischen zwei Gaben ist nur bei einer **reinen** Bedarfsdosierung zulässig (`asNeededBoolean = true` ohne `timing`). Tritt er zusammen mit einem strukturierten Rhythmus auf, bricht der Algorithmus ab. Der bisherige Baustein `, mit mindestens {Wert} {Einheit} Abstand` entfällt ersatzlos: Ein Rhythmus legt den Abstand zwischen zwei Gaben bereits fest, `alle 8 Stunden, mit mindestens 6 Stunden Abstand` ließ offen, welche Angabe gilt.
 - Die kanonische URL der Extension für den Mindestabstand lautet `…/StructureDefinition/MinimumIntervalBetweenAdministrations` statt `…/MindestabstandZwischenGaben`.
 - Wochentagsschemata dulden `frequency` sowie das redundante Paar `period = 1`, `periodUnit = wk` als Legacy-Angaben; sie ändern den erzeugten Text nicht. Jede andere Periode ist mit `dayOfWeek` nicht mehr kombinierbar.
