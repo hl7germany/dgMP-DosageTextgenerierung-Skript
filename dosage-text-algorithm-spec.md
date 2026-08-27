@@ -310,7 +310,22 @@ Abgeleitete Hilfsbedingungen:
 * `istReinesIntervall` = `hatFrequenz` **und** `hatPeriode` **und** `hatPeriodeneinheit` **und nicht** (`hatWhenCodes` oder `hatUhrzeit` oder `hatWochentag`)
 * `hatZulaessigeLegacyFelder` = **nicht** `hatFrequenzMax` **und nicht** `hatPeriodenMax` **und** ((**nicht** `hatPeriode` **und nicht** `hatPeriodeneinheit`) **oder** (`repeat.period = 1` **und** `repeat.periodUnit = 'wk'`))
 
-Zu `hatZulaessigeLegacyFelder`: Wochentagsschemata wiederholen sich implizit wöchentlich. `frequency` und das vollständige Paar `period = 1`, `periodUnit = wk` dürfen aus Gründen der Rückwärtskompatibilität redundant mitgeführt werden und ändern die Ausgabe nicht. Jede andere Periode beschreibt ein echtes Intervall und ist mit `dayOfWeek` nicht kombinierbar; eine variable Frequenz oder Periode ebenfalls nicht, weil Wochentage die Zahl der Anwendungen bereits festlegen.
+#### Legacy-Angaben
+
+In früheren Fassungen des Medication IG DE waren `frequency`, `period` und `periodUnit` in **allen** Dosierschemata verpflichtend — auch dort, wo sie nur wiederholen, was Wochentage, Tagesabschnitte oder Uhrzeiten bereits ausdrücken. Sie sind heute nur noch dort erforderlich, wo sie tatsächlich ein Intervall beschreiben. Damit bestehende Verordnungsdaten gültig bleiben, werden sie weiterhin geduldet. Sie begründen kein Intervallschema und **ändern die Ausgabe nicht**: Eine Ressource mit und eine ohne diese Felder erzeugen denselben Text.
+
+Zwei der oben genannten Hilfsbedingungen beschreiben denselben Sachverhalt für unterschiedliche Schemata und unterscheiden sich nur in der Periodeneinheit:
+
+| Bedingung | geduldetes Paar | verwendet in |
+|---|---|---|
+| `hatZulaessigeLegacyFelder` | `period = 1`, `periodUnit = wk` | Regel 4 und 5 (Wochentage) |
+| `istTagesmuster` | `period = 1`, `periodUnit = d` | Regel 3 und 6 (Tagesabschnitte, Uhrzeiten) |
+
+`frequency` wird in keiner der beiden Bedingungen geprüft: In diesen Schemata beeinflusst es die Schema-Erkennung nicht und wird nicht ausgegeben, weil die konkreten Zeitpunkte die Zahl der Gaben bereits festlegen. Die Invariante `TimingFrequencyCount` des Profils stellt sicher, dass ein angegebener Wert dieser Anzahl entspricht. Nur bei **wiederkehrenden Intervallen** (Regel 8) ist `frequency` keine Legacy-Angabe: Dort ist es konstituierend und erscheint im Text, etwa als `2 x alle 8 Stunden`.
+
+Wochentagsschemata wiederholen sich implizit wöchentlich, tägliche Schemata implizit täglich — daher die unterschiedliche Einheit. Jede **andere** Periode beschreibt ein echtes Intervall: Bei `dayOfWeek` ist sie unzulässig, bei `when` oder `timeOfDay` führt sie über `istNichtTagesmuster` zu Regel 7. Eine variable Frequenz oder Periode ist bei Wochentagen ebenfalls ausgeschlossen, weil die Wochentage die Zahl der Anwendungen bereits festlegen.
+
+Im Schema **Kombination von Zeitintervallen** (Regel 7) ist ausschließlich `frequency` eine Legacy-Angabe; `period` und `periodUnit` legen dort den Rhythmus fest.
 
 ### Prioritätsreihenfolge
 
