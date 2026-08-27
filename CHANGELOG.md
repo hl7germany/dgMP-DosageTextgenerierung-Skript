@@ -23,10 +23,14 @@ Daraus folgt für jeden Eintrag:
 #### Added
 
 - Normative Spezifikation [dosage-text-algorithm-spec.md](dosage-text-algorithm-spec.md). Sie ist gegenüber der Referenzimplementierung führend; weicht das Skript ab, gilt die Spezifikation.
+- Abschnitt „Legacy-Angaben" in der Spezifikation: `hatZulaessigeLegacyFelder` und `istTagesmuster` beschreiben denselben Sachverhalt für unterschiedliche Schemata und sind nun gemeinsam erklärt, samt Herkunft der Felder und Abgrenzung zu den Schemata, in denen sie konstituierend sind.
+- Blockquotes in der Spezifikation stehen nur noch für Unverbindliches — Orientierung, Hintergrund, Verweise. Sieben normative Regeln, die bisher als eingerückter Hinweis erschienen, sind Fließtext; das Intro benennt die Konvention.
 - Schema „Kombination von Zeitintervallen": eine nicht tägliche Periode (`d`, `wk` oder `mo`) zusammen mit `when` oder `timeOfDay`. Damit sind wöchentliche und monatliche Rhythmen mit konkreten Zeitpunkten abbildbar.
 
 #### Changed
 
+- Enthält eine Ressource mehrere `Dosage`-Elemente, muss jedes zu demselben Schema führen; andernfalls bricht der Algorithmus ab. Bisher bestimmte allein das erste Element das Schema, und ein abweichendes späteres Element entfiel stillschweigend — aus „morgens 1 Stück" und „montags 2 Stück" wurde `1-0-0-0 Stück`.
+- Eine variable Frequenz (`frequencyMax`) oder Periode (`periodMax`) führt in den täglichen Schemata mit `when` oder `timeOfDay` jetzt zum Abbruch. Bisher wurde sie dort stillschweigend übergangen — `when = MORN` mit `frequencyMax = 3` ergab `1-0-0-0 Stück` und unterschlug die Spanne. Das Profil verbietet die Kombination über `TimingOnlyOneType`; die Schema-Erkennung bildet diese Bedingung jetzt vollständig ab.
 - Ein Mindestabstand zwischen zwei Gaben ist nur bei einer **reinen** Bedarfsdosierung zulässig (`asNeededBoolean = true` ohne `timing`). Tritt er zusammen mit einem strukturierten Rhythmus auf, bricht der Algorithmus ab. Der bisherige Baustein `, mit mindestens {Wert} {Einheit} Abstand` entfällt ersatzlos: Ein Rhythmus legt den Abstand zwischen zwei Gaben bereits fest, `alle 8 Stunden, mit mindestens 6 Stunden Abstand` ließ offen, welche Angabe gilt.
 - Die kanonische URL der Extension für den Mindestabstand lautet `…/StructureDefinition/MinimumIntervalBetweenAdministrations` statt `…/MindestabstandZwischenGaben`.
 - Wochentagsschemata dulden `frequency` sowie das redundante Paar `period = 1`, `periodUnit = wk` als Legacy-Angaben; sie ändern den erzeugten Text nicht. Jede andere Periode ist mit `dayOfWeek` nicht mehr kombinierbar.

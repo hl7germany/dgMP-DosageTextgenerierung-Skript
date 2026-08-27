@@ -8,7 +8,9 @@ Voraussetzung für eine erfolgreiche Texterzeugung ist stets ein **profilkonform
 
 Diese Seite stellt zwei Aspekte dar: **Teil A** beschreibt, wie jede einzelne Angabe einer `Dosage` in Text überführt wird. **Teil B** beschreibt, wie diese Bausteine je zulässigem Schema zu einem vollständigen Dosierungstext zusammengesetzt werden.
 
-> Hinweis zur Bereichsdarstellung: Variable Angaben (Frequenz, Periode, Einzeldosis) werden durchgängig mit dem Wort **„bis"** gebildet (z. B. „1 bis 2 Stück"). Enthält das kompakte 4‑Schema einen variablen Wert, wird es in die ausgeschriebene Segmentform überführt (siehe [4‑Schema](#schema-mit-tageszeiten-bezug-4-schema)).
+Der gesamte Fließtext dieser Seite ist verbindlich. Eingerückte Blöcke enthalten ausschließlich Unverbindliches: Orientierungshilfen, Hintergrund und Verweise auf andere Dokumente.
+
+**Zur Bereichsdarstellung** — festgelegt in den jeweiligen Abschnitten, hier vorab zur Orientierung: Variable Angaben (Frequenz, Periode, Einzeldosis) werden durchgängig mit dem Wort **„bis"** gebildet (z. B. „1 bis 2 Stück"). Enthält das kompakte 4‑Schema einen variablen Wert, wird es in die ausgeschriebene Segmentform überführt (siehe [4‑Schema](#schema-mit-tageszeiten-bezug-4-schema)).
 
 ---
 
@@ -43,6 +45,8 @@ und anzahl(dosierungen) != 1:
 
 schema = erkenneSchema(dosierungen[0])
 wenn schema unbekannt: Fehler
+fuer jede weitere dosierung:
+  wenn erkenneSchema(dosierung) != schema: Fehler
 
 text = erzeugeSchemaspezifischenText(schema, dosierungen)
 wenn schema = Freitext: return text
@@ -62,7 +66,7 @@ Es wird ausschließlich `doseAndRate[0]` ausgewertet. Ist dort `doseQuantity` vo
 * beidseitig: `je {von} bis {bis} {Einheit}` (z. B. `je 1 bis 2 Stück`)
 * nur obere Grenze: `je bis zu {bis} {Einheit}` (z. B. `je bis zu 2 Stück`)
 
-> Nur die untere Grenze (`low` ohne `high`) ist **nicht zulässig** und wird durch die Invariante `DoseRangeHighRequiredWhenLowPresent` ausgeschlossen.
+Nur die untere Grenze (`low` ohne `high`) ist **nicht zulässig** und wird durch die Invariante `DoseRangeHighRequiredWhenLowPresent` ausgeschlossen.
 
 Ganzzahlige Werte werden ohne Nachkommastelle dargestellt; überflüssige Dezimalstelle und Komma entfallen (`1.0` → `1`). Dezimalwerte werden mit **deutschem Dezimalkomma** ausgegeben (z. B. `1,5`). Die maximale Anzahl von Nachkommastellen ist nicht eingeschränkt; Werte werden verlustfrei ohne Rundung übernommen. Die Verantwortung für sinnvolle Präzision (z. B. nicht mehr als 2 Nachkommastellen) liegt beim aufrufenden System.
 
@@ -235,7 +239,7 @@ Ergänzende Einnahmehinweise werden aus `patientInstruction` (einzelner String, 
 
 Der Hinweis wird als **eigener Satz** angehängt. Der bisherige strukturierte Dosierungstext erhält einen abschließenden Punkt, gefolgt von `Hinweis: {Text}`. Ist bereits ein Punkt vorhanden, wird kein zweiter ergänzt. Bei profilkonformen Eingaben erzeugt der Algorithmus den Punkt regulär beim Anhängen des Hinweises. Beispiel: `1-0-1-0 Stück. Hinweis: Nach dem Essen`.
 
-> `additionalInstruction` wird **nicht** verwendet und ist im Profil `DosageDgMP` auf `0..0` gestrichen; es bleibt für künftige strukturierte Zusatzangaben reserviert.
+`additionalInstruction` wird **nicht** verwendet und ist im Profil `DosageDgMP` auf `0..0` gestrichen; es bleibt für künftige strukturierte Zusatzangaben reserviert.
 
 Auch `route` wird vom Algorithmus nicht gelesen oder ausgegeben; es steht in der Liste zukünftig unterstützter Dosierkonfigurationen (siehe [Beispiele von erzeugten Dosiertexten](https://ig.fhir.de/igs/medication/dosierung-beispiele.html)).
 
@@ -266,7 +270,7 @@ Die folgenden Zeichen sind für den erzeugten Text **verbindlich festgelegt**. M
 
 Für die Umlaute in den festen Wortbestandteilen (`täglich`, `wöchentlich`, `für`) gilt die **vorkomponierte NFC-Form**: `ä` U+00E4, `ö` U+00F6, `ü` U+00FC — **nicht** die zerlegte Form aus Grundbuchstabe und kombinierendem Trema (`a` + U+0308). Der gesamte erzeugte Text ist NFC-normalisiert. Ein `ß` kommt in keinem vom Algorithmus erzeugten Wortbestandteil vor.
 
-> Nicht Teil dieses Repertoires sind Zeichen, die **unverändert aus dem Input übernommen** werden: die Dosiereinheit (`doseQuantity.unit`), der Einnahmeanlass (`asNeededFor`), der Hinweis (`patientInstruction`) und der Freitext (`Dosage.text`). Sie werden weder ersetzt noch normalisiert.
+Nicht Teil dieses Repertoires sind Zeichen, die **unverändert aus dem Input übernommen** werden: die Dosiereinheit (`doseQuantity.unit`), der Einnahmeanlass (`asNeededFor`), der Hinweis (`patientInstruction`) und der Freitext (`Dosage.text`). Sie werden weder ersetzt noch normalisiert.
 
 Strukturierte Schemata erzeugen keine Zeilenumbrüche; ihr Text steht in einer Zeile. Die Freitext-Dosierung durchläuft die nachfolgende Normalisierung nicht und kann daher im Feld enthaltene Zeilenumbrüche beibehalten; lediglich der unter [Freitext-Dosierung](#freitext-dosierung) beschriebene `trim` wird angewendet. Diese Ausnahme ist notwendig, weil die Invariante `FreeTextMatchesRenderedText` exakte Gleichheit zwischen `renderedDosageInstruction` und `Dosage.text` verlangt.
 
@@ -284,7 +288,9 @@ Der Gedankenstrich (`—`) und Klammern bleiben dabei unangetastet.
 
 ## Schema-Erkennung
 
-Bevor die Bausteine zusammengesetzt werden, wird genau **ein** Darstellungsschema bestimmt. Grundlage der Erkennung ist das **erste `Dosage`-Element** der Ressource; der profilkonforme Input stellt sicher, dass alle weiteren Elemente strukturell dazu passen und nur zusätzliche Segmente beisteuern.
+Bevor die Bausteine zusammengesetzt werden, wird genau **ein** Darstellungsschema bestimmt. Es gilt für die gesamte Ressource: Enthält sie mehrere `Dosage`-Elemente, muss **jedes** zu demselben Schema führen, sonst bricht der Algorithmus ab. Grundlage der Erkennung ist zwar das erste Element, ein abweichendes späteres Element würde bei der Textbildung aber übergangen — und mit ihm eine vollständige Gabe: Aus „morgens 1 Stück" und „montags 2 Stück" entstünde kommentarlos `1-0-0-0 Stück`. Die Invarianten `TimingOnlyOneType` und `TimingOnlyWhenOrTimeOfDay` schließen das für profilkonformen Input aus; der Algorithmus verlässt sich darauf nicht.
+
+ Grundlage der Erkennung ist das **erste `Dosage`-Element** der Ressource; der profilkonforme Input stellt sicher, dass alle weiteren Elemente strukturell dazu passen und nur zusätzliche Segmente beisteuern.
 
 ### Ausgewertete Merkmale (auf `timing.repeat` des ersten Elements)
 
@@ -305,12 +311,27 @@ Bevor die Bausteine zusammengesetzt werden, wird genau **ein** Darstellungsschem
 
 Abgeleitete Hilfsbedingungen:
 
-* `istTagesmuster` = `repeat.period = 1` **und** `repeat.periodUnit = 'd'` **und nicht** `hatPeriodenMax`
+* `istTagesmuster` = `repeat.period = 1` **und** `repeat.periodUnit = 'd'` **und nicht** `hatPeriodenMax` — dient nur der Abgrenzung von `istNichtTagesmuster` in Regel 7
 * `istNichtTagesmuster` = `hatPeriode` **und** `hatPeriodeneinheit` **und nicht** `istTagesmuster`
 * `istReinesIntervall` = `hatFrequenz` **und** `hatPeriode` **und** `hatPeriodeneinheit` **und nicht** (`hatWhenCodes` oder `hatUhrzeit` oder `hatWochentag`)
-* `hatZulaessigeLegacyFelder` = **nicht** `hatFrequenzMax` **und nicht** `hatPeriodenMax` **und** ((**nicht** `hatPeriode` **und nicht** `hatPeriodeneinheit`) **oder** (`repeat.period = 1` **und** `repeat.periodUnit = 'wk'`))
+* `hatZulaessigeLegacyFelder(einheit)` = **nicht** `hatFrequenzMax` **und nicht** `hatPeriodenMax` **und** ((**nicht** `hatPeriode` **und nicht** `hatPeriodeneinheit`) **oder** (`repeat.period = 1` **und** `repeat.periodUnit = einheit`))
 
-Zu `hatZulaessigeLegacyFelder`: Wochentagsschemata wiederholen sich implizit wöchentlich. `frequency` und das vollständige Paar `period = 1`, `periodUnit = wk` dürfen aus Gründen der Rückwärtskompatibilität redundant mitgeführt werden und ändern die Ausgabe nicht. Jede andere Periode beschreibt ein echtes Intervall und ist mit `dayOfWeek` nicht kombinierbar; eine variable Frequenz oder Periode ebenfalls nicht, weil Wochentage die Zahl der Anwendungen bereits festlegen.
+#### Legacy-Angaben
+
+In früheren Fassungen des Medication IG DE waren `frequency`, `period` und `periodUnit` in **allen** Dosierschemata verpflichtend — auch dort, wo sie nur wiederholen, was Wochentage, Tagesabschnitte oder Uhrzeiten bereits ausdrücken. Sie sind heute nur noch dort erforderlich, wo sie tatsächlich ein Intervall beschreiben. Damit bestehende Verordnungsdaten gültig bleiben, werden sie weiterhin geduldet. Sie begründen kein Intervallschema und **ändern die Ausgabe nicht**: Eine Ressource mit und eine ohne diese Felder erzeugen denselben Text.
+
+Die Bedingung `hatZulaessigeLegacyFelder` gilt für alle vier betroffenen Schemata; sie unterscheiden sich nur in der Periodeneinheit, die sich aus der impliziten Wiederholung des Schemas ergibt:
+
+| Aufruf | geduldetes Paar | verwendet in |
+|---|---|---|
+| `hatZulaessigeLegacyFelder('wk')` | `period = 1`, `periodUnit = wk` | Regel 4 und 5 (Wochentage) |
+| `hatZulaessigeLegacyFelder('d')` | `period = 1`, `periodUnit = d` | Regel 3 und 6 (Tagesabschnitte, Uhrzeiten) |
+
+`frequency` wird in keiner der beiden Bedingungen geprüft: In diesen Schemata beeinflusst es die Schema-Erkennung nicht und wird nicht ausgegeben, weil die konkreten Zeitpunkte die Zahl der Gaben bereits festlegen. Die Invariante `TimingFrequencyCount` des Profils stellt sicher, dass ein angegebener Wert dieser Anzahl entspricht. Nur bei **wiederkehrenden Intervallen** (Regel 8) ist `frequency` keine Legacy-Angabe: Dort ist es konstituierend und erscheint im Text, etwa als `2 x alle 8 Stunden`.
+
+Wochentagsschemata wiederholen sich implizit wöchentlich, tägliche Schemata implizit täglich — daher die unterschiedliche Einheit. Jede **andere** Periode beschreibt ein echtes Intervall: Bei `dayOfWeek` ist sie unzulässig, bei `when` oder `timeOfDay` führt sie über `istNichtTagesmuster` zu Regel 7. Eine variable Frequenz oder Periode ist bei Wochentagen ebenfalls ausgeschlossen, weil die Wochentage die Zahl der Anwendungen bereits festlegen.
+
+Im Schema **Kombination von Zeitintervallen** (Regel 7) ist ausschließlich `frequency` eine Legacy-Angabe; `period` und `periodUnit` legen dort den Rhythmus fest.
 
 ### Prioritätsreihenfolge
 
@@ -320,15 +341,15 @@ Die Regeln werden **von oben nach unten** geprüft; die **erste** zutreffende Re
 |---|--------|-----------|
 | 1 | **Freitext-Dosierung** | `hatText` **und nicht** `hatTiming` **und nicht** `hatDosis` |
 | 2 | **Bedarfsmedikation (rein)** | `istBedarf` **und nicht** `hatTiming` |
-| 3 | **4-Schema** (Tageszeiten) | `hatWhenCodes` **und nicht** `hatUhrzeit` **und nicht** `hatWochentag` **und** (`istTagesmuster` **oder** (nicht `hatPeriode` **und** nicht `hatPeriodeneinheit`)) |
-| 4 | **Wochentags-Bezug** | `hatWochentag` **und nicht** `hatWhenCodes` **und nicht** `hatUhrzeit` **und** `hatZulaessigeLegacyFelder` |
-| 5 | **Kombination von Wochentagen** | `hatWochentag` **und** (`hatUhrzeit` **oder** `hatWhenCodes`) **und** `hatZulaessigeLegacyFelder` |
-| 6 | **Uhrzeiten-Bezug** | `hatUhrzeit` **und nicht** `hatWochentag` **und nicht** `hatWhenCodes` **und** (`istTagesmuster` **oder** (nicht `hatPeriode` **und** nicht `hatPeriodeneinheit`)) |
+| 3 | **4-Schema** (Tageszeiten) | `hatWhenCodes` **und nicht** `hatUhrzeit` **und nicht** `hatWochentag` **und** `hatZulaessigeLegacyFelder('d')` |
+| 4 | **Wochentags-Bezug** | `hatWochentag` **und nicht** `hatWhenCodes` **und nicht** `hatUhrzeit` **und** `hatZulaessigeLegacyFelder('wk')` |
+| 5 | **Kombination von Wochentagen** | `hatWochentag` **und** (`hatUhrzeit` **oder** `hatWhenCodes`) **und** `hatZulaessigeLegacyFelder('wk')` |
+| 6 | **Uhrzeiten-Bezug** | `hatUhrzeit` **und nicht** `hatWochentag` **und nicht** `hatWhenCodes` **und** `hatZulaessigeLegacyFelder('d')` |
 | 7 | **Kombination von Zeitintervallen** | `istNichtTagesmuster` **und** (`hatUhrzeit` **oder** `hatWhenCodes`) **und nicht** `hatWochentag` **und** `repeat.periodUnit` ∈ {`d`, `wk`, `mo`} |
 | 8 | **Wiederkehrende Intervalle** | `istReinesIntervall` |
 | – | **Abbruch** | trifft keine Regel zu |
 
-> **Bedarf als Querschnittsmerkmal:** Nur der **reine** Bedarf (ohne `timing`, Regel 2) ist ein eigenes Schema. Ist zusätzlich ein `timing` vorhanden, wird über die Regeln 3–8 das strukturierte Schema bestimmt; die Bedarfskennzeichnung (`asNeededBoolean`, Einnahmeanlass, Mindestabstand, Maximalmenge) wird dann beim Zusammensetzen als Präfix/Suffix ergänzt (siehe [Schema für Bedarfsmedikation](#schema-für-bedarfsmedikation)).
+**Bedarf als Querschnittsmerkmal:** Nur der **reine** Bedarf (ohne `timing`, Regel 2) ist ein eigenes Schema. Ist zusätzlich ein `timing` vorhanden, wird über die Regeln 3–8 das strukturierte Schema bestimmt; die Bedarfskennzeichnung (`asNeededBoolean`, Einnahmeanlass, Mindestabstand, Maximalmenge) wird dann beim Zusammensetzen als Präfix/Suffix ergänzt (siehe [Schema für Bedarfsmedikation](#schema-für-bedarfsmedikation)).
 
 ---
 
@@ -360,7 +381,7 @@ Die Werte werden über alle `Dosage`-Elemente eingesammelt. Für jedes Element w
 
 *Beispiel:* `für 5 Tage: 1-1-1-1 Kapseln`
 
-> **Variabilität:** Enthält eine der Positionen einen variablen Wert (Bereich), wird das kompakte Schema in die ausgeschriebene Segmentform (nur belegte Positionen) überführt, z. B. `morgens — je 1 bis 2 Stück, abends — je 2 Stück`. Feste 4‑Schemata bleiben kompakt (`1-0-2-0 Stück`).
+**Variabilität:** Enthält eine der Positionen einen variablen Wert (Bereich), wird das kompakte Schema in die ausgeschriebene Segmentform (nur belegte Positionen) überführt, z. B. `morgens — je 1 bis 2 Stück, abends — je 2 Stück`. Feste 4‑Schemata bleiben kompakt (`1-0-2-0 Stück`).
 
 ### Schema mit Uhrzeiten-Bezug
 
@@ -424,7 +445,7 @@ Jeder belegte Tag bildet mit seinen Uhrzeiten oder seinem Tagesabschnitts-Muster
 
 Bei der Kombination mit Tagesabschnitten stammt die gemeinsame Einheit aus dem ersten Element mit auswertbarer Dosis. Wird bei nicht profilkonformem Input dieselbe Kombination aus Wochentag und Tagesabschnitt mehrfach mit unterschiedlicher Dosis belegt, bricht der Algorithmus ab: `ValueError("Doppelte Belegung der Kombination aus Wochentag '{code}' und Zeit-/Tagesabschnitt '{zeit}' mit unterschiedlicher Dosis.")` Wie beim reinen Wochentags-Schema beeinflussen `frequency` sowie das redundante Paar `period = 1`, `periodUnit = wk` die Ausgabe nicht. `frequencyMax`, `periodMax` und jede andere Periode sind in diesem Schema nicht zulässig (siehe [Schema-Erkennung](#schema-erkennung)).
 
-> **Variabilität:** Enthält **irgendein** Tag einen variablen Wert (Bereich), wird die ausgeschriebene Segmentform für **alle** Tage verwendet, damit die Notation über den gesamten Text einheitlich bleibt — z. B. `montags morgens — je 1 bis 2 Stück; mittwochs abends — je 2 Stück`. Sind alle Werte fest, bleiben alle Tage kompakt (`montags 1-0-1-0 Stück; mittwochs 2-1-2-0 Stück`).
+**Variabilität:** Enthält **irgendein** Tag einen variablen Wert (Bereich), wird die ausgeschriebene Segmentform für **alle** Tage verwendet, damit die Notation über den gesamten Text einheitlich bleibt — z. B. `montags morgens — je 1 bis 2 Stück; mittwochs abends — je 2 Stück`. Sind alle Werte fest, bleiben alle Tage kompakt (`montags 1-0-1-0 Stück; mittwochs 2-1-2-0 Stück`).
 
 ### Schema für Bedarfsmedikation
 
@@ -496,7 +517,7 @@ Die folgende Tabelle nennt für jeden dynamischen Baustein den genauen Lese-Pfad
 * Einnahmeanlass: `http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor`
 * Mindestabstand: `http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations`
 
-> Beide Extensions werden über ihre **exakte kanonische `url`** identifiziert.
+Beide Extensions werden über ihre **exakte kanonische `url`** identifiziert.
 
 > Zur `asNeededFor`-Extension: Die kanonische URL `http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor` stammt aus FHIR R5, wird hier aber gemäß dem Cross-Version-Extension-Pattern bewusst für ein R4-Profil (FHIR 4.0.1) zurückportiert. Das ist ein im FHIR-Ökosystem etabliertes Vorgehen, um R5-Konzepte in R4-Implementierungen vorwegzunehmen.
 
@@ -536,6 +557,7 @@ Die formale Definition zulässiger Felder und Kombinationen liegt in den Timing-
 * `doseRange` ohne erforderliche obere Grenze: Abbruch mit `ValueError("doseRange.high.value ist für die Textgenerierung erforderlich.")`; eine fehlende Einheit führt entsprechend zu `ValueError("doseRange.high.unit ist für die Textgenerierung erforderlich.")`
 * `doseRange.high.value <= 0`: Abbruch mit `ValueError("doseRange.high.value muss größer als 0 sein.")`
 * vorhandenes `doseRange.low` ohne `.value` oder `.unit`: Abbruch mit der entsprechenden Fehlermeldung für `doseRange.low.value` beziehungsweise `doseRange.low.unit`
+* mehrere `Dosage`-Elemente mit unterschiedlichem Schema: Abbruch mit `ValueError("Alle Dosage-Elemente müssen demselben Schema folgen; Element 1 ergibt '{schema1}', Element {n} '{schemaN}'.")`
 * vorhandenes `doseRange.low.value < 0`: Abbruch mit `ValueError("doseRange.low.value darf nicht negativ sein.")`. Der Wert `0` ist hier — anders als bei `doseQuantity` und `doseRange.high` — zulässig, weil er die Untergrenze einer variablen Dosis wie „0 bis 2 Stück“ bildet
 * unterschiedliche Einheiten in `doseRange.low` und `doseRange.high`: Abbruch mit `ValueError("doseRange.low.unit und doseRange.high.unit müssen übereinstimmen.")`
 * vorhandenes `boundsDuration` ohne `.value` oder `.code`: Abbruch mit einer entsprechenden Pflichtfeldmeldung; ein nicht numerischer Wert oder ein Wert `<= 0` führt zu `ValueError("boundsDuration.value muss größer als 0 sein.")`

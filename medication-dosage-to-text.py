@@ -169,6 +169,22 @@ class MedicationDosageTextGenerator:
         # Step 2: Determine which dosage schema applies (implements TimingOnlyOneType logic)
         schema_type = self._determine_dosage_schema(dosage_instructions)
 
+        # Die Erkennung stützt sich auf das erste Dosage-Element. Gehörte ein
+        # späteres Element zu einem anderen Schema, würde es bei der Textbildung
+        # übergangen — und mit ihm eine vollständige Gabe: Aus „morgens 1 Stück"
+        # plus „montags 2 Stück" entstünde kommentarlos „1-0-0-0 Stück". Die
+        # Invarianten TimingOnlyOneType und TimingOnlyWhenOrTimeOfDay schließen
+        # das aus; der Algorithmus verlässt sich darauf nicht, weil eine
+        # unterschlagene Dosis der gefährlichste Ausgang wäre.
+        for position, dosage in enumerate(dosage_instructions[1:], start=2):
+            other_schema = self._determine_dosage_schema([dosage])
+            if other_schema != schema_type:
+                raise ValueError(
+                    "Alle Dosage-Elemente müssen demselben Schema folgen; "
+                    f"Element 1 ergibt '{schema_type}', Element {position} "
+                    f"'{other_schema}'."
+                )
+
         # Step 3: Generate text using the appropriate schema-specific method
         text_generators = {
             self.SCHEMA_FREE_TEXT: self._generate_freetext_schema_text,
@@ -292,21 +308,32 @@ class MedicationDosageTextGenerator:
         is_non_daily_pattern = (has_period and has_period_unit and not is_daily_pattern)
         is_pure_interval = (has_frequency and has_period and has_period_unit and
                             not has_when_codes and not has_time_of_day and not has_day_of_week)
-        has_valid_weekday_legacy_fields = (
-            'frequencyMax' not in repeat_element and
-            'periodMax' not in repeat_element and
-            (
-                (not has_period and not has_period_unit) or
-                (repeat_element.get('period') == 1 and
-                 repeat_element.get('periodUnit') == 'wk')
+        def has_valid_legacy_fields(period_unit):
+            """Geduldete Legacy-Angaben fuer ein Schema mit impliziter Wiederholung.
+
+            frequency wird hier nicht geprueft: Es beeinflusst die Erkennung nicht
+            und wird nie ausgegeben. Eine variable Frequenz oder Periode ist dagegen
+            ausgeschlossen - die konkreten Zeitpunkte legen die Zahl der Gaben
+            bereits fest, eine Spanne daneben liesse sich nur unterschlagen.
+            """
+            return (
+                'frequencyMax' not in repeat_element and
+                'periodMax' not in repeat_element and
+                (
+                    (not has_period and not has_period_unit) or
+                    (repeat_element.get('period') == 1 and
+                     repeat_element.get('periodUnit') == period_unit)
+                )
             )
-        )
+
+        has_valid_weekday_legacy_fields = has_valid_legacy_fields('wk')
+        has_valid_daily_legacy_fields = has_valid_legacy_fields('d')
 
         # Schema 3: 4-Schema. Konkrete Tagesabschnitte legen die Zahl der Gaben
         # bereits fest. frequency sowie das tägliche period/periodUnit-Paar sind
         # optional und ändern die Textausgabe nicht.
         if (has_when_codes and not has_time_of_day and not has_day_of_week and
-                (is_daily_pattern or (not has_period and not has_period_unit))):
+                has_valid_daily_legacy_fields):
             return self.SCHEMA_4_PATTERN
 
         # Schema 4: DayOfWeek. frequency/period/periodUnit may be present as
@@ -324,7 +351,7 @@ class MedicationDosageTextGenerator:
         # Schema 6: TimeOfDay. frequency sowie das tägliche
         # period/periodUnit-Paar sind optional und ändern die Textausgabe nicht.
         if (has_time_of_day and not has_day_of_week and not has_when_codes and
-                (is_daily_pattern or (not has_period and not has_period_unit))):
+                has_valid_daily_legacy_fields):
             return self.SCHEMA_TIME_OF_DAY
 
         # Schema 7: Äußeres, nicht tägliches Intervall mit konkreten Zeitpunkten.

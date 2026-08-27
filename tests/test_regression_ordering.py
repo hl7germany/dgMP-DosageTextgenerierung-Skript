@@ -600,3 +600,100 @@ class SchemaOutputTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DailyLegacyFieldsTest(unittest.TestCase):
+    """Variable Angaben sind in den taeglichen Schemata unzulaessig.
+
+    Frueher wurden frequencyMax und periodMax dort stillschweigend uebergangen:
+    "when + frequencyMax" ergab 1-0-0-0 Stueck und unterschlug die Spanne. Das
+    Profil verbietet die Kombination ueber TimingOnlyOneType; der Algorithmus
+    bricht jetzt ebenfalls ab.
+    """
+
+    def setUp(self):
+        self.generator = MODULE.MedicationDosageTextGenerator()
+
+    def _resource(self, dosage_instructions):
+        return {"resourceType": "MedicationRequest",
+                "dosageInstruction": dosage_instructions}
+
+    def _dosage(self, **repeat):
+        return {
+            "timing": {"repeat": repeat},
+            "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
+        }
+
+    def test_variable_frequency_or_period_is_rejected_in_daily_schemas(self):
+        for repeat in (
+            {"when": ["MORN"], "frequencyMax": 3},
+            {"when": ["MORN"], "periodMax": 3},
+            {"timeOfDay": ["08:00:00"], "frequencyMax": 3},
+            {"timeOfDay": ["08:00:00"], "periodMax": 3},
+        ):
+            with self.subTest(repeat=repeat):
+                with self.assertRaises(ValueError):
+                    self.generator.generate_dosage_text(
+                        self._resource([self._dosage(**repeat)])
+                    )
+
+    def test_daily_legacy_pair_still_produces_the_same_text(self):
+        ohne = self._dosage(when=["MORN", "EVE"])
+        mit = self._dosage(when=["MORN", "EVE"], frequency=2, period=1, periodUnit="d")
+        self.assertEqual(
+            self.generator.generate_dosage_text(self._resource([ohne])),
+            self.generator.generate_dosage_text(self._resource([mit])),
+        )
+
+
+class MixedSchemaTest(unittest.TestCase):
+    """Alle Dosage-Elemente muessen demselben Schema folgen.
+
+    Die Schema-Erkennung stuetzt sich auf das erste Element. Frueher wurde ein
+    abweichendes spaeteres Element bei der Textbildung uebergangen - und mit ihm
+    eine vollstaendige Gabe: "morgens 1 Stueck" plus "montags 2 Stueck" ergab
+    kommentarlos "1-0-0-0 Stueck".
+    """
+
+    def setUp(self):
+        self.generator = MODULE.MedicationDosageTextGenerator()
+
+    def _dosage(self, dose, **repeat):
+        return {
+            "timing": {"repeat": repeat},
+            "doseAndRate": [{"doseQuantity": {"value": dose, "unit": "Stück"}}],
+        }
+
+    def _text(self, *dosages):
+        return self.generator.generate_dosage_text(
+            {"resourceType": "MedicationRequest", "dosageInstruction": list(dosages)}
+        )
+
+    def test_mixed_schemas_are_rejected(self):
+        cases = (
+            (self._dosage(1, when=["MORN"]), self._dosage(2, dayOfWeek=["mon"])),
+            (self._dosage(1, dayOfWeek=["mon"]), self._dosage(2, when=["EVE"])),
+            (self._dosage(1, when=["MORN"]), self._dosage(2, timeOfDay=["20:00:00"])),
+            (self._dosage(1, when=["MORN"]),
+             self._dosage(2, frequency=1, period=8, periodUnit="h")),
+            (self._dosage(1, when=["MORN"]), self._dosage(2, when=["EVE"], periodMax=3)),
+        )
+        for first, second in cases:
+            with self.subTest(second=second["timing"]["repeat"]):
+                with self.assertRaises(ValueError):
+                    self._text(first, second)
+
+    def test_same_schema_across_elements_still_works(self):
+        self.assertEqual(
+            self._text(self._dosage(1, when=["MORN"]), self._dosage(2, when=["EVE"])),
+            "1-0-2-0 Stück",
+        )
+
+    def test_legacy_fields_in_only_one_element_do_not_split_the_schema(self):
+        self.assertEqual(
+            self._text(
+                self._dosage(1, when=["MORN"]),
+                self._dosage(2, when=["EVE"], frequency=2, period=1, periodUnit="d"),
+            ),
+            "1-0-2-0 Stück",
+        )
