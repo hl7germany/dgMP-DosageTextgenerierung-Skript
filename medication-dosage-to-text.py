@@ -169,6 +169,22 @@ class MedicationDosageTextGenerator:
         # Step 2: Determine which dosage schema applies (implements TimingOnlyOneType logic)
         schema_type = self._determine_dosage_schema(dosage_instructions)
 
+        # Die Erkennung stützt sich auf das erste Dosage-Element. Gehörte ein
+        # späteres Element zu einem anderen Schema, würde es bei der Textbildung
+        # übergangen — und mit ihm eine vollständige Gabe: Aus „morgens 1 Stück"
+        # plus „montags 2 Stück" entstünde kommentarlos „1-0-0-0 Stück". Die
+        # Invarianten TimingOnlyOneType und TimingOnlyWhenOrTimeOfDay schließen
+        # das aus; der Algorithmus verlässt sich darauf nicht, weil eine
+        # unterschlagene Dosis der gefährlichste Ausgang wäre.
+        for position, dosage in enumerate(dosage_instructions[1:], start=2):
+            other_schema = self._determine_dosage_schema([dosage])
+            if other_schema != schema_type:
+                raise ValueError(
+                    "Alle Dosage-Elemente müssen demselben Schema folgen; "
+                    f"Element 1 ergibt '{schema_type}', Element {position} "
+                    f"'{other_schema}'."
+                )
+
         # Step 3: Generate text using the appropriate schema-specific method
         text_generators = {
             self.SCHEMA_FREE_TEXT: self._generate_freetext_schema_text,

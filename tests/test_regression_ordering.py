@@ -644,3 +644,56 @@ class DailyLegacyFieldsTest(unittest.TestCase):
             self.generator.generate_dosage_text(self._resource([ohne])),
             self.generator.generate_dosage_text(self._resource([mit])),
         )
+
+
+class MixedSchemaTest(unittest.TestCase):
+    """Alle Dosage-Elemente muessen demselben Schema folgen.
+
+    Die Schema-Erkennung stuetzt sich auf das erste Element. Frueher wurde ein
+    abweichendes spaeteres Element bei der Textbildung uebergangen - und mit ihm
+    eine vollstaendige Gabe: "morgens 1 Stueck" plus "montags 2 Stueck" ergab
+    kommentarlos "1-0-0-0 Stueck".
+    """
+
+    def setUp(self):
+        self.generator = MODULE.MedicationDosageTextGenerator()
+
+    def _dosage(self, dose, **repeat):
+        return {
+            "timing": {"repeat": repeat},
+            "doseAndRate": [{"doseQuantity": {"value": dose, "unit": "Stück"}}],
+        }
+
+    def _text(self, *dosages):
+        return self.generator.generate_dosage_text(
+            {"resourceType": "MedicationRequest", "dosageInstruction": list(dosages)}
+        )
+
+    def test_mixed_schemas_are_rejected(self):
+        cases = (
+            (self._dosage(1, when=["MORN"]), self._dosage(2, dayOfWeek=["mon"])),
+            (self._dosage(1, dayOfWeek=["mon"]), self._dosage(2, when=["EVE"])),
+            (self._dosage(1, when=["MORN"]), self._dosage(2, timeOfDay=["20:00:00"])),
+            (self._dosage(1, when=["MORN"]),
+             self._dosage(2, frequency=1, period=8, periodUnit="h")),
+            (self._dosage(1, when=["MORN"]), self._dosage(2, when=["EVE"], periodMax=3)),
+        )
+        for first, second in cases:
+            with self.subTest(second=second["timing"]["repeat"]):
+                with self.assertRaises(ValueError):
+                    self._text(first, second)
+
+    def test_same_schema_across_elements_still_works(self):
+        self.assertEqual(
+            self._text(self._dosage(1, when=["MORN"]), self._dosage(2, when=["EVE"])),
+            "1-0-2-0 Stück",
+        )
+
+    def test_legacy_fields_in_only_one_element_do_not_split_the_schema(self):
+        self.assertEqual(
+            self._text(
+                self._dosage(1, when=["MORN"]),
+                self._dosage(2, when=["EVE"], frequency=2, period=1, periodUnit="d"),
+            ),
+            "1-0-2-0 Stück",
+        )

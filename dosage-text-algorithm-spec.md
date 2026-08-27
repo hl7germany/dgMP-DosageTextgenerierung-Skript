@@ -45,6 +45,8 @@ und anzahl(dosierungen) != 1:
 
 schema = erkenneSchema(dosierungen[0])
 wenn schema unbekannt: Fehler
+fuer jede weitere dosierung:
+  wenn erkenneSchema(dosierung) != schema: Fehler
 
 text = erzeugeSchemaspezifischenText(schema, dosierungen)
 wenn schema = Freitext: return text
@@ -286,7 +288,9 @@ Der Gedankenstrich (`—`) und Klammern bleiben dabei unangetastet.
 
 ## Schema-Erkennung
 
-Bevor die Bausteine zusammengesetzt werden, wird genau **ein** Darstellungsschema bestimmt. Grundlage der Erkennung ist das **erste `Dosage`-Element** der Ressource; der profilkonforme Input stellt sicher, dass alle weiteren Elemente strukturell dazu passen und nur zusätzliche Segmente beisteuern.
+Bevor die Bausteine zusammengesetzt werden, wird genau **ein** Darstellungsschema bestimmt. Es gilt für die gesamte Ressource: Enthält sie mehrere `Dosage`-Elemente, muss **jedes** zu demselben Schema führen, sonst bricht der Algorithmus ab. Grundlage der Erkennung ist zwar das erste Element, ein abweichendes späteres Element würde bei der Textbildung aber übergangen — und mit ihm eine vollständige Gabe: Aus „morgens 1 Stück" und „montags 2 Stück" entstünde kommentarlos `1-0-0-0 Stück`. Die Invarianten `TimingOnlyOneType` und `TimingOnlyWhenOrTimeOfDay` schließen das für profilkonformen Input aus; der Algorithmus verlässt sich darauf nicht.
+
+ Grundlage der Erkennung ist das **erste `Dosage`-Element** der Ressource; der profilkonforme Input stellt sicher, dass alle weiteren Elemente strukturell dazu passen und nur zusätzliche Segmente beisteuern.
 
 ### Ausgewertete Merkmale (auf `timing.repeat` des ersten Elements)
 
@@ -553,6 +557,7 @@ Die formale Definition zulässiger Felder und Kombinationen liegt in den Timing-
 * `doseRange` ohne erforderliche obere Grenze: Abbruch mit `ValueError("doseRange.high.value ist für die Textgenerierung erforderlich.")`; eine fehlende Einheit führt entsprechend zu `ValueError("doseRange.high.unit ist für die Textgenerierung erforderlich.")`
 * `doseRange.high.value <= 0`: Abbruch mit `ValueError("doseRange.high.value muss größer als 0 sein.")`
 * vorhandenes `doseRange.low` ohne `.value` oder `.unit`: Abbruch mit der entsprechenden Fehlermeldung für `doseRange.low.value` beziehungsweise `doseRange.low.unit`
+* mehrere `Dosage`-Elemente mit unterschiedlichem Schema: Abbruch mit `ValueError("Alle Dosage-Elemente müssen demselben Schema folgen; Element 1 ergibt '{schema1}', Element {n} '{schemaN}'.")`
 * vorhandenes `doseRange.low.value < 0`: Abbruch mit `ValueError("doseRange.low.value darf nicht negativ sein.")`. Der Wert `0` ist hier — anders als bei `doseQuantity` und `doseRange.high` — zulässig, weil er die Untergrenze einer variablen Dosis wie „0 bis 2 Stück“ bildet
 * unterschiedliche Einheiten in `doseRange.low` und `doseRange.high`: Abbruch mit `ValueError("doseRange.low.unit und doseRange.high.unit müssen übereinstimmen.")`
 * vorhandenes `boundsDuration` ohne `.value` oder `.code`: Abbruch mit einer entsprechenden Pflichtfeldmeldung; ein nicht numerischer Wert oder ein Wert `<= 0` führt zu `ValueError("boundsDuration.value muss größer als 0 sein.")`
