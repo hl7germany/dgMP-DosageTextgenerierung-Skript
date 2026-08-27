@@ -2,6 +2,7 @@
 
 import importlib.util
 import unittest
+import pathlib
 from pathlib import Path
 
 
@@ -662,8 +663,15 @@ class MedicationDosageTextTest(unittest.TestCase):
             "wöchentlich: morgens — je 1 Stück",
         )
 
-    def test_algorithm_version_is_2_0_0(self):
-        self.assertEqual(MODULE.__version__, "2.0.0")
+    def test_algorithm_version_matches_spec(self):
+        """__version__ wird als algorithmVersion in jede Ressource geschrieben.
+
+        Der Wert muss mit der Versionsangabe der Spezifikation uebereinstimmen;
+        beim Tag-Push prueft die CI zusaetzlich gegen den Tag.
+        """
+        spec = (pathlib.Path(__file__).resolve().parents[1]
+                / "dosage-text-algorithm-spec.md").read_text(encoding="utf-8")
+        self.assertIn(f"Algorithmus-Version **{MODULE.__version__}**", spec)
 
     def test_all_supported_resource_types_use_their_dosage_field(self):
         dosage = self.dosage(

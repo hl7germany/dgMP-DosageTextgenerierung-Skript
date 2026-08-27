@@ -16,7 +16,7 @@ Daraus folgt für jeden Eintrag:
 
 Ändert sich nur die Referenzimplementierung, bleibt die Versionsnummer stehen.
 
-## [2.0.0] - tbd
+## [2.0.0-alpha1] - 2026-08-27
 
 ### Algorithmus
 
