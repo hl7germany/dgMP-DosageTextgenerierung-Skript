@@ -24,6 +24,7 @@ Daraus folgt für jeden Eintrag:
 
 - Normative Spezifikation [dosage-text-algorithm-spec.md](dosage-text-algorithm-spec.md). Sie ist gegenüber der Referenzimplementierung führend; weicht das Skript ab, gilt die Spezifikation.
 - Abschnitt „Legacy-Angaben" in der Spezifikation: `hatZulaessigeLegacyFelder` und `istTagesmuster` beschreiben denselben Sachverhalt für unterschiedliche Schemata und sind nun gemeinsam erklärt, samt Herkunft der Felder und Abgrenzung zu den Schemata, in denen sie konstituierend sind.
+- Blockquotes in der Spezifikation stehen nur noch für Unverbindliches — Orientierung, Hintergrund, Verweise. Sieben normative Regeln, die bisher als eingerückter Hinweis erschienen, sind Fließtext; das Intro benennt die Konvention.
 - Schema „Kombination von Zeitintervallen": eine nicht tägliche Periode (`d`, `wk` oder `mo`) zusammen mit `when` oder `timeOfDay`. Damit sind wöchentliche und monatliche Rhythmen mit konkreten Zeitpunkten abbildbar.
 
 #### Changed
