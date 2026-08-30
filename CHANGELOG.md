@@ -16,6 +16,10 @@ Daraus folgt für jeden Eintrag:
 
 Ändert sich nur die Referenzimplementierung, bleibt die Versionsnummer stehen.
 
+## [2.0.0-ballot] - 2026-08-30
+
+Inhaltlich identisch zu `2.0.0-alpha1`; die Version markiert den Stand, der in das Kommentierungsverfahren geht.
+
 ## [2.0.0-alpha1] - 2026-08-27
 
 ### Algorithmus
