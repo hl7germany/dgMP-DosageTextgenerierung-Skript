@@ -40,7 +40,7 @@ import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-__version__ = "2.0.0-alpha1"
+__version__ = "2.0.0-ballot"
 __language__ = "de-DE"
 
 class MedicationDosageTextGenerator:

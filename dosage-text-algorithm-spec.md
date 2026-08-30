@@ -587,7 +587,7 @@ Andere Profilverletzungen können je nach fehlendem Feld dennoch zu einem unvoll
 
 Die Version des verwendeten Algorithmus MUSS über die Extension [GeneratedDosageInstructionsMeta](https://ig.fhir.de/igs/medication/StructureDefinition-GeneratedDosageInstructionsMeta.html) gesetzt werden. So lassen sich Textinhalt und verwendete Algorithmus-Version nachvollziehbar prüfen.
 
-Diese Seite beschreibt die Algorithmus-Version **2.0.0-alpha1**. Die Nummer bezeichnet den hier festgelegten Algorithmus, nicht ein einzelnes Programm: Die Beispielimplementierung führt sie in `__version__` und gibt sie beim Erzeugen der Beispiele in `algorithmVersion` weiter. Eine eigene Implementierung trägt dieselbe Nummer ein, sobald sie diesen Algorithmus umsetzt.
+Diese Seite beschreibt die Algorithmus-Version **2.0.0-ballot**. Die Nummer bezeichnet den hier festgelegten Algorithmus, nicht ein einzelnes Programm: Die Beispielimplementierung führt sie in `__version__` und gibt sie beim Erzeugen der Beispiele in `algorithmVersion` weiter. Eine eigene Implementierung trägt dieselbe Nummer ein, sobald sie diesen Algorithmus umsetzt.
 
 Damit bestimmt dieses Dokument die Versionsfolge: **Eine neue Versionsnummer entsteht genau dann, wenn sich diese Spezifikation ändert.** Korrekturen, die ausschließlich die Referenzimplementierung, ihre Tests oder die CI betreffen, ändern das festgelegte Verhalten nicht und lassen die Nummer unberührt. Die Versionshistorie führt [CHANGELOG.md](CHANGELOG.md); dort trennt jeder Eintrag beides voneinander.
 
