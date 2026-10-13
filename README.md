@@ -16,7 +16,7 @@ Spezifikation und Python-Referenzimplementierung des Algorithmus zur Dosierungst
 | [dosage-text-algorithm-spec.md](dosage-text-algorithm-spec.md) | **Normative Spezifikation** des Algorithmus — verbindlich für alle Implementierungen |
 | [medication-dosage-to-text.py](medication-dosage-to-text.py) | Python-Referenzimplementierung — dient der Veranschaulichung, nicht als Standard |
 
-**Die Spezifikation ist führend.** Weicht das Skript von ihr ab, gilt die Spezifikation. Die in `__version__` geführte Versionsnummer des Skripts bezeichnet die umgesetzte Algorithmus-Version und entspricht der in der Spezifikation angegebenen.
+**Die Spezifikation ist führend.** Die in `__version__` geführte Versionsnummer des Skripts bezeichnet die umgesetzte Algorithmus-Version und entspricht der in der Spezifikation angegebenen.
 
 ## HAFTUNGSAUSSCHLUSS
 
