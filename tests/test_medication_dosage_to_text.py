@@ -174,6 +174,25 @@ class MedicationDosageTextTest(unittest.TestCase):
             "monatlich: je 1 Stück",
         )
 
+    def test_short_form_does_not_drop_period_max(self):
+        cases = [
+            ({"frequency": 1, "period": 1, "periodMax": 3, "periodUnit": "d"},
+             "alle 1 bis 3 Tage: je 1 Stück"),
+            ({"frequency": 1, "period": 1, "periodMax": 2, "periodUnit": "wk"},
+             "alle 1 bis 2 Wochen: je 1 Stück"),
+            ({"frequency": 1, "period": 1, "periodMax": 2, "periodUnit": "mo"},
+             "alle 1 bis 2 Monate: je 1 Stück"),
+            ({"frequency": 2, "period": 1, "periodMax": 3, "periodUnit": "d"},
+             "2 x alle 1 bis 3 Tage: je 1 Stück"),
+        ]
+        for repeat, expected in cases:
+            with self.subTest(repeat=repeat):
+                resource = self.medication_request(self.dosage(1, repeat))
+                self.assertEqual(
+                    self.generator.generate_dosage_text(resource),
+                    expected,
+                )
+
     def test_minimum_interval_with_structured_rhythm_is_rejected(self):
         dosage = self.dosage(
             1,

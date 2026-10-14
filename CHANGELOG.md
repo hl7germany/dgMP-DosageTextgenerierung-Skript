@@ -16,6 +16,20 @@ Daraus folgt für jeden Eintrag:
 
 Ändert sich nur die Referenzimplementierung, bleibt die Versionsnummer stehen.
 
+## [Unreleased]
+
+### Algorithmus
+
+#### Fixed
+
+- Die Kurzformen `täglich`, `wöchentlich` und `monatlich` gelten nur noch für eine feste Periode von `1` ohne `periodMax`. Bisher fiel bei `period = 1` mit `periodMax` die Obergrenze weg: Aus `frequency = 1`, `period = 1`, `periodMax = 3`, `periodUnit = d` wurde `täglich` statt `alle 1 bis 3 Tage`. Bei einer Frequenz größer als `1` entsprechend `2 x alle 1 bis 3 Tage` statt `2 x täglich`.
+
+### Referenzimplementierung und Repository
+
+#### Added
+
+- Testfälle für `period = 1` mit `periodMax` in `d`, `wk` und `mo`.
+
 ## [2.0.0-ballot] - 2026-08-30
 
 ### Algorithmus
