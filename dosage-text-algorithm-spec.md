@@ -107,21 +107,21 @@ Das Datum wird im Format `TT.MM.JJJJ`, eine vorhandene Uhrzeit im Format `HH:MM 
 
 Aus `frequency`, `frequencyMax`, `period`, `periodMax` und `periodUnit` entsteht der einleitende Rhythmus:
 
-* tägliches Muster (`periodUnit='d'`, `period=1`): `täglich` bei `frequency=1` und fehlendem `frequencyMax`, sonst `{Frequenzwert} x täglich`
-* wöchentliches Muster (`periodUnit='wk'`, `period=1`): `wöchentlich` bei `frequency=1` und fehlendem `frequencyMax`, sonst `{Frequenzwert} x wöchentlich`
-* monatliches Muster (`periodUnit='mo'`, `period=1`): `monatlich` bei `frequency=1` und fehlendem `frequencyMax`, sonst `{Frequenzwert} x monatlich`
+* tägliches Muster (`periodUnit='d'`, `period=1`, `periodMax` fehlt): `täglich` bei `frequency=1` und fehlendem `frequencyMax`, sonst `{Frequenzwert} x täglich`
+* wöchentliches Muster (`periodUnit='wk'`, `period=1`, `periodMax` fehlt): `wöchentlich` bei `frequency=1` und fehlendem `frequencyMax`, sonst `{Frequenzwert} x wöchentlich`
+* monatliches Muster (`periodUnit='mo'`, `period=1`, `periodMax` fehlt): `monatlich` bei `frequency=1` und fehlendem `frequencyMax`, sonst `{Frequenzwert} x monatlich`
 * sonstige Perioden bei einer **festen Frequenz von genau 1** (`frequency=1`, `frequencyMax` fehlt): `alle {Periodenwert} {Einheit}` (z. B. `alle 8 Stunden`)
 * sonstige Perioden bei einem **Frequenzbereich** (`frequencyMax` vorhanden, auch bei `frequency=1`) oder einer festen Frequenz größer als 1: `{Frequenzwert} x alle {Periodenwert} {Einheit}` (z. B. `1 bis 2 x alle 8 Stunden` beziehungsweise `2 x alle 8 Stunden`)
 
-`{Frequenzwert}` bezeichnet entweder `frequency` allein oder `frequency bis frequencyMax`; `{Periodenwert}` entsprechend `period` allein oder `period bis periodMax`. Die Perioden-Einheit wird nach den Regeln unter [Einheiten und Pluralisierung](#einheiten-und-pluralisierung) ausgegeben. Beispiele für Bereiche sind `2 bis 3 x täglich` und `alle 2 bis 3 Tage`.
+`{Frequenzwert}` bezeichnet entweder `frequency` allein oder `frequency bis frequencyMax`; `{Periodenwert}` entsprechend `period` allein oder `period bis periodMax`. Die Perioden-Einheit wird nach den Regeln unter [Einheiten und Pluralisierung](#einheiten-und-pluralisierung) ausgegeben. Beispiele für Bereiche sind `2 bis 3 x täglich` und `alle 2 bis 3 Tage`. Eine Periode `1` mit vorhandenem `periodMax` ist ein Periodenbereich und fällt unter die sonstigen Perioden: `alle 1 bis 3 Tage`, nicht `täglich`.
 
 Diese allgemeine Frequenzdarstellung gilt für das reine Intervallschema ohne
 `timeOfDay` oder `when`. Bei einer Intervall-Kombination geben die konkreten
 Zeitpunkte die Anwendungshäufigkeit bereits vollständig an. Deshalb wird dort eine
 vorhandene `frequency` nicht ausgegeben; der gemeinsame Einnahmerhythmus wird
 ausschließlich aus `period`, `periodMax` und `periodUnit` gebildet. Dabei gelten
-für `1 d`, `1 wk` und `1 mo` ebenfalls die Kurzformen `täglich`, `wöchentlich`
-und `monatlich`.
+für `1 d`, `1 wk` und `1 mo` ohne `periodMax` ebenfalls die Kurzformen `täglich`,
+`wöchentlich` und `monatlich`.
 
 Fehlen `frequency`, `period` und `periodUnit` vollständig, wird kein Baustein für
 den Einnahmerhythmus erzeugt. Dies ist nur bei Schemata zulässig, deren zeitlicher

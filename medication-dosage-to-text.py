@@ -1076,22 +1076,24 @@ class MedicationDosageTextGenerator:
         if frequency is None and period is None and period_unit is None:
             return ""
 
+        # Kurzformen nur für eine feste Periode von genau 1. Mit periodMax greift
+        # die allgemeine Form ("alle 1 bis 3 Tage"), sonst entfiele die Obergrenze.
         # Daily patterns (periodUnit='d', period=1)
-        if period_unit == 'd' and period == 1:
+        if period_unit == 'd' and period == 1 and period_max is None:
             if frequency == 1 and frequency_max is None:
                 return "täglich"
             else:
                 return f"{self._format_range_value(frequency, frequency_max)} x täglich"
 
         # Weekly patterns (periodUnit='wk', period=1)
-        if period_unit == 'wk' and period == 1:
+        if period_unit == 'wk' and period == 1 and period_max is None:
             if frequency == 1 and frequency_max is None:
                 return "wöchentlich"
             else:
                 return f"{self._format_range_value(frequency, frequency_max)} x wöchentlich"
 
         # Monthly patterns (periodUnit='mo', period=1)
-        if period_unit == 'mo' and period == 1:
+        if period_unit == 'mo' and period == 1 and period_max is None:
             if frequency == 1 and frequency_max is None:
                 return "monatlich"
             else:
