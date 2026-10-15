@@ -580,16 +580,15 @@ class MedicationDosageTextGenerator:
     def _dose_value_as_number(self, value, field_name):
         """Dosiswert als Zahl lesen.
 
-        FHIR führt Dosiswerte als decimal; einzelne Serialisierer liefern sie als
-        String. Beides wird akzeptiert, alles andere abgewiesen — ein nicht
-        auswertbarer Wert darf nicht ungeprüft in den Dosierungstext gelangen.
+        FHIR führt Dosiswerte als decimal, im JSON also als Zahl. Ein String
+        ("2") ist kein gültiges decimal und wird wie jeder andere falsche Typ
+        abgewiesen; ihn stillschweigend zu konvertieren würde Werte annehmen, die
+        eine validierte Ressource nicht enthalten kann. bool ist in Python ein
+        int-Subtyp und wird deshalb ausdrücklich ausgeschlossen.
         """
-        if isinstance(value, bool):
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
             raise ValueError(f"{field_name} muss numerisch sein.")
-        try:
-            return float(value)
-        except (TypeError, ValueError):
-            raise ValueError(f"{field_name} muss numerisch sein.")
+        return value
 
     def _extract_dose_quantity(self, dosage):
         """

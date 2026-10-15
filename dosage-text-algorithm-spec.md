@@ -552,7 +552,7 @@ Die formale Definition zulässiger Felder und Kombinationen liegt in den Timing-
 * fehlendes oder leeres `doseAndRate`: Abbruch mit `ValueError("doseAndRate ist für die Textgenerierung erforderlich.")`
 * `doseAndRate[0]` ohne `doseQuantity` oder `doseRange`: Abbruch mit `ValueError("Dosisangabe in doseAndRate[0] fehlt.")`
 * `doseQuantity` ohne `.value` oder `.unit`: Abbruch mit `ValueError("doseQuantity.value ist für die Textgenerierung erforderlich.")` beziehungsweise `ValueError("doseQuantity.unit ist für die Textgenerierung erforderlich.")`
-* nicht numerischer Dosiswert in `doseQuantity.value`, `doseRange.low.value` oder `doseRange.high.value`: Abbruch mit `ValueError("<Feld> muss numerisch sein.")`. Zahlen und numerische Strings werden akzeptiert, Boolesche Werte nicht
+* nicht numerischer Dosiswert in `doseQuantity.value`, `doseRange.low.value` oder `doseRange.high.value`: Abbruch mit `ValueError("<Feld> muss numerisch sein.")`. Akzeptiert wird ausschließlich eine JSON-Zahl, wie sie FHIR für `decimal` vorschreibt; Strings (auch numerische wie `"2"`) und Boolesche Werte werden abgewiesen
 * `doseQuantity.value <= 0`: Abbruch mit `ValueError("doseQuantity.value muss größer als 0 sein.")`
 * `doseRange` ohne erforderliche obere Grenze: Abbruch mit `ValueError("doseRange.high.value ist für die Textgenerierung erforderlich.")`; eine fehlende Einheit führt entsprechend zu `ValueError("doseRange.high.unit ist für die Textgenerierung erforderlich.")`
 * `doseRange.high.value <= 0`: Abbruch mit `ValueError("doseRange.high.value muss größer als 0 sein.")`

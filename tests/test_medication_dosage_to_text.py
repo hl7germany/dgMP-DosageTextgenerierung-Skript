@@ -486,11 +486,16 @@ class MedicationDosageTextTest(unittest.TestCase):
                         self.medication_request(dosage)
                     )
 
-    def test_numeric_strings_are_validated_like_numbers(self):
-        with self.assertRaisesRegex(ValueError, "doseQuantity.value muss größer als 0 sein"):
-            self.generator.generate_dosage_text(
-                self.medication_request(self.dosage("-1", {"when": ["MORN"]}))
-            )
+    def test_numeric_strings_are_rejected_like_any_wrong_type(self):
+        """FHIR decimal ist im JSON eine Zahl. Ein String "2" ist kein gueltiger
+        Wert; er wuerde sonst als Bereichsmarker (str) gelesen und das 4-Schema
+        in die ausgeschriebene Form kippen, ohne Dezimalkomma."""
+        for value in ("2", "1.5", "-1"):
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "doseQuantity.value muss numerisch sein"):
+                    self.generator.generate_dosage_text(
+                        self.medication_request(self.dosage(value, {"when": ["MORN"]}))
+                    )
 
     def test_negative_values_are_rejected_in_all_dose_value_locations(self):
         dose_quantity = self.dosage(-1, {"when": ["MORN"]})

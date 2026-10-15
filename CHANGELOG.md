@@ -23,6 +23,7 @@ Daraus folgt für jeden Eintrag:
 #### Fixed
 
 - Die Kurzformen `täglich`, `wöchentlich` und `monatlich` gelten nur noch für eine feste Periode von `1` ohne `periodMax`. Bisher fiel bei `period = 1` mit `periodMax` die Obergrenze weg: Aus `frequency = 1`, `period = 1`, `periodMax = 3`, `periodUnit = d` wurde `täglich` statt `alle 1 bis 3 Tage`. Bei einer Frequenz größer als `1` entsprechend `2 x alle 1 bis 3 Tage` statt `2 x täglich`.
+- Numerische Strings als Dosiswert (`"value": "2"`) werden abgewiesen wie jeder andere falsche Typ. FHIR `decimal` ist im JSON eine Zahl; eine validierte Ressource enthält keinen String. Bisher wurden sie akzeptiert, aber nicht wie Zahlen formatiert: `"2"` kippte das 4‑Schema in die ausgeschriebene Form (`morgens — je 2 Stück` statt `2-0-0-0 Stück`), `"1.5"` ergab `je 1.5 Stück` ohne Dezimalkomma, `"1.0"` ergab `je 1.0 Stück`.
 
 ### Referenzimplementierung und Repository
 
