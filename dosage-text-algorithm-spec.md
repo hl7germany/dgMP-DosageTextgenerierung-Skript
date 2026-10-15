@@ -251,9 +251,9 @@ Auch `route` wird vom Algorithmus nicht gelesen oder ausgegeben; es steht in der
 
 ### Trennzeichen
 
-* **Doppelpunkt mit Leerzeichen** (`: `) trennt die Dosieranweisung in zwei Abschnitte. In den strukturierten Schemata stehen links des Doppelpunkts, sofern vorhanden, der Zeitrahmen und das Intervall beziehungsweise der Marker `täglich`; beide teilen sich einen Doppelpunkt (`für 7 Tage alle 2 Tage: …`). Bei Bedarfsmedikation steht der Doppelpunkt hinter dem Einnahmeanlass, das Intervall rechts davon (`bei Kopfschmerzen: alle 8 Stunden je 1 Stück`).
+* **Doppelpunkt mit Leerzeichen** (`: `) trennt die Dosieranweisung in zwei Abschnitte. In den strukturierten Schemata stehen links des Doppelpunkts, sofern vorhanden, der Zeitrahmen und das Intervall beziehungsweise der Marker `täglich`; beide teilen sich einen Doppelpunkt (`für 7 Tage alle 2 Tage: …`). Bei Bedarfsmedikation gilt dasselbe: Zeitrahmen, Einnahmeanlass und Intervall stehen links des Doppelpunkts, ein Komma trennt den Einnahmeanlass vom Intervall (`bei Kopfschmerzen, alle 8 Stunden: je 1 Stück`). Ohne Intervall steht der Doppelpunkt direkt hinter dem Einnahmeanlass (`bei Kopfschmerzen: je 1 Stück`).
 * **Gedankenstrich mit Leerzeichen** (` — `) verbindet eine Zeit- oder Abschnittsangabe mit der zugehörigen Dosis sowie die Dosis mit der Maximalmenge im Falle einer Bedarfsmedikation.
-* **Komma mit Leerzeichen** (`, `) trennt aufeinanderfolgende Segmente unterschiedlicher **Tages- oder Uhrzeiten**, unabhängig davon, ob sie aus derselben oder aus verschiedenen `Dosage`-Einträgen stammen.
+* **Komma mit Leerzeichen** (`, `) trennt aufeinanderfolgende Segmente unterschiedlicher **Tages- oder Uhrzeiten**, unabhängig davon, ob sie aus derselben oder aus verschiedenen `Dosage`-Einträgen stammen. Bei Bedarfsmedikation mit Intervall trennt es außerdem den Einnahmeanlass vom Intervall. Der Einnahmeanlass ist Freitext und kann auf eine Zahl enden; ohne das Komma stießen zwei Zahlen aneinander (`bei Blutzucker über 250, 2 x täglich: …` statt `… über 250 2 x täglich: …`).
 * **Semikolon mit Leerzeichen** (`; `) trennt aufeinanderfolgende **Wochentagssegmente**, unabhängig davon, ob sie aus derselben oder aus verschiedenen `Dosage`-Einträgen stammen.
 * **Bindestrich** (`-`) trennt die vier Positionen des 4‑Schemas.
 
@@ -265,7 +265,7 @@ Die folgenden Zeichen sind für den erzeugten Text **verbindlich festgelegt**. M
 |---------|-----------|------|------------|-----------------|
 | `—` | U+2014 | EM DASH | Zeit-/Abschnittsangabe ↔ Dosis; Dosis ↔ Maximalmenge | `–` U+2013, `―` U+2015, `-` U+002D |
 | `-` | U+002D | HYPHEN-MINUS | die vier Positionen des 4‑Schemas | `‐` U+2010, `−` U+2212, `–` U+2013 |
-| `,` | U+002C | COMMA | Segmenttrennung **und** deutsches Dezimalkomma | `،` U+060C |
+| `,` | U+002C | COMMA | Segmenttrennung, Einnahmeanlass ↔ Intervall bei Bedarf **und** deutsches Dezimalkomma | `،` U+060C |
 | `;` | U+003B | SEMICOLON | Trennung von Wochentagssegmenten | `;` U+037E |
 | `:` | U+003A | COLON | Abschnittstrennung sowie Stunde:Minute | `∶` U+2236 |
 | `.` | U+002E | FULL STOP | Satzende vor `Hinweis:` sowie Tag.Monat.Jahr | `․` U+2024 |
@@ -464,21 +464,24 @@ Eine Bedarfsmedikation liegt vor, wenn auf Ebene der `Dosage` `asNeededBoolean =
 Bei einer **reinen Bedarfsdosierung** muss die Ressource genau ein `Dosage`-Element enthalten (Invariante `AsNeededSingleDosageOnly`). Mehrere Dosen ohne zeitliche Zuordnung wären nicht eindeutig zu einem gemeinsamen Text zusammenführbar. Der Algorithmus bricht deshalb auch bei nicht vorab validiertem Input mit mehreren `Dosage`-Elementen ab.
 
 ```
-[{Zeitrahmen} ]bei {Einnahmeanlass}: [im Abstand von mindestens {Mindestabstand} ]je {Dosis}[ — nicht mehr als {Maximalmenge}][. Hinweis: {Instruktionen}]
+Reine Bedarfsdosierung:     bei {Einnahmeanlass}: [im Abstand von mindestens {Mindestabstand} ]je {Dosis}[ — nicht mehr als {Maximalmenge}][. Hinweis: {Instruktionen}]
+Bedarf mit Schema:         [{Zeitrahmen} ]bei {Einnahmeanlass}[, {Intervall}]: {Kern des Schemas}[. Hinweis: {Instruktionen}]
 ```
 
-* Sofern vorhanden, steht der **Zeitrahmen** am Anfang, gefolgt vom **Einnahmeanlass** und einem **Doppelpunkt**. Der Doppelpunkt steht damit direkt hinter dem Einnahmeanlass. Bei der reinen Bedarfsdosierung kann kein Zeitrahmen vorliegen, weil er in `timing.repeat` steht; er tritt nur bei strukturiertem Bedarf auf (`ab dem 05.06.2026 bei Bedarf: …`).
+* Sofern vorhanden, steht der **Zeitrahmen** am Anfang, gefolgt vom **Einnahmeanlass**. Bei der reinen Bedarfsdosierung kann kein Zeitrahmen vorliegen, weil er in `timing.repeat` steht; er tritt nur bei strukturiertem Bedarf auf (`ab dem 05.06.2026 bei Bedarf, täglich: …`).
+* Bei strukturiertem Bedarf folgt das **Intervall** beziehungsweise der Marker `täglich` des Schemas — wie ohne Bedarf links des Doppelpunkts —, durch ein Komma vom Einnahmeanlass getrennt: `bei Kopfschmerzen, alle 8 Stunden: je 1 Stück`. Schemata ohne Intervall (Wochentage) haben keinen solchen Teil: `bei Bedarf: montags — je 1 Stück`. Der **Doppelpunkt** steht damit immer am Ende des Teils, der sagt, wann und weshalb angewendet wird.
 * Ist kein Einnahmeanlass angegeben, wird generisch `bei Bedarf` gesetzt.
 * Auch hier wird **nicht** großgeschrieben; `bei Kopfschmerzen: …` und `bei Bedarf: …` bleiben Fragmente wie jeder andere erzeugte Text.
-* Ein optionaler **Mindestabstand** (`modifierExtension[MinimumIntervalBetweenAdministrations]`) steht rechts des Doppelpunkts vor der Dosis. Er ist nur bei reiner Bedarfsdosierung zulässig; bei strukturiertem Bedarf folgt dort stattdessen das jeweilige Schema (Intervall, 4‑Schema …).
+* Ein optionaler **Mindestabstand** (`modifierExtension[MinimumIntervalBetweenAdministrations]`) steht rechts des Doppelpunkts vor der Dosis. Er ist nur bei reiner Bedarfsdosierung zulässig.
 * Die **Maximalmenge** ist ebenfalls nur bei reiner Bedarfsdosierung zulässig (siehe [Maximalmenge](#maximalmenge-maxdoseperperiod)) und wird mit Gedankenstrich hinter der Dosis angefügt. Ein anschließender `Hinweis: ` folgt erst danach.
 
 *Beispiele:*
 
 * `bei Kopfschmerzen: im Abstand von mindestens 4 Stunden je 1 Stück — nicht mehr als 6 Stück in 24 Stunden`
-* `bei Bedarf: täglich 08:00 Uhr — je 1 Stück, 20:00 Uhr — je 2 Stück`
-* `bei Kopfschmerzen: alle 8 Stunden je 1 Stück`
-* `bei Bedarf: täglich 1-0-2-0 Stück`
+* `bei Bedarf, täglich: 08:00 Uhr — je 1 Stück, 20:00 Uhr — je 2 Stück`
+* `bei Kopfschmerzen, alle 8 Stunden: je 1 Stück`
+* `bei Bedarf, täglich: 1-0-2-0 Stück`
+* `bei Bedarf: montags — je 1 Stück; mittwochs — je 2 Stück`
 
 ### Freitext-Dosierung
 

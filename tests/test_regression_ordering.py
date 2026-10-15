@@ -360,7 +360,7 @@ class SchemaOutputTest(unittest.TestCase):
             "timing": {"repeat": {"timeOfDay": ["20:00:00"]}},
             "doseAndRate": [{"doseQuantity": {"value": 2, "unit": "Stück"}}],
         }
-        self.assertEqual("bei Bedarf: täglich 08:00 Uhr — je 1 Stück, 20:00 Uhr — je 2 Stück",
+        self.assertEqual("bei Bedarf, täglich: 08:00 Uhr — je 1 Stück, 20:00 Uhr — je 2 Stück",
                          self.generator.generate_dosage_text(self._resource([dosage_a, dosage_b])))
 
     def test_structured_as_needed_with_interval(self):
@@ -371,7 +371,7 @@ class SchemaOutputTest(unittest.TestCase):
             "timing": {"repeat": {"frequency": 1, "period": 8, "periodUnit": "h"}},
             "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
         }
-        self.assertEqual("bei Kopfschmerzen: alle 8 Stunden je 1 Stück",
+        self.assertEqual("bei Kopfschmerzen, alle 8 Stunden: je 1 Stück",
                          self.generator.generate_dosage_text(self._resource([dosage])))
 
     # ── 4-Schema ──────────────────────────────────────────────────────────────
