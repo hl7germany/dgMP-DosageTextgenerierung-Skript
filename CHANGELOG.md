@@ -97,29 +97,40 @@ Daraus folgt für jeden Eintrag:
 
 ## [2.0.0-ballot] - 2026-08-30
 
+Erste Version mit normativer Spezifikation. Die Einträge beschreiben die Unterschiede zum Skript 1.0.2; die Beispiele zeigen jeweils die Ausgabe von 1.0.2 und 2.0.0-ballot.
+
 ### Algorithmus
 
 #### Added
 
 - Normative Spezifikation [dosage-text-algorithm-spec.md](dosage-text-algorithm-spec.md). Sie ist gegenüber der Referenzimplementierung führend; weicht das Skript ab, gilt die Spezifikation.
-- Abschnitt „Legacy-Angaben" in der Spezifikation: `hatZulaessigeLegacyFelder` und `istTagesmuster` beschreiben denselben Sachverhalt für unterschiedliche Schemata und sind nun gemeinsam erklärt, samt Herkunft der Felder und Abgrenzung zu den Schemata, in denen sie konstituierend sind.
-- Blockquotes in der Spezifikation stehen nur noch für Unverbindliches — Orientierung, Hintergrund, Verweise. Sieben normative Regeln, die bisher als eingerückter Hinweis erschienen, sind Fließtext; das Intro benennt die Konvention.
-- Schema „Kombination von Zeitintervallen": eine nicht tägliche Periode (`d`, `wk` oder `mo`) zusammen mit `when` oder `timeOfDay`. Damit sind wöchentliche und monatliche Rhythmen mit konkreten Zeitpunkten abbildbar.
+- Bedarfsmedikation. Reine Bedarfsdosierung (`asNeededBoolean = true` ohne `timing`) mit optionalem Einnahmeanlass (`asNeededFor`, mehrere als Aufzählung), Mindestabstand (Extension `MinimumIntervalBetweenAdministrations`) und Maximalmenge (`maxDosePerPeriod`, Bezugszeitraum `24 h` oder `1 d`): `bei Kopfschmerzen: im Abstand von mindestens 4 Stunden je 1 Stück — nicht mehr als 6 Stück in 24 Stunden`. Mindestabstand und Maximalmenge sind nur bei reiner Bedarfsdosierung zulässig; zusammen mit einem strukturierten Rhythmus bricht der Algorithmus ab. Ein strukturiertes Schema kann als Bedarf gekennzeichnet sein: `bei Kopfschmerzen: alle 8 Stunden je 1 Stück`. 1.0.2 lieferte für reinen Bedarf `Unbekanntes Dosierungsschema: Unknown` und ließ bei strukturiertem Bedarf die Kennzeichnung weg (`alle 8 Stunden: je 1 Stück`).
+- Start- und Endzeitpunkt (`boundsPeriod`): `ab dem …`, `vom … bis zum …`, `bis zum …`, eine Uhrzeit umgerechnet nach `Europe/Berlin`. 1.0.2 ignorierte `boundsPeriod` (`1-0-0-0 Stück` statt `vom 05.06.2026 bis zum 05.07.2026: 1-0-0-0 Stück`).
+- Variable Frequenz und Periode im reinen Intervall: `1 bis 2 x alle 8 Stunden`, `alle 2 bis 3 Tage`. 1.0.2 ignorierte `frequencyMax` und `periodMax` (`alle 8 Stunden`, `alle 2 Tage`).
+- Variable Dosis (`doseRange`): `je 1 bis 2 Stück`, `je bis zu 2 Stück`; im 4‑Schema in ausgeschriebener Form (`morgens — je 1 bis 2 Stück`). 1.0.2 gab im Intervall gar keine Dosis aus (`alle 8 Stunden`) und brach im 4‑Schema ab.
+- Hinweis aus `patientInstruction` als eigener Satz: `1-0-0-0 Stück. Hinweis: Nach dem Essen`. 1.0.2 ließ ihn weg.
+- `frequency`, `period` und `periodUnit` sind bei Tagesabschnitten, Uhrzeiten und Wochentagen optional; vorhanden ändern sie den Text nicht (Legacy-Angaben). 1.0.2 lieferte ohne sie `Unbekanntes Dosierungsschema: Unknown`.
+- Intervall-Kombination ohne `frequency` (`alle 2 Tage: morgens — je 1 Stück`). 1.0.2 lieferte dafür `Unbekanntes Dosierungsschema: Unknown`.
 
 #### Changed
 
-- Enthält eine Ressource mehrere `Dosage`-Elemente, muss jedes zu demselben Schema führen; andernfalls bricht der Algorithmus ab. Bisher bestimmte allein das erste Element das Schema, und ein abweichendes späteres Element entfiel stillschweigend — aus „morgens 1 Stück" und „montags 2 Stück" wurde `1-0-0-0 Stück`.
-- Eine variable Frequenz (`frequencyMax`) oder Periode (`periodMax`) führt in den täglichen Schemata mit `when` oder `timeOfDay` jetzt zum Abbruch. Bisher wurde sie dort stillschweigend übergangen — `when = MORN` mit `frequencyMax = 3` ergab `1-0-0-0 Stück` und unterschlug die Spanne. Das Profil verbietet die Kombination über `TimingOnlyOneType`; die Schema-Erkennung bildet diese Bedingung jetzt vollständig ab.
-- Eine Maximalmenge (`maxDosePerPeriod`) ist nur bei einer **reinen** Bedarfsdosierung zulässig (`asNeededBoolean = true` ohne `timing`); zusammen mit einem strukturierten Rhythmus bricht der Algorithmus ab. Ein Rhythmus legt bereits fest, wie viel im Bezugszeitraum angewendet wird.
-- Ein Mindestabstand zwischen zwei Gaben ist nur bei einer **reinen** Bedarfsdosierung zulässig (`asNeededBoolean = true` ohne `timing`). Tritt er zusammen mit einem strukturierten Rhythmus auf, bricht der Algorithmus ab. Der bisherige Baustein `, mit mindestens {Wert} {Einheit} Abstand` entfällt ersatzlos: Ein Rhythmus legt den Abstand zwischen zwei Gaben bereits fest, `alle 8 Stunden, mit mindestens 6 Stunden Abstand` ließ offen, welche Angabe gilt.
-- Die kanonische URL der Extension für den Mindestabstand lautet `…/StructureDefinition/MinimumIntervalBetweenAdministrations` statt `…/MindestabstandZwischenGaben`.
-- Wochentagsschemata dulden `frequency` sowie das redundante Paar `period = 1`, `periodUnit = wk` als Legacy-Angaben; sie ändern den erzeugten Text nicht. Jede andere Periode ist mit `dayOfWeek` nicht mehr kombinierbar.
-- Eine variable Frequenz (`frequencyMax`) ist der reinen Intervallangabe vorbehalten. Konkrete Zeitpunkte und Wochentage legen die Zahl der Gaben bereits fest.
-- Jeder erzeugte Text ist durchgehend ein kleingeschriebenes Fragment. Die Großschreibung des ersten Zeichens bei Bedarfsmedikation und die großgeschriebenen `boundsPeriod`-Literale entfallen; die Schreibweise am Satzanfang entscheidet das anzeigende System. Freitext wird weiterhin unverändert durchgereicht.
-- `doseQuantity.value` und `doseRange.high.value` müssen größer als `0` sein; `0` bleibt ausschließlich als `doseRange.low.value` zulässig — als Untergrenze einer variablen Dosis wie „0 bis 2 Stück".
-- Nicht numerische Dosiswerte werden mit `<Feld> muss numerisch sein.` abgewiesen statt unverändert in den Text übernommen; numerische Strings werden wie Zahlen geprüft.
-- Doppelte Belegung desselben Zeitpunkts mit unterschiedlicher Dosis führt schemaübergreifend zum Abbruch.
-
+- Eine nicht klassifizierbare Dosierung führt zum Abbruch (`Die Dosierung entspricht keinem unterstützten Dosierungsschema.`). 1.0.2 gab `Unbekanntes Dosierungsschema: Unknown` als Dosierungstext zurück.
+- Segmente verschiedener Uhrzeiten oder Tagesabschnitte werden mit Komma getrennt statt mit Semikolon; das Semikolon trennt nur noch Wochentage: `täglich: 08:00 Uhr — je 1 Stück, 20:00 Uhr — je 2 Stück` statt `…; 20:00 Uhr — je 2 Stück`. Uhrzeiten mit derselben Dosis werden auch über mehrere `Dosage`-Elemente hinweg zusammengefasst (`täglich: 08:00 Uhr, 20:00 Uhr — je 1 Stück`). Betrifft 16 der 92 regulären Beispiele des IG 1.0.7.
+- `period = 1` mit `periodUnit = mo` ergibt `monatlich` statt `alle 1 Monat`, in der Intervall-Kombination statt `alle 1 mo`.
+- Enthält eine Ressource mehrere `Dosage`-Elemente, muss jedes zu demselben Schema führen; andernfalls bricht der Algorithmus ab. 1.0.2 bestimmte das Schema allein am ersten Element, ein abweichendes späteres Element entfiel: aus „morgens 1 Stück" und „montags 2 Stück" wurde `1-0-0-0 Stück`.
+- Eine variable Frequenz (`frequencyMax`) oder Periode (`periodMax`) führt bei Tagesabschnitten, Uhrzeiten und Wochentagen zum Abbruch; sie ist dem reinen Intervall vorbehalten. 1.0.2 übergang sie stillschweigend.
+- Wochentage sind nur mit der Periode `1 wk` kombinierbar; jede andere Periode bricht ab. 1.0.2 ignorierte sie (`montags — je 1 Stück` bei `period = 2`, `periodUnit = d`).
+- Die Intervall-Kombination setzt eine Periode in Tagen, Wochen oder Monaten voraus. 1.0.2 akzeptierte auch Stunden (`alle 3 h: morgens — je 1 Stück`).
+- Abbruch statt fehlerhaftem Text bei nicht darstellbaren Angaben. 1.0.2 erzeugte jeweils einen Text:
+  - fehlende Dosis (`doseAndRate`): `alle 8 Stunden`
+  - unbekannter `when`-Code: `0-0-0-0 Stück`
+  - unbekannte Zeiteinheit: `alle 8 x: je 1 Stück`
+  - `timeOfDay` und `when` im selben Element (`tim-10`): `Unbekanntes Dosierungsschema: Unknown`
+  - derselbe Wochentag mit unterschiedlicher Dosis: die zuletzt gelesene (`montags — je 2 Stück`)
+  - dieselbe Kombination aus Wochentag und Tagesabschnitt mit unterschiedlicher Dosis: zwei Segmente (`montags 1-0-0-0 Stück; montags 2-0-0-0 Stück`)
+  - dieselbe Uhrzeit oder derselbe Tagesabschnitt einer Intervall-Kombination mit unterschiedlicher Dosis: beide Dosen hintereinander
+- `doseQuantity.value` und `doseRange.high.value` müssen größer als `0` sein; `0` bleibt nur als `doseRange.low.value` zulässig. 1.0.2 gab `je 0 Stück` aus.
+- Nicht numerische Dosiswerte werden mit `<Feld> muss numerisch sein.` abgewiesen. 1.0.2 brach mit einem Python-Fehler ab; numerische Strings werden wie Zahlen geprüft.
 
 ### Referenzimplementierung und Repository
 
@@ -127,20 +138,14 @@ Daraus folgt für jeden Eintrag:
 
 - Unit-Tests für die Textgenerierung (`tests/test_medication_dosage_to_text.py`).
 
-#### Removed
-
-- `MindestabstandIdentical` aus der Aufzählung der Invarianten, die die Konsistenz der Rahmen-Angaben über mehrere `Dosage`-Elemente sichern. Sie ist nicht erreichbar: Ein Mindestabstand setzt eine reine Bedarfsdosierung voraus, und dafür erlaubt `AsNeededSingleDosageOnly` genau ein `Dosage`-Element.
-
 #### Changed
 
 - Release läuft über `gh release`; die beiden Release-Workflows entfallen. Bei einem Tag-Push prüft die CI, dass `__version__` mit dem Tag übereinstimmt — beide Angaben landen als `algorithmVersion` beim Konsumenten und dürfen nicht auseinanderlaufen.
 - CI testet nur noch die älteste und die neueste unterstützte Python-Version. Das Skript nutzt ausschließlich die Standardbibliothek.
+- Der Syntax-Check prüft das gesamte `tests/`-Verzeichnis statt einzelner Dateien.
 
 #### Fixed
 
-- `tests/test_medication_dosage_to_text.py` konnte das Modul nicht laden und ließ dadurch die gesamte Test-Discovery und damit jeden CI-Lauf scheitern.
-- Der Tag-Release-Workflow lief bei jedem Branch-Push und scheiterte nach 0 Sekunden ohne Job, weil seine Tag-Muster `*.*.*+*` und `*.*.*-*+*` das Sonderzeichen `+` unescaped enthielten.
-- Der Syntax-Check deckte `tests/test_medication_dosage_to_text.py` nicht ab; er prüft jetzt das gesamte `tests/`-Verzeichnis.
 - Regressionstests kombinierten `dayOfWeek` mit `periodUnit = d`; zwei davon prüften dadurch nur noch die Schema-Erkennung statt der benannten Regel.
 
 ## [1.0.2] - 2026-03-05
