@@ -6,7 +6,7 @@ This script converts FHIR medication dosage instructions into human-readable Ger
 
 It is an EXAMPLE implementation of the dosage text generation algorithm. The normative
 definition is the "Dosierung: Textgenerierung" page of the German FHIR medication dosage
-implementation guide — if this script and that page disagree, the page prevails.
+implementation guide; this script illustrates it.
 `__version__` therefore names the version of the algorithm being implemented, not of the
 script itself.
 
@@ -159,6 +159,8 @@ class MedicationDosageTextGenerator:
                     "timeOfDay und when dürfen nicht gemeinsam angegeben werden (tim-10)."
                 )
 
+        self._check_as_needed_preconditions(dosage_instructions)
+
         # Eine reine Bedarfsdosierung (asNeededBoolean=true ohne timing) ist
         # nicht aggregierbar und muss das einzige Dosage-Element sein. Diese
         # defensive Prüfung spiegelt AsNeededSingleDosageOnly auch für Input,
@@ -309,22 +311,27 @@ class MedicationDosageTextGenerator:
                 self._require_string(dosage[name], name)
         if "asNeededBoolean" in dosage and not isinstance(dosage["asNeededBoolean"], bool):
             raise ValueError("asNeededBoolean muss ein boolescher Wert sein.")
+        # Fremde Extensions werden nicht gelesen und deshalb auch nicht geprüft;
+        # nur die url entscheidet, ob ein Eintrag den Algorithmus betrifft.
         for name in ("extension", "modifierExtension"):
             if name in dosage:
                 for extension in self._require_list(dosage[name], name):
                     self._require_object(extension, f"{name}[]")
                     if "url" in extension:
                         self._require_string(extension["url"], f"{name}[].url")
-                    if "valueCodeableConcept" in extension:
+                    url = extension.get("url")
+                    if url == self.URL_AS_NEEDED_FOR and "valueCodeableConcept" in extension:
                         concept = self._require_object(
                             extension["valueCodeableConcept"], f"{name}[].valueCodeableConcept")
                         if "text" in concept:
                             self._require_string(concept["text"], f"{name}[].valueCodeableConcept.text")
-                    if "valueDuration" in extension:
+                    if url == self.URL_MINDESTABSTAND and "valueDuration" in extension:
                         self._check_quantity_types(extension["valueDuration"], f"{name}[].valueDuration")
         if "doseAndRate" in dosage:
-            for item in self._require_list(dosage["doseAndRate"], "doseAndRate"):
-                self._require_object(item, "doseAndRate[]")
+            # Gelesen wird nur doseAndRate[0]; weitere Einträge werden ignoriert.
+            items = self._require_list(dosage["doseAndRate"], "doseAndRate")
+            if items:
+                item = self._require_object(items[0], "doseAndRate[]")
                 if "doseQuantity" in item:
                     self._check_quantity_types(item["doseQuantity"], "doseQuantity")
                 if "doseRange" in item:
@@ -369,10 +376,62 @@ class MedicationDosageTextGenerator:
         quantity = self._require_object(quantity, path)
         if "value" in quantity:
             self._require_decimal(quantity["value"], f"{path}.value")
-        for name in ("unit", "code", "system"):
+        for name in ("unit", "code"):
             if name in quantity:
                 self._require_string(quantity[name], f"{path}.{name}")
+        # Ein comparator ("<", ">=", ...) veraendert die Bedeutung des Wertes;
+        # der Text kennt dafuer keine Form und wuerde ihn unterschlagen
+        # ("je 2 Stück" fuer "< 2").
+        if "comparator" in quantity:
+            raise ValueError(f"{path}.comparator wird nicht unterstützt.")
         return quantity
+
+    def _check_as_needed_preconditions(self, dosage_instructions):
+        """
+        Einnahmeanlass, Mindestabstand und Maximalmenge setzen das
+        Bedarfskennzeichen voraus; Mindestabstand und Maximalmenge zusaetzlich
+        eine reine Bedarfsdosierung ohne timing. Sie stillschweigend zu
+        uebergehen waere eine Auslassung - eine modifierExtension darf nie
+        ignoriert werden, und alle drei sind Angaben der Ressource. Neben einem
+        strukturierten Rhythmus waeren sie zudem widerspruechlich: Der Rhythmus
+        legt Abstand und Menge im Bezugszeitraum bereits fest.
+
+        Die Pruefung laeuft ueber *alle* Dosage-Elemente, obwohl der Text die
+        Angaben nur aus dem ersten liest: Ein Verstoss in einem spaeteren
+        Element darf nicht von der Reihenfolge abhaengen.
+        """
+        for dosage in dosage_instructions:
+            as_needed = self._is_as_needed(dosage)
+            has_timing = bool(dosage.get('timing'))
+            # Freitext wird unveraendert uebernommen (FreeTextMatchesRenderedText
+            # verlangt exakte Gleichheit); Mindestabstand und Maximalmenge daneben
+            # koennten nie im Text erscheinen.
+            is_free_text = bool(dosage.get('text')) and not has_timing and not dosage.get('doseAndRate')
+            if self._extract_as_needed_for_text(dosage) and not as_needed:
+                raise ValueError(
+                    "Ein Einnahmeanlass (asNeededFor) setzt asNeededBoolean = true voraus.")
+            if self._extract_minimum_interval_text(dosage):
+                if not as_needed:
+                    raise ValueError("Ein Mindestabstand setzt asNeededBoolean = true voraus.")
+                if has_timing:
+                    raise ValueError(
+                        "Ein Mindestabstand ist nur bei reiner Bedarfsmedikation "
+                        "zulässig, nicht zusammen mit einem strukturierten Rhythmus."
+                    )
+                if is_free_text:
+                    raise ValueError(
+                        "Ein Mindestabstand ist bei einer Freitext-Dosierung nicht darstellbar.")
+            if self._extract_max_dose_text(dosage):
+                if not as_needed:
+                    raise ValueError("Eine Maximalmenge setzt asNeededBoolean = true voraus.")
+                if has_timing:
+                    raise ValueError(
+                        "Eine Maximalmenge ist nur bei reiner Bedarfsmedikation "
+                        "zulässig, nicht zusammen mit einem strukturierten Rhythmus."
+                    )
+                if is_free_text:
+                    raise ValueError(
+                        "Eine Maximalmenge ist bei einer Freitext-Dosierung nicht darstellbar.")
 
     def _require_day_code(self, day_code):
         """Die Wochentags-Tabelle ist abschließend. Ein Code außerhalb würde
@@ -638,13 +697,9 @@ class MedicationDosageTextGenerator:
         # Freitext unverändert, auch Rand-Leerraum: FreeTextMatchesRenderedText
         # verlangt exakte Gleichheit mit Dosage.text; ein Trim machte sie fuer
         # solche Texte unmoeglich.
-        text_parts = []
-        for dosage in dosage_instructions:
-            text_content = dosage.get('text', '')
-            if text_content:
-                text_parts.append(text_content)
-
-        return " ".join(text_parts)
+        # Jedes Element traegt einen nicht leeren Text: Die Schema-Erkennung
+        # verlangt ihn, und die Schema-Gleichheit gilt fuer alle Elemente.
+        return " ".join(dosage['text'] for dosage in dosage_instructions)
 
     def _generate_time_of_day_text(self, dosage_instructions):
         """
@@ -777,47 +832,34 @@ class MedicationDosageTextGenerator:
 
         first_dose = dose_and_rate[0]
 
+        # Typen (Objekt, Zahl, String) hat Schritt 3 bereits geprueft; hier geht
+        # es nur noch um Vorhandensein. Eine Einheit aus Leerraum ist keine.
         if 'doseQuantity' in first_dose:
-            dose_quantity = self._require_object(
-                first_dose.get('doseQuantity') or {}, 'doseQuantity')
+            dose_quantity = first_dose['doseQuantity']
             dose_value = dose_quantity.get('value')
             unit = dose_quantity.get('unit')
             if dose_value is None:
                 raise ValueError("doseQuantity.value ist für die Textgenerierung erforderlich.")
-            if unit is not None:
-                self._require_string(unit, 'doseQuantity.unit')
-            if not unit:
+            if not unit or not unit.strip():
                 raise ValueError("doseQuantity.unit ist für die Textgenerierung erforderlich.")
             # Nur die Lesbarkeit wird geprüft, nicht der Wertebereich: "je 0 Stück"
             # ist ein eindeutiger Text. Ob 0 zulässig ist, entscheidet das Profil
             # (DosageDoseValuePositive), nicht der Algorithmus.
-            self._require_decimal(dose_value, 'doseQuantity.value')
             return (dose_value, unit)
 
         if 'doseRange' in first_dose:
-            dose_range = self._require_object(
-                first_dose.get('doseRange') or {}, 'doseRange')
+            dose_range = first_dose['doseRange']
             low = dose_range.get('low')
             high = dose_range.get('high')
-            if low is not None:
-                self._require_object(low, 'doseRange.low')
-            if high is not None:
-                self._require_object(high, 'doseRange.high')
 
-            if not high or high.get('value') is None:
+            if high is None or high.get('value') is None:
                 raise ValueError("doseRange.high.value ist für die Textgenerierung erforderlich.")
-            if high.get('unit') is not None:
-                self._require_string(high.get('unit'), 'doseRange.high.unit')
-            if not high.get('unit'):
+            if not high.get('unit') or not high['unit'].strip():
                 raise ValueError("doseRange.high.unit ist für die Textgenerierung erforderlich.")
-            self._require_decimal(high.get('value'), 'doseRange.high.value')
 
             if low is not None:
                 if low.get('value') is None:
                     raise ValueError("doseRange.low.value ist für die Textgenerierung erforderlich.")
-                if low.get('unit') is not None:
-                    self._require_string(low.get('unit'), 'doseRange.low.unit')
-                self._require_decimal(low.get('value'), 'doseRange.low.value')
                 # Die Einheit erscheint nur einmal im Text und stammt aus high.
                 # low.unit wird deshalb nicht verlangt; ist sie vorhanden und
                 # weicht ab, würde der Text sie unterschlagen - dann Abbruch.
@@ -924,8 +966,9 @@ class MedicationDosageTextGenerator:
           - wie ohne Bedarf steht der Rhythmus links des Doppelpunkts; ein Komma
             trennt ihn vom Anlass. Der Anlass ist Freitext und kann auf eine Zahl
             enden ("bei Blutzucker über 250, 2 x täglich: …").
-          - ein Mindestabstand ist nur bei reiner Bedarfsmedikation zulaessig,
-            also ohne strukturierten Rhythmus; sonst bricht der Algorithmus ab.
+          - ein Mindestabstand kommt nur bei reiner Bedarfsmedikation vor; die
+            Vorbedingungen (Bedarfskennzeichen, kein timing) prueft
+            _check_as_needed_preconditions vorab ueber alle Elemente.
         """
         bounds_text = self._extract_bounds_text(dosage)
 
@@ -940,31 +983,11 @@ class MedicationDosageTextGenerator:
             minimum_interval = self._extract_minimum_interval_text(dosage)
             right_parts = []
             if minimum_interval:
-                # Ein strukturierter Rhythmus legt den Abstand zwischen zwei Gaben
-                # bereits fest. Den Mindestabstand daneben auszugeben ergaebe eine
-                # widerspruechliche Anweisung, ihn stillschweigend zu unterschlagen
-                # eine sicherheitsrelevante Auslassung - deshalb Abbruch. Kriterium
-                # ist das timing, nicht der Zwischenteil: Wochentagsschemata tragen
-                # ihren Rhythmus im Kern und haetten sonst durchgerutscht.
-                if dosage.get('timing'):
-                    raise ValueError(
-                        "Ein Mindestabstand ist nur bei reiner Bedarfsmedikation "
-                        "zulässig, nicht zusammen mit einem strukturierten Rhythmus."
-                    )
                 right_parts.append(f"im Abstand von mindestens {minimum_interval}")
             if core:
                 right_parts.append(core)
             right = " ".join(right_parts)
             return f"{left}: {right}" if right else left
-
-        # Nicht-Bedarf: Einnahmeanlass und Mindestabstand setzen das
-        # Bedarfskennzeichen voraus. Sie stillschweigend zu uebergehen waere eine
-        # Auslassung - eine modifierExtension darf nie ignoriert werden.
-        if self._extract_as_needed_for_text(dosage):
-            raise ValueError(
-                "Ein Einnahmeanlass (asNeededFor) setzt asNeededBoolean = true voraus.")
-        if self._extract_minimum_interval_text(dosage):
-            raise ValueError("Ein Mindestabstand setzt asNeededBoolean = true voraus.")
 
         # Nicht-Bedarf: Zeitrahmen und Intervall/Marker links, Kern rechts.
         left = " ".join(part for part in [bounds_text, middle] if part)
@@ -1003,16 +1026,13 @@ class MedicationDosageTextGenerator:
         return text.strip()
 
     def _format_duration_text(self, duration, prefix="", field_name="Duration"):
-        self._require_object(duration, field_name)
+        # Typen prueft Schritt 3; hier nur Vorhandensein.
         duration_value = duration.get('value')
         duration_unit = duration.get('code')
-        if duration_unit is not None:
-            self._require_string(duration_unit, f"{field_name}.code")
         if duration_value is None:
             raise ValueError(f"{field_name}.value ist für die Textgenerierung erforderlich.")
         # Wertebereich wird nicht geprüft; "für 0 Tage" ist ein eindeutiger Text.
         # TimingValuesPositive bzw. DosageLimitsPositive sind Sache des Profils.
-        self._require_decimal(duration_value, f"{field_name}.value")
         if not duration_unit:
             raise ValueError(f"{field_name}.code ist für die Textgenerierung erforderlich.")
         formatted_value = self._format_decimal_value(duration_value)
@@ -1047,9 +1067,6 @@ class MedicationDosageTextGenerator:
             f"{field_name} muss ein parsebares FHIR-dateTime mit vollständigem Datum "
             "im Format JJJJ-MM-TT sein; eine Uhrzeit erfordert eine Zeitzone."
         )
-        if not isinstance(value, str):
-            raise ValueError(error_message)
-
         if re.fullmatch(r'\d{4}-\d{2}-\d{2}', value):
             try:
                 return datetime.strptime(value, "%Y-%m-%d").strftime("%d.%m.%Y")
@@ -1110,12 +1127,6 @@ class MedicationDosageTextGenerator:
             Input: "08:30"
             Output: "08:30 Uhr"
         """
-        if not isinstance(time_string, str):
-            raise ValueError(
-                "timeOfDay muss im Format HH:MM oder HH:MM:SS"
-                "[.Bruchteile] angegeben sein."
-            )
-
         match = re.fullmatch(
             r'((?:[01]\d|2[0-3])):([0-5]\d)'
             r'(?::(?:[0-5]\d|60)(?:\.\d+)?)?',
@@ -1277,10 +1288,6 @@ class MedicationDosageTextGenerator:
         period = repeat_element.get('period')
         period_max = repeat_element.get('periodMax')
         period_unit = repeat_element.get('periodUnit')
-
-        # Handle missing timing information
-        if frequency is None and period is None and period_unit is None:
-            return ""
 
         # Kurzformen nur für eine feste Periode von genau 1. Mit periodMax greift
         # die allgemeine Form ("alle 1 bis 3 Tage"), sonst entfiele die Obergrenze.
@@ -1534,67 +1541,58 @@ class MedicationDosageTextGenerator:
             period, period_unit, period_max
         )
 
-        # Group dosages by time or when code
-        time_to_dosages = {}  # time_key -> list of dosages
+        # Der Rhythmus wird nur aus dem ersten Element gelesen. Ein spaeteres
+        # Element mit anderer Periode verloere sie stillschweigend - deshalb
+        # Abbruch (TimingOnlyOneTimeForInterval verlangt dieselbe Periode).
+        for dosage in dosage_instructions[1:]:
+            other_repeat = dosage.get('timing', {}).get('repeat', {})
+            other_text = self._format_period_only_rhythm(
+                other_repeat.get('period'), other_repeat.get('periodUnit'),
+                other_repeat.get('periodMax'))
+            if other_text != interval_text:
+                raise ValueError(
+                    "Alle Dosage-Elemente einer Intervall-Kombination müssen "
+                    "denselben Einnahmerhythmus tragen.")
+
+        # Zeit-Schluessel ist die angezeigte Uhrzeit (HH:MM Uhr) bzw. der
+        # when-Code, wie in den anderen Schemata: "08:00" und "08:00:00" sind
+        # dieselbe Uhrzeit. Sortiert wird nach dem Eingabestring der ersten
+        # Nennung (nullaufgefuellt, daher chronologisch).
+        dose_by_key = {}      # Zeit-Schluessel -> Dosis-Text
+        sort_key_by_key = {}  # Zeit-Schluessel -> Sortierschluessel
+
+        def register(key, sort_key, dosage, duplicate_message):
+            dose_text = self._extract_dose_text_with_prefix(dosage)
+            known = dose_by_key.get(key)
+            if known is None:
+                dose_by_key[key] = dose_text
+                sort_key_by_key[key] = sort_key
+            elif known != dose_text:
+                raise ValueError(duplicate_message)
 
         for dosage in dosage_instructions:
-            timing = dosage.get('timing', {})
-            repeat_element = timing.get('repeat', {})
+            repeat_element = dosage.get('timing', {}).get('repeat', {})
 
-            # Process timeOfDay entries
-            if 'timeOfDay' in repeat_element and repeat_element['timeOfDay']:
-                for time_of_day in repeat_element['timeOfDay']:
-                    if time_of_day in time_to_dosages:
-                        if self._extract_dose_text_with_prefix(time_to_dosages[time_of_day][0]) != self._extract_dose_text_with_prefix(dosage):
-                            raise ValueError(
-                                f"Doppelte Belegung des Zeit-Schlüssels '{time_of_day}' mit unterschiedlicher Dosis.")
-                    else:
-                        time_to_dosages[time_of_day] = []
-                    time_to_dosages[time_of_day].append(dosage)
+            for time_of_day in repeat_element.get('timeOfDay') or []:
+                formatted_time = self._format_time_german(time_of_day)
+                register(formatted_time, (1, time_of_day), dosage,
+                         f"Doppelte Belegung der Uhrzeit '{formatted_time}' "
+                         "mit unterschiedlicher Dosis.")
 
-            # Process when code entries
-            elif 'when' in repeat_element and repeat_element['when']:
-                self._extract_dose_quantity(dosage)
-                for when_code in repeat_element['when']:
-                    if when_code not in self.WHEN_CODE_TRANSLATIONS:
-                        raise ValueError(
-                            f"Nicht unterstützter Tagesabschnitt (when): '{when_code}'.")
-                    if when_code in time_to_dosages:
-                        if self._extract_dose_text_with_prefix(time_to_dosages[when_code][0]) != self._extract_dose_text_with_prefix(dosage):
-                            raise ValueError(
-                                f"Doppelte Belegung des Zeit-Schlüssels '{when_code}' mit unterschiedlicher Dosis.")
-                    else:
-                        time_to_dosages[when_code] = []
-                    time_to_dosages[when_code].append(dosage)
+            for when_code in repeat_element.get('when') or []:
+                if when_code not in self.WHEN_CODE_TRANSLATIONS:
+                    raise ValueError(
+                        f"Nicht unterstützter Tagesabschnitt (when): '{when_code}'.")
+                register(self.WHEN_CODE_TRANSLATIONS[when_code],
+                         (0, self.WHEN_CODES_ORDER.index(when_code)), dosage,
+                         f"Doppelte Belegung des Tagesabschnitts '{when_code}' "
+                         "mit unterschiedlicher Dosis.")
 
-        # Generate time-dose text parts
-        time_dose_parts = []
-
-        # Sort times: when codes first (in logical order), then timeOfDay chronologically
-        def time_sort_key(time_key):
-            if time_key in self.WHEN_CODES_ORDER:
-                # When codes: use position in defined order
-                return (0, self.WHEN_CODES_ORDER.index(time_key))
-            else:
-                # TimeOfDay: sort chronologically by time string
-                return (1, time_key)
-
-        sorted_times = sorted(time_to_dosages.keys(), key=time_sort_key)
-
-        for time_key in sorted_times:
-            dosages_at_time = time_to_dosages[time_key]
-
-            # Format time display
-            if time_key in self.WHEN_CODE_TRANSLATIONS:
-                # This is a when code - use German translation
-                time_display = self.WHEN_CODE_TRANSLATIONS[time_key]
-            else:
-                # This is a timeOfDay - format as German time
-                time_display = self._format_time_german(time_key)
-
-            dose_text = self._extract_dose_text_with_prefix(dosages_at_time[0])
-
-            time_dose_parts.append(f"{time_display} — {dose_text}")
+        # Tagesabschnitte in fester Reihenfolge vor allen Uhrzeiten.
+        time_dose_parts = [
+            f"{key} — {dose_by_key[key]}"
+            for key in sorted(dose_by_key, key=sort_key_by_key.get)
+        ]
 
         # Zeit-/Abschnitts-Segmente werden mit Komma getrennt (siehe Trennzeichen).
         combined_times = ", ".join(time_dose_parts)
@@ -1650,7 +1648,7 @@ class MedicationDosageTextGenerator:
             if extension.get('url') != self.URL_MINDESTABSTAND:
                 continue
             duration = extension.get('valueDuration')
-            if not duration:
+            if duration is None:
                 raise ValueError(
                     "MinimumIntervalBetweenAdministrations.valueDuration ist "
                     "für die Textgenerierung erforderlich."
@@ -1665,9 +1663,9 @@ class MedicationDosageTextGenerator:
         if 'maxDosePerPeriod' not in dosage:
             return ""
 
-        max_dose = dosage.get('maxDosePerPeriod') or {}
-        numerator = self._require_object(
-            max_dose.get('numerator') or {}, 'maxDosePerPeriod.numerator')
+        # Typen prueft Schritt 3; hier nur Vorhandensein.
+        max_dose = dosage['maxDosePerPeriod']
+        numerator = max_dose.get('numerator') or {}
         value = numerator.get('value')
         unit = numerator.get('unit')
         if value is None:
@@ -1675,9 +1673,6 @@ class MedicationDosageTextGenerator:
                 "maxDosePerPeriod.numerator.value ist für die "
                 "Textgenerierung erforderlich."
             )
-        self._require_decimal(value, 'maxDosePerPeriod.numerator.value')
-        if unit is not None:
-            self._require_string(unit, 'maxDosePerPeriod.numerator.unit')
         if not unit or not unit.strip():
             raise ValueError(
                 "maxDosePerPeriod.numerator.unit ist für die "
@@ -1686,8 +1681,7 @@ class MedicationDosageTextGenerator:
 
         dose = self._format_decimal_value(value)
         dose = f"{dose} {unit.strip()}"
-        period = self._format_max_dose_period(self._require_object(
-            max_dose.get('denominator') or {}, 'maxDosePerPeriod.denominator'))
+        period = self._format_max_dose_period(max_dose.get('denominator') or {})
         return f"nicht mehr als {dose} {period}"
 
     def _format_max_dose_period(self, denominator):
@@ -1698,10 +1692,6 @@ class MedicationDosageTextGenerator:
         """
         value = denominator.get('value')
         code = denominator.get('code')
-        if value is not None:
-            self._require_decimal(value, 'maxDosePerPeriod.denominator.value')
-        if code is not None:
-            self._require_string(code, 'maxDosePerPeriod.denominator.code')
         if value is None:
             raise ValueError(
                 "maxDosePerPeriod.denominator.value ist für die "
@@ -1721,19 +1711,10 @@ class MedicationDosageTextGenerator:
         )
 
     def _append_trailing_instructions(self, text, dosage):
-        # Maximalmenge (nur reine Bedarfsmedikation): der Dosis mit Gedankenstrich
-        # nachgestellt. Ein strukturierter Rhythmus legt die Menge im
-        # Bezugszeitraum bereits fest; die Angabe daneben stillschweigend zu
-        # uebergehen waere eine sicherheitsrelevante Auslassung.
+        # Maximalmenge (nur reine Bedarfsmedikation; Vorbedingungen prueft
+        # _check_as_needed_preconditions): der Dosis mit Gedankenstrich nachgestellt.
         max_dose_text = self._extract_max_dose_text(dosage)
         if max_dose_text:
-            if not self._is_as_needed(dosage):
-                raise ValueError("Eine Maximalmenge setzt asNeededBoolean = true voraus.")
-            if dosage.get('timing'):
-                raise ValueError(
-                    "Eine Maximalmenge ist nur bei reiner Bedarfsmedikation "
-                    "zulässig, nicht zusammen mit einem strukturierten Rhythmus."
-                )
             text = f"{text} — {max_dose_text}"
 
         # Verabreichungsweg (route) ist im dgMP-Profil 0..0 und wird nicht dargestellt.

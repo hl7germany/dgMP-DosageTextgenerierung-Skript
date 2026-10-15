@@ -1086,6 +1086,92 @@ class SilentOmissionTest(unittest.TestCase):
     def text(self, *dosages):
         return self.generator.generate_dosage_text(self.request(*dosages))
 
+    # -- Intervall-Kombination ----------------------------------------------
+
+    def test_interval_combination_compares_displayed_time(self):
+        """'08:00', '08:00:00' und '08:00:00.0' sind dieselbe Uhrzeit."""
+        for first, second in (("08:00", "08:00:00"), ("08:00:00", "08:00:00.0"), ("08:00:00", "08:00:30")):
+            with self.subTest(first=first, second=second):
+                with self.assertRaisesRegex(ValueError, "Doppelte Belegung der Uhrzeit '08:00 Uhr'"):
+                    self.text(self.dosage(1, {"period": 2, "periodUnit": "d", "timeOfDay": [first]}),
+                              self.dosage(2, {"period": 2, "periodUnit": "d", "timeOfDay": [second]}))
+        self.assertEqual(
+            self.text(self.dosage(1, {"period": 2, "periodUnit": "d", "timeOfDay": ["08:00"]}),
+                      self.dosage(1, {"period": 2, "periodUnit": "d", "timeOfDay": ["08:00:00"]})),
+            "alle 2 Tage: 08:00 Uhr — je 1 Stück")
+
+    def test_interval_combination_rejects_differing_rhythm(self):
+        """Der Rhythmus eines weiteren Elements darf nicht stillschweigend
+        durch den des ersten ersetzt werden."""
+        first = self.dosage(1, {"period": 2, "periodUnit": "d", "when": ["MORN"]})
+        for other in ({"period": 3, "periodUnit": "d"}, {"period": 2, "periodUnit": "wk"},
+                      {"period": 2, "periodMax": 3, "periodUnit": "d"}):
+            with self.subTest(other=other):
+                with self.assertRaisesRegex(ValueError, "denselben Einnahmerhythmus"):
+                    self.text(first, self.dosage(2, {**other, "when": ["EVE"]}))
+        self.assertEqual(
+            self.text(first, self.dosage(2, {"period": 2, "periodUnit": "d", "when": ["EVE"]})),
+            "alle 2 Tage: morgens — je 1 Stück, abends — je 2 Stück")
+
+    # -- Vorbedingungen der Bedarfs-Bausteine in jedem Element ---------------
+
+    def test_as_needed_preconditions_apply_to_every_element(self):
+        """Ein Verstoss in Element 2 darf nicht von der Reihenfolge abhaengen."""
+        plain = self.dosage(1, {"when": ["MORN"]})
+        cases = (
+            (self.dosage(2, {"when": ["EVE"]}, extension=[{
+                "url": self.URL_AS_NEEDED_FOR, "valueCodeableConcept": {"text": "Kopfschmerzen"}}]),
+             "Ein Einnahmeanlass"),
+            (self.dosage(2, {"when": ["EVE"]}, modifierExtension=[{
+                "url": self.URL_MINDESTABSTAND, "valueDuration": {"value": 4, "code": "h"}}]),
+             "Ein Mindestabstand setzt"),
+            (self.dosage(2, {"when": ["EVE"]}, maxDosePerPeriod={
+                "numerator": {"value": 4, "unit": "Stück"}, "denominator": {"value": 1, "code": "d"}}),
+             "Eine Maximalmenge setzt"),
+        )
+        for second, message in cases:
+            with self.subTest(message=message):
+                with self.assertRaisesRegex(ValueError, message):
+                    self.text(plain, second)
+                with self.assertRaisesRegex(ValueError, message):
+                    self.text(second, plain)
+
+    def test_minimum_interval_without_as_needed_and_timing_names_the_cause(self):
+        with self.assertRaisesRegex(ValueError, "Ein Mindestabstand setzt asNeededBoolean = true voraus."):
+            self.text(self.dosage(1, modifierExtension=[{
+                "url": self.URL_MINDESTABSTAND, "valueDuration": {"value": 4, "code": "h"}}]))
+
+    def test_free_text_with_minimum_interval_or_max_dose_is_rejected(self):
+        """Freitext wird unveraendert uebernommen; eine modifierExtension oder
+        Mengenbegrenzung daneben koennte nie im Text erscheinen."""
+        free_text = {"text": "Bei Kopfschmerzen 1 Stück", "asNeededBoolean": True}
+        with self.assertRaisesRegex(ValueError, "Mindestabstand ist bei einer Freitext-Dosierung"):
+            self.text({**free_text, "modifierExtension": [{
+                "url": self.URL_MINDESTABSTAND, "valueDuration": {"value": 4, "code": "h"}}]})
+        with self.assertRaisesRegex(ValueError, "Maximalmenge ist bei einer Freitext-Dosierung"):
+            self.text({**free_text, "maxDosePerPeriod": {
+                "numerator": {"value": 6, "unit": "Stück"}, "denominator": {"value": 1, "code": "d"}}})
+        # asNeededBoolean und Einnahmeanlass gehen nicht in den Freitext ein
+        self.assertEqual(self.text({**free_text, "extension": [{
+            "url": self.URL_AS_NEEDED_FOR, "valueCodeableConcept": {"text": "Kopfschmerzen"}}]}),
+            "Bei Kopfschmerzen 1 Stück")
+
+    # -- comparator ---------------------------------------------------------
+
+    def test_quantity_comparator_is_rejected(self):
+        """'< 2 Stück' hat keine Textform; der Operator wuerde unterschlagen."""
+        dosage = self.dosage(2, {"when": ["MORN"]})
+        dosage["doseAndRate"][0]["doseQuantity"]["comparator"] = "<"
+        with self.assertRaisesRegex(ValueError, "doseQuantity.comparator wird nicht unterstützt."):
+            self.text(dosage)
+        dosage = self.dosage(1, {"when": ["MORN"], "boundsDuration": {"value": 7, "code": "d", "comparator": ">"}})
+        with self.assertRaisesRegex(ValueError, "timing.repeat.boundsDuration.comparator wird nicht unterstützt."):
+            self.text(dosage)
+
+    def test_whitespace_unit_counts_as_missing(self):
+        with self.assertRaisesRegex(ValueError, "doseQuantity.unit ist für die Textgenerierung erforderlich."):
+            self.text(self.dosage(1, {"when": ["MORN"]}, unit="  "))
+
     # -- doppelte Uhrzeit --------------------------------------------------
 
     def test_same_time_with_different_dose_is_rejected_in_time_schemas(self):
