@@ -1160,16 +1160,37 @@ class SilentOmissionTest(unittest.TestCase):
 
     # -- Einheit ------------------------------------------------------------
 
-    def test_differing_dose_units_across_elements_are_rejected(self):
+    def test_differing_dose_units_are_shown_per_segment(self):
+        """Das kompakte Muster traegt nur eine Einheit. Weichen die Einheiten ab,
+        wechselt die Darstellung in die ausgeschriebene Form; jede Einheit steht
+        bei ihrer Dosis. Nichts wird unterschlagen, nichts bricht ab - ob die
+        Einheiten zusammenpassen, prueft die Validierung."""
         cases = (
-            ({"when": ["MORN"]}, {"when": ["EVE"]}),
-            ({"dayOfWeek": ["mon"]}, {"dayOfWeek": ["wed"]}),
-            ({"dayOfWeek": ["mon"], "when": ["MORN"]}, {"dayOfWeek": ["wed"], "when": ["MORN"]}),
+            ({"when": ["MORN"]}, {"when": ["EVE"]},
+             "täglich: morgens — je 1 Stück, abends — je 2 mg"),
+            ({"dayOfWeek": ["mon"]}, {"dayOfWeek": ["wed"]},
+             "montags — je 1 Stück; mittwochs — je 2 mg"),
+            ({"dayOfWeek": ["mon"], "when": ["MORN"]}, {"dayOfWeek": ["mon"], "when": ["EVE"]},
+             "montags morgens — je 1 Stück, abends — je 2 mg"),
         )
-        for first, second in cases:
+        for first, second, expected in cases:
             with self.subTest(first=first):
-                with self.assertRaisesRegex(ValueError, "Abweichende Dosis-Einheiten 'Stück' und 'mg'"):
-                    self.text(self.dosage(1, first), self.dosage(2, second, unit="mg"))
+                self.assertEqual(self.text(self.dosage(1, first), self.dosage(2, second, unit="mg")), expected)
+
+    def test_units_differing_only_between_days_stay_compact(self):
+        """Ein Tag traegt seine Einheit selbst; erst gemischte Einheiten innerhalb
+        eines Tages erfordern die ausgeschriebene Form."""
+        self.assertEqual(
+            self.text(self.dosage(1, {"dayOfWeek": ["mon"], "when": ["MORN"]}),
+                      self.dosage(2, {"dayOfWeek": ["wed"], "when": ["MORN"]}, unit="mg")),
+            "montags 1-0-0-0 Stück; mittwochs 2-0-0-0 mg",
+        )
+
+    def test_same_value_with_different_unit_is_a_different_dose(self):
+        """Dieselbe Dosis heisst derselbe Text: 1 Stück und 1 Tablette auf
+        derselben Position sind eine doppelte Belegung mit abweichender Dosis."""
+        with self.assertRaisesRegex(ValueError, "Doppelte Belegung des Tagesabschnitts 'MORN'"):
+            self.text(self.dosage(1, {"when": ["MORN"]}), self.dosage(1, {"when": ["MORN"]}, unit="Tablette"))
 
     # -- frequencyMax in der Intervall-Kombination ---------------------------
 

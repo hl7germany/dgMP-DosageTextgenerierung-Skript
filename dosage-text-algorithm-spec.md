@@ -10,7 +10,7 @@ Diese Seite stellt zwei Aspekte dar: **Teil A** beschreibt, wie jede einzelne An
 
 Der gesamte Fließtext dieser Seite ist verbindlich. Eingerückte Blöcke enthalten ausschließlich Unverbindliches: Orientierungshilfen, Hintergrund und Verweise auf andere Dokumente.
 
-**Zur Bereichsdarstellung** — festgelegt in den jeweiligen Abschnitten, hier vorab zur Orientierung: Variable Angaben (Frequenz, Periode, Einzeldosis) werden durchgängig mit dem Wort **„bis"** gebildet (z. B. „1 bis 2 Stück"). Enthält das kompakte 4‑Schema einen variablen Wert, wird es in die ausgeschriebene Segmentform überführt (siehe [4‑Schema](#schema-mit-tageszeiten-bezug-4-schema)).
+**Zur Bereichsdarstellung** — festgelegt in den jeweiligen Abschnitten, hier vorab zur Orientierung: Variable Angaben (Frequenz, Periode, Einzeldosis) werden durchgängig mit dem Wort **„bis"** gebildet (z. B. „1 bis 2 Stück"). Enthält das kompakte 4‑Schema einen variablen Wert oder verschiedene Einheiten, wird es in die ausgeschriebene Segmentform überführt (siehe [4‑Schema](#schema-mit-tageszeiten-bezug-4-schema)).
 
 ---
 
@@ -383,13 +383,13 @@ Je nach Schema werden einzelne Bestandteile weggelassen oder unterschiedlich kom
 
 Nicht belegte Positionen erhalten den Wert `0`.
 
-Die Werte werden über alle `Dosage`-Elemente eingesammelt. Für jedes Element wird dessen Dosis allen `when`-Codes dieses Elements zugeordnet. Die Dosis-Einheit der Ausgabe stammt aus dem ersten Element mit auswertbarer Dosis. Wird derselbe Tagesabschnitt mehrfach mit **unterschiedlicher** Dosis belegt, bricht der Algorithmus ab; dieselbe Dosis mehrfach ergibt denselben Text und ist wie in den übrigen Schemata zulässig. Eine Position, die explizit mit der Dosis `0` belegt ist, gilt als belegt und ist von einer nicht belegten Position zu unterscheiden; im kompakten Muster sehen beide gleich aus (`0`), in der ausgeschriebenen Form bleibt nur die belegte erhalten. Ein Code außerhalb der [Tagesabschnitts-Tabelle](#tagesabschnitt-when-codes) führt ebenfalls zum Abbruch.
+Die Werte werden über alle `Dosage`-Elemente eingesammelt. Für jedes Element wird dessen Dosis samt Einheit allen `when`-Codes dieses Elements zugeordnet. Das kompakte Muster trägt eine gemeinsame Einheit, die aller belegten Positionen. Wird derselbe Tagesabschnitt mehrfach mit **unterschiedlicher** Dosis belegt, bricht der Algorithmus ab; dieselbe Dosis mehrfach ergibt denselben Text und ist wie in den übrigen Schemata zulässig. Eine Position, die explizit mit der Dosis `0` belegt ist, gilt als belegt und ist von einer nicht belegten Position zu unterscheiden; im kompakten Muster sehen beide gleich aus (`0`), in der ausgeschriebenen Form bleibt nur die belegte erhalten. Ein Code außerhalb der [Tagesabschnitts-Tabelle](#tagesabschnitt-when-codes) führt ebenfalls zum Abbruch.
 
 Wie beim [Uhrzeiten-Schema](#schema-mit-uhrzeiten-bezug) lautet der Marker in diesem Schema immer `täglich`: Das Muster allein lässt offen, dass es an jedem Tag gilt. `frequency`, `frequencyMax`, `period`, `periodMax` und `periodUnit` beeinflussen die Ausgabe dieses Schemas nicht.
 
 *Beispiele:* `täglich: 1-0-2-0 Stück` · mit Zeitrahmen: `für 5 Tage täglich: 1-1-1-1 Kapseln`
 
-**Variabilität:** Enthält eine der Positionen einen variablen Wert (Bereich), wird das kompakte Schema in die ausgeschriebene Segmentform (nur belegte Positionen) überführt, z. B. `täglich: morgens — je 1 bis 2 Stück, abends — je 2 Stück`. Eine explizit mit `0` belegte Position erscheint dabei als Segment `morgens — je 0 Stück`. Feste 4‑Schemata bleiben kompakt (`täglich: 1-0-2-0 Stück`).
+**Ausgeschriebene Form:** Enthält eine der Positionen einen variablen Wert (Bereich) oder tragen die belegten Positionen **nicht alle dieselbe Einheit**, wird das kompakte Schema in die ausgeschriebene Segmentform (nur belegte Positionen) überführt, z. B. `täglich: morgens — je 1 bis 2 Stück, abends — je 2 Stück`. Jedes Segment trägt die Einheit seiner Dosis: `täglich: morgens — je 1 Stück, abends — je 2 Messlöffel`. Verglichen wird die Einheit so, wie sie im Text erscheint (`doseQuantity.unit` beziehungsweise `doseRange.high.unit`), nicht der Code: Der Text gibt die Anzeige wieder, und eine abweichende Anzeige bei gleichem Code kann auf einen Fehler in einem Element hinweisen, der nicht verdeckt werden darf. Ob die Einheiten zusammenpassen, beurteilt der Algorithmus nicht; das ist Sache der Validierung (`DosageDoseUnitSameCode`). Eine explizit mit `0` belegte Position erscheint als Segment `morgens — je 0 Stück`. Feste 4‑Schemata mit einer Einheit bleiben kompakt (`täglich: 1-0-2-0 Stück`).
 
 ### Schema mit Uhrzeiten-Bezug
 
@@ -411,7 +411,7 @@ Jeder belegte Tag bildet mit seiner Dosis ein Segment. Mehrere Segmente werden i
 
 *Beispiel:* `montags — je 1 Stück; mittwochs — je 2 Stück`
 
-Die Dosis-Einheit stammt aus dem ersten Element mit auswertbarer Dosis. Wird bei nicht profilkonformem Input derselbe Wochentag mehrfach mit unterschiedlicher Dosis belegt, bricht der Algorithmus ab: `ValueError("Doppelte Belegung des Wochentags '{code}' mit unterschiedlicher Dosis.")`
+Jedes Segment trägt die Einheit seines Elements (`montags — je 1 Stück; mittwochs — je 2 Messlöffel`). Wird bei nicht profilkonformem Input derselbe Wochentag mehrfach mit unterschiedlicher Dosis belegt, bricht der Algorithmus ab: `ValueError("Doppelte Belegung des Wochentags '{code}' mit unterschiedlicher Dosis.")`
 
 ### Schema für wiederkehrende Intervalle
 
@@ -453,9 +453,9 @@ Jeder belegte Tag bildet mit seinen Uhrzeiten oder seinem Tagesabschnitts-Muster
 * `montags 08:00 Uhr — je 1 Stück, 12:00 Uhr — je 2 Stück; mittwochs 20:00 Uhr — je 1 Stück`
 * `montags 1-0-1-0 Stück; mittwochs 2-1-2-0 Stück`
 
-Bei der Kombination mit Tagesabschnitten stammt die gemeinsame Einheit aus dem ersten Element mit auswertbarer Dosis. Wird bei nicht profilkonformem Input dieselbe Kombination aus Wochentag und Tagesabschnitt mehrfach mit unterschiedlicher Dosis belegt, bricht der Algorithmus ab: `ValueError("Doppelte Belegung der Kombination aus Wochentag '{code}' und Zeit-/Tagesabschnitt '{zeit}' mit unterschiedlicher Dosis.")` Wie beim reinen Wochentags-Schema beeinflussen `frequency` sowie das redundante Paar `period = 1`, `periodUnit = wk` die Ausgabe nicht. `frequencyMax`, `periodMax` und jede andere Periode sind in diesem Schema nicht zulässig (siehe [Schema-Erkennung](#schema-erkennung)).
+Bei der Kombination mit Tagesabschnitten trägt jeder Tag die Einheit seiner Positionen; verschiedene Einheiten an verschiedenen Tagen bleiben kompakt (`montags 1-0-0-0 Stück; mittwochs 2-0-0-0 mg`). Wird bei nicht profilkonformem Input dieselbe Kombination aus Wochentag und Tagesabschnitt mehrfach mit unterschiedlicher Dosis belegt, bricht der Algorithmus ab: `ValueError("Doppelte Belegung der Kombination aus Wochentag '{code}' und Zeit-/Tagesabschnitt '{zeit}' mit unterschiedlicher Dosis.")` Wie beim reinen Wochentags-Schema beeinflussen `frequency` sowie das redundante Paar `period = 1`, `periodUnit = wk` die Ausgabe nicht. `frequencyMax`, `periodMax` und jede andere Periode sind in diesem Schema nicht zulässig (siehe [Schema-Erkennung](#schema-erkennung)).
 
-**Variabilität:** Enthält **irgendein** Tag einen variablen Wert (Bereich), wird die ausgeschriebene Segmentform für **alle** Tage verwendet, damit die Notation über den gesamten Text einheitlich bleibt — z. B. `montags morgens — je 1 bis 2 Stück; mittwochs abends — je 2 Stück`. Sind alle Werte fest, bleiben alle Tage kompakt (`montags 1-0-1-0 Stück; mittwochs 2-1-2-0 Stück`).
+**Ausgeschriebene Form:** Enthält **irgendein** Tag einen variablen Wert (Bereich) oder Positionen mit verschiedenen Einheiten, wird die ausgeschriebene Segmentform für **alle** Tage verwendet, damit die Notation über den gesamten Text einheitlich bleibt — z. B. `montags morgens — je 1 bis 2 Stück; mittwochs abends — je 2 Stück`. Sind alle Werte fest, bleiben alle Tage kompakt (`montags 1-0-1-0 Stück; mittwochs 2-1-2-0 Stück`).
 
 ### Schema für Bedarfsmedikation
 
@@ -543,11 +543,11 @@ Für **unterschiedliche** Dosierungen, die sich nicht in einem einzelnen `Dosage
 * **Segmente** (Uhrzeit-, Tagesabschnitts- und Wochentagssegmente) werden über **alle** `Dosage`-Elemente eingesammelt und gemeinsam sortiert. Ein Segment kann daher aus demselben oder aus verschiedenen `Dosage`-Einträgen stammen; im erzeugten Text erscheinen sie zusammengeführt (siehe Trennzeichen-Regeln). Dies betrifft die Schemata 4‑Schema, Uhrzeiten, Wochentage, Wochentag-Kombinationen und Intervall-Kombinationen.
 * Die **Rahmen-Angaben** – Zeitrahmen (Dauer/Start-Ende), Bedarfskennzeichen inkl. Einnahmeanlass, Mindestabstand und Maximalmenge sowie der abschließende Hinweis – werden **ausschließlich aus dem ersten** `Dosage`-Element gelesen. Dass sie über alle Elemente konsistent sind, ist keine bloße Annahme, sondern wird durch Invarianten erzwungen: `TimingOnlyOneBounds` (Dauer sowie Start/Ende), `AsNeededIdentical`, `AsNeededForIdentical` und `PatientInstructionIdentical`. Ohne sie könnte eine abweichende Angabe in einem späteren Element unbemerkt entfallen — bei Maximalmenge, Mindestabstand oder Bedarfskennzeichen mit unmittelbarer Auswirkung auf die Arzneimittelsicherheit.
 * Bei den Schemata **wiederkehrende Intervalle** und **reine Bedarfsmedikation** ist jeweils genau ein `Dosage`-Element zulässig; bei mehreren bricht der Algorithmus ab, weil ein weiteres Element sonst stillschweigend entfiele. Profilkonform erzwingen das `TimingIntervalOnlyOneFrequency` beziehungsweise `AsNeededSingleDosageOnly`.
-* **Dieselbe Dosis** bedeutet in allen Duplikatprüfungen dieselbe Textdarstellung: `1` und `1,0` sind verschieden, auch wenn sie numerisch gleich sind — sonst hinge der Text davon ab, welches Element zuerst gelesen wird. Bei Gleichheit bleibt der zuerst gelesene Wert.
+* **Dieselbe Dosis** bedeutet in allen Duplikatprüfungen dieselbe Textdarstellung von Wert und Einheit: `1` und `1,0` sind verschieden, auch wenn sie numerisch gleich sind, ebenso `1 Stück` und `1 Tablette` — sonst hinge der Text davon ab, welches Element zuerst gelesen wird. Bei Gleichheit bleibt der zuerst gelesene Wert.
 
 Bei profilkonformem Input ist die resultierende Reihenfolge der Segmente **deterministisch** und hängt nicht von der Reihenfolge der `Dosage`-Elemente ab (Uhrzeiten aufsteigend, Tagesabschnitte in fester Reihenfolge, Wochentage kanonisch).
 
-Die gemeinsame Dosis-Einheit aggregierender 4‑ und Wochentagsschemata wird aus der ersten angetroffenen auswertbaren Dosis übernommen. Weicht die Einheit eines weiteren Elements ab, bricht der Algorithmus ab (`Abweichende Dosis-Einheiten '{a}' und '{b}' lassen sich nicht in einem gemeinsamen Muster darstellen.`); `DosageDoseUnitSameCode` vergleicht nur den Code, nicht die Anzeigeeinheit, und der Text würde die zweite Einheit sonst unterschlagen.
+Aggregierende 4‑ und Wochentagsschemata geben die Einheit jeder Dosis wieder. Nur das kompakte 4‑Schema-Muster trägt eine gemeinsame Einheit; tragen die Positionen verschiedene Einheiten, wird die ausgeschriebene Form verwendet. `DosageDoseUnitSameCode` vergleicht nur den Code; eine abweichende Anzeige bleibt so im Text sichtbar, statt durch die Einheit eines anderen Elements ersetzt zu werden.
 
 ---
 
@@ -593,7 +593,6 @@ Die formale Definition zulässiger Felder und Kombinationen liegt in den Timing-
 * dieselbe Uhrzeit mit unterschiedlicher Dosis im Uhrzeiten-Schema oder in der Wochentags-Kombination: Abbruch mit `ValueError("Doppelte Belegung der Uhrzeit '{HH:MM Uhr}' mit unterschiedlicher Dosis.")`
 * Uhrzeiten und Tagesabschnitte gemischt in einer Wochentags-Kombination (über Elemente oder Tage hinweg): Abbruch mit `ValueError("Wochentags-Kombinationen mit Uhrzeiten und mit Tagesabschnitten dürfen nicht gemischt werden.")`
 * mehr als ein `Dosage`-Element im Intervall-Schema: Abbruch mit `ValueError("Wiederkehrende Intervalle erlauben genau ein Dosage-Element.")`
-* abweichende Dosis-Einheit eines weiteren Elements im 4‑Schema, Wochentags-Schema oder in der Wochentags-Kombination mit Tagesabschnitten: Abbruch mit `ValueError("Abweichende Dosis-Einheiten '{a}' und '{b}' lassen sich nicht in einem gemeinsamen Muster darstellen.")`
 * Einnahmeanlass, Mindestabstand oder Maximalmenge ohne `asNeededBoolean = true`: Abbruch mit `ValueError("Ein Einnahmeanlass (asNeededFor) setzt asNeededBoolean = true voraus.")`, `ValueError("Ein Mindestabstand setzt asNeededBoolean = true voraus.")` beziehungsweise `ValueError("Eine Maximalmenge setzt asNeededBoolean = true voraus.")`
 * Zeiteinheit außerhalb der [Einheiten-Tabelle](#einheiten-und-pluralisierung) in `periodUnit`, `boundsDuration.code` oder beim Mindestabstand: Abbruch mit `ValueError("Nicht unterstützte Zeiteinheit: '{code}'.")`
 

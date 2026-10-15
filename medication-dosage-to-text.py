@@ -529,11 +529,10 @@ class MedicationDosageTextGenerator:
 
         Example output: "täglich: 1-0-2-0 Stück"
         """
-        # None = nicht belegt. Eine explizit mit 0 belegte Position muss davon
-        # unterscheidbar bleiben, damit sie in der ausgeschriebenen Form nicht
-        # entfaellt (siehe _render_when_doses).
+        # Je Position (Wert, Einheit); None = nicht belegt. Eine explizit mit 0
+        # belegte Position muss davon unterscheidbar bleiben, damit sie in der
+        # ausgeschriebenen Form nicht entfaellt (siehe _render_when_doses).
         dose_amounts = {code: None for code in self.WHEN_CODES_ORDER}
-        unit_text = ""
 
         # Process each dosage instruction to extract dose amounts
         for dosage in dosage_instructions:
@@ -543,14 +542,6 @@ class MedicationDosageTextGenerator:
 
             # Extract dose quantity information
             dose_value, dose_unit = self._extract_dose_quantity(dosage)
-            if not unit_text:
-                unit_text = dose_unit
-            elif dose_unit != unit_text:
-                # Das Muster traegt eine gemeinsame Einheit; eine abweichende
-                # Einheit eines weiteren Elements wuerde unterschlagen.
-                raise ValueError(
-                    f"Abweichende Dosis-Einheiten '{unit_text}' und '{dose_unit}' "
-                    "lassen sich nicht in einem gemeinsamen Muster darstellen.")
 
             # Assign dose value to each specified time period
             for when_code in when_codes:
@@ -562,56 +553,65 @@ class MedicationDosageTextGenerator:
                 # Schemata).
                 existing = dose_amounts[when_code]
                 if existing is None:
-                    dose_amounts[when_code] = dose_value
-                elif self._dose_key(existing) != self._dose_key(dose_value):
+                    dose_amounts[when_code] = (dose_value, dose_unit)
+                elif self._slot_key(existing) != self._slot_key((dose_value, dose_unit)):
                     raise ValueError(
                         f"Doppelte Belegung des Tagesabschnitts '{when_code}' "
                         "mit unterschiedlicher Dosis.")
 
-        # Feste Dosen -> kompakt "1-0-2-0"; sobald eine Position variabel ist,
-        # wird gemäß Option 2 die ausgeschriebene Segmentform verwendet
+        # Feste Dosen mit gemeinsamer Einheit -> kompakt "1-0-2-0"; ein variabler
+        # Wert oder abweichende Einheiten -> ausgeschriebene Segmentform
         # (siehe _render_when_doses).
-        dose_pattern = self._render_when_doses(dose_amounts, unit_text)
+        dose_pattern = self._render_when_doses(dose_amounts)
         # Marker "täglich" wie beim Uhrzeiten-Schema: Das nackte Muster
         # "1-0-2-0" lässt offen, dass es jeden Tag gilt.
         text = self._assemble(dosage_instructions[0], "täglich", dose_pattern)
         return self._append_trailing_instructions(text, dosage_instructions[0])
 
-    def _render_when_doses(self, dose_amounts, unit_text, force_written=False):
-        """
-        Render eine MORN/NOON/EVE/NIGHT-Dosisbelegung.
+    def _needs_written_form(self, dose_amounts):
+        """Ausgeschriebene Form noetig: ein variabler Wert (Bereich) oder nicht
+        alle belegten Positionen mit derselben Einheit. Das kompakte Muster
+        traegt nur eine Einheit; eine zweite fiele weg."""
+        assigned = [slot for slot in dose_amounts.values() if slot is not None]
+        return (any(isinstance(value, str) for value, _ in assigned)
+                or len({unit for _, unit in assigned}) > 1)
 
-        Feste Dosen ergeben die kompakte, positionelle Notation
-        "1-0-2-0 [Einheit]"; nicht belegte Positionen (None) erscheinen als 0.
-        Sobald eine Position variabel ist (Bereich, z. B. "1 bis 2"), wird das
-        Schema gemäß Option 2 in die ausgeschriebene Segmentform überführt: nur
-        belegte Positionen erscheinen als "morgens — je 1 bis 2 Stück,
-        abends — je 2 Stück". Eine explizit mit 0 belegte Position ist belegt
-        und bleibt erhalten ("morgens — je 0 Stück").
+    def _render_when_doses(self, dose_amounts, force_written=False):
+        """
+        Render eine MORN/NOON/EVE/NIGHT-Dosisbelegung; je Position (Wert, Einheit)
+        oder None fuer nicht belegt.
+
+        Feste Dosen mit gemeinsamer Einheit ergeben die kompakte, positionelle
+        Notation "1-0-2-0 [Einheit]"; nicht belegte Positionen erscheinen als 0.
+        Ist eine Position variabel (Bereich, z. B. "1 bis 2") oder tragen die
+        Positionen verschiedene Einheiten, wird die ausgeschriebene Segmentform
+        verwendet: nur belegte Positionen, jede mit ihrer eigenen Einheit, z. B.
+        "morgens — je 1 bis 2 Stück, abends — je 2 Messlöffel". Der Algorithmus
+        beurteilt nicht, ob die Einheiten zusammenpassen; er gibt sie wieder.
+        Eine explizit mit 0 belegte Position ist belegt und bleibt erhalten.
 
         `force_written` erzwingt die ausgeschriebene Form auch für eine für sich
-        genommen feste Belegung. Die Wochentags-Kombination nutzt das, damit die
-        Notation über alle Tage hinweg einheitlich bleibt, sobald irgendein Tag
-        einen variablen Wert enthält.
+        genommen kompakt darstellbare Belegung. Die Wochentags-Kombination nutzt
+        das, damit die Notation über alle Tage hinweg einheitlich bleibt.
         """
-        has_variable = force_written or any(
-            isinstance(value, str) for value in dose_amounts.values())
-
-        if not has_variable:
+        if not (force_written or self._needs_written_form(dose_amounts)):
+            units = {slot[1] for slot in dose_amounts.values() if slot is not None}
+            unit_text = units.pop() if units else ""
             pattern = "-".join(
                 "0" if dose_amounts[code] is None
-                else self._format_decimal_value(dose_amounts[code])
+                else self._format_decimal_value(dose_amounts[code][0])
                 for code in self.WHEN_CODES_ORDER)
             return f"{pattern} {unit_text}"
 
         segments = []
         for code in self.WHEN_CODES_ORDER:
-            value = dose_amounts[code]
+            slot = dose_amounts[code]
             # Unbelegte Positionen entfallen in der ausgeschriebenen Form.
-            if value is None:
+            if slot is None:
                 continue
+            value, unit = slot
             formatted = value if isinstance(value, str) else self._format_decimal_value(value)
-            segments.append(f"{self.WHEN_CODE_TRANSLATIONS[code]} — je {formatted} {unit_text}")
+            segments.append(f"{self.WHEN_CODE_TRANSLATIONS[code]} — je {formatted} {unit}")
         # Tagesabschnitts-Segmente werden mit Komma getrennt (siehe Trennzeichen).
         return ", ".join(segments)
 
@@ -841,6 +841,12 @@ class MedicationDosageTextGenerator:
         von der Reihenfolge der Dosage-Elemente ab.
         """
         return dose_value if isinstance(dose_value, str) else self._format_decimal_value(dose_value)
+
+    def _slot_key(self, slot):
+        """Vergleichsschluessel fuer eine Belegung (Wert, Einheit): dieselbe Dosis
+        heisst derselbe Text, also gleicher Wert UND gleiche Einheit."""
+        value, unit = slot
+        return (self._dose_key(value), unit)
 
     def _extract_dose_text_with_prefix(self, dosage):
         """
@@ -1166,8 +1172,7 @@ class MedicationDosageTextGenerator:
             return ""
 
         # Group dosages by day and collect dose information
-        day_to_dose = {}  # day_code -> dose_value
-        unit_text = ""
+        day_to_dose = {}  # day_code -> (dose_value, unit)
 
         for dosage in dosage_instructions:
             timing = dosage.get('timing', {})
@@ -1176,21 +1181,13 @@ class MedicationDosageTextGenerator:
 
             # Extract dose information
             dose_value, dose_unit = self._extract_dose_quantity(dosage)
-            if not unit_text:
-                unit_text = dose_unit
-            elif dose_unit != unit_text:
-                # Das Muster traegt eine gemeinsame Einheit; eine abweichende
-                # Einheit eines weiteren Elements wuerde unterschlagen.
-                raise ValueError(
-                    f"Abweichende Dosis-Einheiten '{unit_text}' und '{dose_unit}' "
-                    "lassen sich nicht in einem gemeinsamen Muster darstellen.")
 
             # Associate this dose with each specified day
             for day_code in day_codes:
                 self._require_day_code(day_code)
                 if day_code not in day_to_dose:
-                    day_to_dose[day_code] = dose_value
-                elif self._dose_key(day_to_dose[day_code]) != self._dose_key(dose_value):
+                    day_to_dose[day_code] = (dose_value, dose_unit)
+                elif self._slot_key(day_to_dose[day_code]) != self._slot_key((dose_value, dose_unit)):
                     raise ValueError(
                         f"Doppelte Belegung des Wochentags '{day_code}' mit unterschiedlicher Dosis.")
 
@@ -1203,14 +1200,14 @@ class MedicationDosageTextGenerator:
 
         day_text_parts = []
         for day_code in sorted_days:
-            dose_value = day_to_dose[day_code]
+            dose_value, unit = day_to_dose[day_code]
 
             # Get German day name
             day_name = self.DAY_TRANSLATIONS[day_code]
 
-            # Format dose value and create day entry
+            # Jedes Segment traegt die Einheit seines Elements.
             formatted_dose = dose_value if isinstance(dose_value, str) else self._format_decimal_value(dose_value)
-            day_text_parts.append(f"{day_name} — je {formatted_dose} {unit_text}")
+            day_text_parts.append(f"{day_name} — je {formatted_dose} {unit}")
 
         combined_days = "; ".join(day_text_parts)
         text = self._assemble(dosage_instructions[0], "", combined_days)
@@ -1441,8 +1438,7 @@ class MedicationDosageTextGenerator:
             return ""
 
         # Group dosages by day and build 4-schema pattern for each day
-        day_to_patterns = {}  # day_code -> {MORN: dose, NOON: dose, EVE: dose, NIGHT: dose}
-        unit_text = ""
+        day_to_patterns = {}  # day_code -> {MORN: (dose, unit) | None, NOON: …, EVE: …, NIGHT: …}
 
         for dosage in dosage_instructions:
             timing = dosage.get('timing', {})
@@ -1453,14 +1449,6 @@ class MedicationDosageTextGenerator:
 
             # Extract dose information
             dose_value, dose_unit = self._extract_dose_quantity(dosage)
-            if not unit_text:
-                unit_text = dose_unit
-            elif dose_unit != unit_text:
-                # Das Muster traegt eine gemeinsame Einheit; eine abweichende
-                # Einheit eines weiteren Elements wuerde unterschlagen.
-                raise ValueError(
-                    f"Abweichende Dosis-Einheiten '{unit_text}' und '{dose_unit}' "
-                    "lassen sich nicht in einem gemeinsamen Muster darstellen.")
 
             # For each day and each when code, set the dose
             for day_code in day_codes:
@@ -1475,8 +1463,8 @@ class MedicationDosageTextGenerator:
                             f"Nicht unterstützter Tagesabschnitt (when): '{when_code}'.")
                     existing = day_to_patterns[day_code][when_code]
                     if existing is None:
-                        day_to_patterns[day_code][when_code] = dose_value
-                    elif self._dose_key(existing) != self._dose_key(dose_value):
+                        day_to_patterns[day_code][when_code] = (dose_value, dose_unit)
+                    elif self._slot_key(existing) != self._slot_key((dose_value, dose_unit)):
                         raise ValueError(
                             f"Doppelte Belegung der Kombination aus Wochentag '{day_code}' "
                             f"und Zeit-/Tagesabschnitt '{when_code}' mit unterschiedlicher Dosis.")
@@ -1489,21 +1477,18 @@ class MedicationDosageTextGenerator:
                              key=self.DAY_ORDER.index)
 
         # Die Entscheidung kompakt/ausgeschrieben fällt einmal über alle Tage, damit
-        # ein einzelner variabler Wert nicht zu zwei Notationen in einem Text führt.
-        has_variable = any(
-            isinstance(value, str)
-            for pattern in day_to_patterns.values()
-            for value in pattern.values()
-        )
+        # ein einzelner Tag mit variablem Wert oder gemischten Einheiten nicht zu
+        # zwei Notationen in einem Text führt. Verschiedene Einheiten an
+        # verschiedenen Tagen erzwingen das nicht: Jeder Tag traegt seine Einheit.
+        has_variable = any(self._needs_written_form(pattern) for pattern in day_to_patterns.values())
 
         day_text_parts = []
         for day_code in sorted_days:
             dose_pattern = day_to_patterns[day_code]
             day_name = self.DAY_TRANSLATIONS[day_code]
 
-            # Feste Dosen -> kompakt "1-0-1-0"; variable -> ausgeschrieben (Option 2).
-            day_content = self._render_when_doses(
-                dose_pattern, unit_text, force_written=has_variable)
+            # Kompakt "1-0-1-0" oder ausgeschrieben (siehe _render_when_doses).
+            day_content = self._render_when_doses(dose_pattern, force_written=has_variable)
             day_text_parts.append(f"{day_name} {day_content}")
 
         combined_days = "; ".join(day_text_parts)
