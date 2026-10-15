@@ -73,9 +73,9 @@ Ganzzahlige Werte werden ohne Nachkommastelle dargestellt; überflüssige Dezima
 
 Eine Dosis ist in **jedem** strukturierten Schema erforderlich. Fehlt `doseAndRate` ganz, bricht der Algorithmus ab — es wird weder ein Segment stillschweigend übersprungen noch eine Dosieranweisung ohne Dosis erzeugt. Profilkonformer Input enthält immer eine Dosis: `DosageStructuredRequiresBoth` erzwingt „`timing` impliziert `doseAndRate`", und für die reine Bedarfsdosierung verlangt `DosageStructuredOrFreeText` ebenfalls `doseAndRate`.
 
-`doseQuantity.value` und `doseQuantity.unit` sind für die Textgenerierung verpflichtend. Fehlt eine dieser Angaben trotz vorhandener `doseQuantity`, bricht der Algorithmus mit einem Fehler ab. Der Wert muss außerdem größer als `0` sein; andernfalls bricht der Algorithmus mit `ValueError("doseQuantity.value muss größer als 0 sein.")` ab.
+`doseQuantity.value` und `doseQuantity.unit` sind für die Textgenerierung verpflichtend. Fehlt eine dieser Angaben trotz vorhandener `doseQuantity` oder ist der Wert nicht numerisch, bricht der Algorithmus mit einem Fehler ab. Der Wertebereich wird nicht geprüft: `je 0 Stück` ist ein eindeutiger Text. Ob ein Wert von `0` zulässig ist, entscheidet das Profil (`DosageDoseValuePositive`), nicht der Algorithmus.
 
-Bei `doseRange` muss die Obergrenze mit `high.value` und `high.unit` vorhanden sein. Ist zusätzlich `low` vorhanden, müssen auch `low.value` und `low.unit` vorhanden sein und beide Einheiten müssen übereinstimmen. Eine fehlende Pflichtangabe oder eine abweichende Einheit führt zum Abbruch. Die Ausgabeeinheit stammt stets aus `high.unit`. Enthält `doseAndRate[0]` weder `doseQuantity` noch `doseRange`, wird ebenfalls abgebrochen. Vorhandene Werte müssen jeweils größer als `0` sein — ein `doseRange.high.value <= 0` führt zu `ValueError("doseRange.high.value muss größer als 0 sein.")`, ein vorhandenes `doseRange.low.value <= 0` entsprechend zu `ValueError("doseRange.low.value muss größer als 0 sein.")`.
+Bei `doseRange` muss die Obergrenze mit `high.value` und `high.unit` vorhanden sein. Ist zusätzlich `low` vorhanden, muss auch `low.value` vorhanden sein. Die Ausgabeeinheit stammt stets aus `high.unit`; `low.unit` erscheint nicht im Text und wird deshalb nicht verlangt. Ist `low.unit` vorhanden und weicht von `high.unit` ab, bricht der Algorithmus ab — der Text würde sie sonst unterschlagen. Eine fehlende Pflichtangabe oder ein nicht numerischer Wert führt ebenso zum Abbruch wie ein `doseAndRate[0]` ohne `doseQuantity` und ohne `doseRange`. Der Wertebereich wird wie bei `doseQuantity` nicht geprüft.
 
 Der so gebildete Dosis-Baustein – einschließlich der **Bereichsform** (`je {von} bis {bis} {Einheit}`) – ist in **allen** Schemata einsetzbar; überall dort, wo in Teil B der Platzhalter `{Dosis}` steht, kann ein fester Wert **oder** ein Bereich stehen (z. B. `alle 8 Stunden: je 1 bis 2 Stück`).
 
@@ -87,7 +87,7 @@ Der so gebildete Dosis-Baustein – einschließlich der **Bereichsform** (`je {v
 
 Eine begrenzte Anwendungsdauer wird vorangestellt als `für {Wert} {Einheit}`. Die Einheit wird nach den Regeln unter [Einheiten und Pluralisierung](#einheiten-und-pluralisierung) ausgegeben, z. B. `für 1 Tag` bzw. `für 7 Tage`.
 
-`boundsDuration.value` und `boundsDuration.code` sind für die Textgenerierung verpflichtend, sobald `boundsDuration` vorhanden ist. Der Wert muss numerisch und größer als `0` sein. Fehlt eine Pflichtangabe oder ist der Wert nicht größer als `0`, bricht der Algorithmus mit einem Fehler ab.
+`boundsDuration.value` und `boundsDuration.code` sind für die Textgenerierung verpflichtend, sobald `boundsDuration` vorhanden ist. Der Wert muss numerisch sein. Fehlt eine Pflichtangabe oder ist der Wert nicht numerisch, bricht der Algorithmus mit einem Fehler ab. Der Wertebereich wird nicht geprüft (`TimingValuesPositive` ist Sache des Profils).
 
 #### Start- und Endzeitpunkt (`boundsPeriod`)
 
@@ -214,7 +214,7 @@ Ausgewertet werden nur Extensions mit der exakten kanonischen URL aus der [Feldr
 
 ### Mindestabstand zwischen Gaben
 
-Der Mindestabstand ist **ausschließlich bei einer reinen Bedarfsdosierung** zulässig, also bei `asNeededBoolean = true` ohne `timing` (Invariante `MindestabstandOnlyPureAsNeeded`). Der Baustein lautet `im Abstand von mindestens {Wert} {Zeiteinheit}` und steht vor der Dosis. Tritt er zusammen mit einem strukturierten Rhythmus auf, bricht der Algorithmus ab: Der Rhythmus legt den Abstand zwischen zwei Gaben bereits fest, eine zweite und schwächere Untergrenze daneben ließe offen, welche Angabe gilt — und den Mindestabstand stillschweigend zu übergehen wäre eine sicherheitsrelevante Auslassung. Der Algorithmus durchsucht `modifierExtension` nach der exakten kanonischen URL `MinimumIntervalBetweenAdministrations` und verwendet die erste passende Extension. `valueDuration`, `valueDuration.value` und `valueDuration.code` sind verpflichtend — im Profil auf `1..1` gesetzt und zusätzlich vom Algorithmus geprüft; der Wert muss numerisch und größer als `0` sein. Andernfalls bricht der Algorithmus mit einem Fehler ab. Die Formatierung des Wertes und der Einheit entspricht `boundsDuration`, jedoch ohne das Wort `für`.
+Der Mindestabstand ist **ausschließlich bei einer reinen Bedarfsdosierung** zulässig, also bei `asNeededBoolean = true` ohne `timing` (Invariante `MindestabstandOnlyPureAsNeeded`). Der Baustein lautet `im Abstand von mindestens {Wert} {Zeiteinheit}` und steht vor der Dosis. Tritt er zusammen mit einem strukturierten Rhythmus auf, bricht der Algorithmus ab: Der Rhythmus legt den Abstand zwischen zwei Gaben bereits fest, eine zweite und schwächere Untergrenze daneben ließe offen, welche Angabe gilt — und den Mindestabstand stillschweigend zu übergehen wäre eine sicherheitsrelevante Auslassung. Der Algorithmus durchsucht `modifierExtension` nach der exakten kanonischen URL `MinimumIntervalBetweenAdministrations` und verwendet die erste passende Extension. `valueDuration`, `valueDuration.value` und `valueDuration.code` sind verpflichtend — im Profil auf `1..1` gesetzt und zusätzlich vom Algorithmus geprüft; der Wert muss numerisch sein. Andernfalls bricht der Algorithmus mit einem Fehler ab. Der Wertebereich wird nicht geprüft (`DosageLimitsPositive` ist Sache des Profils). Die Formatierung des Wertes und der Einheit entspricht `boundsDuration`, jedoch ohne das Wort `für`.
 
 Als Zeiteinheit sind **ausschließlich Minuten (`min`) und Stunden (`h`)** zulässig; `valueDuration.code` ist required an `MindestabstandUnitsOfTimeDgMPVS` gebunden, `valueDuration.system` ist auf UCUM festgelegt. Die Anzeigeeinheit `valueDuration.unit` muss zum Code passen (Invariante `MindestabstandUnitMatchesCode`) — der erzeugte Text leitet die Einheit aus `.code` ab, sodass ein abweichendes `.unit` sonst der Ressource widerspräche.
 
@@ -377,11 +377,11 @@ Je nach Schema werden einzelne Bestandteile weggelassen oder unterschiedlich kom
 
 Nicht belegte Positionen erhalten den Wert `0`.
 
-Die Werte werden über alle `Dosage`-Elemente eingesammelt. Für jedes Element wird dessen Dosis allen `when`-Codes dieses Elements zugeordnet. Die Dosis-Einheit der Ausgabe stammt aus dem ersten Element mit auswertbarer Dosis. Ein Tagesabschnitt darf nur einmal belegt sein; eine doppelte Belegung führt defensiv zu einem Fehler. Ein Code außerhalb der [Tagesabschnitts-Tabelle](#tagesabschnitt-when-codes) führt ebenfalls zum Abbruch. `frequency`, `frequencyMax`, `period`, `periodMax` und `periodUnit` beeinflussen die Ausgabe dieses Schemas nicht.
+Die Werte werden über alle `Dosage`-Elemente eingesammelt. Für jedes Element wird dessen Dosis allen `when`-Codes dieses Elements zugeordnet. Die Dosis-Einheit der Ausgabe stammt aus dem ersten Element mit auswertbarer Dosis. Wird derselbe Tagesabschnitt mehrfach mit **unterschiedlicher** Dosis belegt, bricht der Algorithmus ab; dieselbe Dosis mehrfach ergibt denselben Text und ist wie in den übrigen Schemata zulässig. Eine Position, die explizit mit der Dosis `0` belegt ist, gilt als belegt und ist von einer nicht belegten Position zu unterscheiden; im kompakten Muster sehen beide gleich aus (`0`), in der ausgeschriebenen Form bleibt nur die belegte erhalten. Ein Code außerhalb der [Tagesabschnitts-Tabelle](#tagesabschnitt-when-codes) führt ebenfalls zum Abbruch. `frequency`, `frequencyMax`, `period`, `periodMax` und `periodUnit` beeinflussen die Ausgabe dieses Schemas nicht.
 
 *Beispiel:* `für 5 Tage: 1-1-1-1 Kapseln`
 
-**Variabilität:** Enthält eine der Positionen einen variablen Wert (Bereich), wird das kompakte Schema in die ausgeschriebene Segmentform (nur belegte Positionen) überführt, z. B. `morgens — je 1 bis 2 Stück, abends — je 2 Stück`. Feste 4‑Schemata bleiben kompakt (`1-0-2-0 Stück`).
+**Variabilität:** Enthält eine der Positionen einen variablen Wert (Bereich), wird das kompakte Schema in die ausgeschriebene Segmentform (nur belegte Positionen) überführt, z. B. `morgens — je 1 bis 2 Stück, abends — je 2 Stück`. Eine explizit mit `0` belegte Position erscheint dabei als `morgens — je 0 Stück`. Feste 4‑Schemata bleiben kompakt (`1-0-2-0 Stück`).
 
 ### Schema mit Uhrzeiten-Bezug
 
@@ -482,7 +482,7 @@ Bei reinem Freitext darf die Ressource **genau ein** `Dosage`-Element enthalten 
 
 *Beispiel:* `Nach Bedarf bei Schmerzen`
 
-Zwei Hinweise zum Verhalten bei nicht profilkonformem Input — hier bricht der Algorithmus bewusst **nicht** ab, weil `DosageDE` beide Konstellationen lediglich als Warnung führt (`FreeTextSingleDosageOnlyWarning`, `DosageStructuredOrFreeTextWarning`) und ein Abbruch damit auch gültige DE-Instanzen träfe:
+Zwei Hinweise zum Verhalten bei nicht profilkonformem Input — hier bricht der Algorithmus bewusst **nicht** ab, weil der Text jeweils bildbar ist; ob die Konstellation zulässig ist, entscheidet die Validierung (`FreeTextSingleDosageOnly`, `DosageStructuredOrFreeText`):
 
 * Liegen **mehrere** reine Freitext-Elemente vor, wird jeder Text einzeln getrimmt; leere Werte entfallen, die übrigen werden in Dokumentreihenfolge mit einem Leerzeichen verbunden.
 * `Dosage.text` wird in **allen strukturierten Schemata vollständig ignoriert** — das Feld wird dort ausschließlich für die Schema-Erkennung gelesen und erscheint nie im erzeugten Text.
@@ -553,35 +553,37 @@ Die formale Definition zulässiger Felder und Kombinationen liegt in den Timing-
 * `doseAndRate[0]` ohne `doseQuantity` oder `doseRange`: Abbruch mit `ValueError("Dosisangabe in doseAndRate[0] fehlt.")`
 * `doseQuantity` ohne `.value` oder `.unit`: Abbruch mit `ValueError("doseQuantity.value ist für die Textgenerierung erforderlich.")` beziehungsweise `ValueError("doseQuantity.unit ist für die Textgenerierung erforderlich.")`
 * nicht numerischer Dosiswert in `doseQuantity.value`, `doseRange.low.value` oder `doseRange.high.value`: Abbruch mit `ValueError("<Feld> muss numerisch sein.")`. Zahlen und numerische Strings werden akzeptiert, Boolesche Werte nicht
-* `doseQuantity.value <= 0`: Abbruch mit `ValueError("doseQuantity.value muss größer als 0 sein.")`
 * `doseRange` ohne erforderliche obere Grenze: Abbruch mit `ValueError("doseRange.high.value ist für die Textgenerierung erforderlich.")`; eine fehlende Einheit führt entsprechend zu `ValueError("doseRange.high.unit ist für die Textgenerierung erforderlich.")`
-* `doseRange.high.value <= 0`: Abbruch mit `ValueError("doseRange.high.value muss größer als 0 sein.")`
-* vorhandenes `doseRange.low` ohne `.value` oder `.unit`: Abbruch mit der entsprechenden Fehlermeldung für `doseRange.low.value` beziehungsweise `doseRange.low.unit`
+* vorhandenes `doseRange.low` ohne `.value`: Abbruch mit `ValueError("doseRange.low.value ist für die Textgenerierung erforderlich.")`
 * `maxDosePerPeriod` zusammen mit einem `timing`: Abbruch mit `ValueError("Eine Maximalmenge ist nur bei reiner Bedarfsmedikation zulaessig, nicht zusammen mit einem strukturierten Rhythmus.")`
 * mehrere `Dosage`-Elemente mit unterschiedlichem Schema: Abbruch mit `ValueError("Alle Dosage-Elemente müssen demselben Schema folgen; Element 1 ergibt '{schema1}', Element {n} '{schemaN}'.")`
-* vorhandenes `doseRange.low.value < 0`: Abbruch mit `ValueError("doseRange.low.value darf nicht negativ sein.")`. Der Wert `0` ist hier — anders als bei `doseQuantity` und `doseRange.high` — zulässig, weil er die Untergrenze einer variablen Dosis wie „0 bis 2 Stück“ bildet
-* unterschiedliche Einheiten in `doseRange.low` und `doseRange.high`: Abbruch mit `ValueError("doseRange.low.unit und doseRange.high.unit müssen übereinstimmen.")`
-* vorhandenes `boundsDuration` ohne `.value` oder `.code`: Abbruch mit einer entsprechenden Pflichtfeldmeldung; ein nicht numerischer Wert oder ein Wert `<= 0` führt zu `ValueError("boundsDuration.value muss größer als 0 sein.")`
+* vorhandenes `doseRange.low.unit`, das von `doseRange.high.unit` abweicht: Abbruch mit `ValueError("doseRange.low.unit und doseRange.high.unit müssen übereinstimmen.")`
+* vorhandenes `boundsDuration` ohne `.value` oder `.code`: Abbruch mit einer entsprechenden Pflichtfeldmeldung; ein nicht numerischer Wert führt zu `ValueError("boundsDuration.value muss numerisch sein.")`
 * gleichzeitig vorhandenes `boundsPeriod` und `boundsDuration`: Abbruch mit `ValueError("boundsPeriod und boundsDuration dürfen nicht gleichzeitig vorhanden sein.")`
 * `boundsPeriod` ohne `start` und `end`: Abbruch mit `ValueError("boundsPeriod muss start und/oder end enthalten.")`
 * nicht parsebares oder unvollständiges `boundsPeriod.start` beziehungsweise `.end` sowie eine Uhrzeit ohne Zeitzone: Abbruch mit einer Meldung, dass das Feld ein parsebares FHIR-`dateTime` mit vollständigem Datum sein und eine Uhrzeit eine Zeitzone enthalten muss
 * nicht parsebares oder außerhalb des zulässigen Bereichs liegendes `timeOfDay`: Abbruch mit `ValueError("timeOfDay muss im Format HH:MM oder HH:MM:SS[.Bruchteile] angegeben sein.")`
 * `asNeededFor` ohne nicht leeres `valueCodeableConcept.text`: Abbruch mit `ValueError("asNeededFor.valueCodeableConcept.text ist für die Textgenerierung erforderlich.")`
-* Extension `MinimumIntervalBetweenAdministrations` ohne `valueDuration`: Abbruch mit `ValueError("MinimumIntervalBetweenAdministrations.valueDuration ist für die Textgenerierung erforderlich.")`; für fehlende Unterfelder und Werte `<= 0` gelten die entsprechenden Meldungen mit dem Pfad `MinimumIntervalBetweenAdministrations.valueDuration`
+* Extension `MinimumIntervalBetweenAdministrations` ohne `valueDuration`: Abbruch mit `ValueError("MinimumIntervalBetweenAdministrations.valueDuration ist für die Textgenerierung erforderlich.")`; für fehlende Unterfelder und nicht numerische Werte gelten die entsprechenden Meldungen mit dem Pfad `MinimumIntervalBetweenAdministrations.valueDuration`
 * `maxDosePerPeriod` ohne `numerator.value`, `numerator.unit`, `denominator.value` oder `denominator.code`: Abbruch mit einer entsprechenden Pflichtfeldmeldung
 * nicht numerisches `maxDosePerPeriod.numerator.value`: Abbruch mit `ValueError("maxDosePerPeriod.numerator.value muss numerisch sein.")`
 * anderer Nenner als `1 d` oder `24 h`: Abbruch mit `ValueError("maxDosePerPeriod.denominator muss 1 d oder 24 h sein.")`
 * Intervall-Kombination ohne `period` oder `periodUnit`: Abbruch mit `ValueError("Intervall-Kombinationen erfordern period und periodUnit.")`
 * `when`-Code außerhalb der [Tagesabschnitts-Tabelle](#tagesabschnitt-when-codes): Abbruch mit `ValueError("Nicht unterstützter Tagesabschnitt (when): '{code}'.")`
-* doppelte Belegung eines Tagesabschnitts im reinen 4‑Schema: Abbruch mit `ValueError("Doppelte Belegung des Tagesabschnitts '{code}' im 4-Schema.")`
+* doppelte Belegung eines Tagesabschnitts mit unterschiedlicher Dosis im reinen 4‑Schema: Abbruch mit `ValueError("Doppelte Belegung des Tagesabschnitts '{code}' mit unterschiedlicher Dosis.")`
 * doppelte Belegung desselben Wochentags mit unterschiedlicher Dosis im Wochentags-Schema: Abbruch mit `ValueError("Doppelte Belegung des Wochentags '{code}' mit unterschiedlicher Dosis.")`
 * doppelte Belegung derselben Kombination aus Wochentag und Tagesabschnitt mit unterschiedlicher Dosis: Abbruch mit `ValueError("Doppelte Belegung der Kombination aus Wochentag '{code}' und Zeit-/Tagesabschnitt '{zeit}' mit unterschiedlicher Dosis.")`
 * doppelte Belegung desselben Zeit-Schlüssels mit unterschiedlicher Dosis in einer Intervall-Kombination: Abbruch mit `ValueError("Doppelte Belegung des Zeit-Schlüssels '{zeit}' mit unterschiedlicher Dosis.")`
 * Zeiteinheit außerhalb der [Einheiten-Tabelle](#einheiten-und-pluralisierung) in `periodUnit`, `boundsDuration.code` oder beim Mindestabstand: Abbruch mit `ValueError("Nicht unterstützte Zeiteinheit: '{code}'.")`
 
-Der Algorithmus ist so ausgelegt, dass er im Zweifel **abbricht, statt einen zweifelhaften Text zu erzeugen**: Eine Angabe, die er nicht eindeutig darstellen kann, führt zum Fehler und nicht zu einem Ersatz- oder Teiltext. Die wenigen dokumentierten Ausnahmen betreffen Konstellationen, die das Profil `DosageDE` lediglich als Warnung führt (mehrere Freitext-Elemente, Freitext neben strukturierten Angaben) — dort würde ein Abbruch auch gültige DE-Instanzen treffen.
+**Vorbedingung der Textgenerierung ist eine gegen das Profil validierte Ressource.** Der Algorithmus ist kein Validator und ersetzt keinen: Er prüft weder Wertebereiche (etwa `DosageDoseValuePositive`, `TimingValuesPositive`, `DosageLimitsPositive`) noch Kardinalitäten oder Invarianten, die den Text nicht berühren. Eine Prüfung findet nur dort statt, wo sie für den Text selbst nötig ist, und zwar aus genau zwei Gründen:
 
-Andere Profilverletzungen können je nach fehlendem Feld dennoch zu einem unvollständigen Text oder zu einem Laufzeitfehler führen. Die Profilvalidierung muss deshalb vor der Textgenerierung erfolgen.
+* Der Text ist **nicht bildbar** — eine Angabe fehlt, ist nicht lesbar oder liegt außerhalb der festgelegten Tabellen.
+* Der Text wäre **falsch oder mehrdeutig** — er würde eine Angabe der Ressource unterschlagen oder könnte in zwei Bedeutungen gelesen werden.
+
+In diesen Fällen **bricht der Algorithmus ab, statt einen zweifelhaften Text zu erzeugen**; es gibt keinen Ersatz- oder Teiltext. Alles andere ist Sache der Validierung. Ein Wert von `0` oder ein negativer Wert ist deshalb kein Abbruchgrund: Der Text gibt die Ressource wieder, er beurteilt sie nicht.
+
+Wird eine nicht validierte Ressource übergeben, kann eine Profilverletzung je nach fehlendem Feld dennoch zu einem unvollständigen Text oder zu einem Laufzeitfehler führen. Die Profilvalidierung muss deshalb vor der Textgenerierung erfolgen.
 
 ## Versionierung
 

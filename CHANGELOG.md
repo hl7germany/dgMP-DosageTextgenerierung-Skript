@@ -24,11 +24,21 @@ Daraus folgt für jeden Eintrag:
 
 - Die Kurzformen `täglich`, `wöchentlich` und `monatlich` gelten nur noch für eine feste Periode von `1` ohne `periodMax`. Bisher fiel bei `period = 1` mit `periodMax` die Obergrenze weg: Aus `frequency = 1`, `period = 1`, `periodMax = 3`, `periodUnit = d` wurde `täglich` statt `alle 1 bis 3 Tage`. Bei einer Frequenz größer als `1` entsprechend `2 x alle 1 bis 3 Tage` statt `2 x täglich`.
 
+#### Changed
+
+- Der Algorithmus prüft keine Wertebereiche mehr. Vorbedingung der Textgenerierung ist eine gegen das Profil validierte Ressource; der Algorithmus bricht nur noch ab, wenn der Text nicht bildbar wäre oder eine Angabe unterschlagen beziehungsweise mehrdeutig wiedergeben würde. Der Abschnitt „Fehler und Validierung" benennt diese beiden Gründe. Konkret entfallen:
+  - `doseQuantity.value`, `doseRange.high.value` und `doseRange.low.value` müssen nicht mehr größer als `0` beziehungsweise nicht negativ sein. `je 0 Stück` ist ein eindeutiger Text; `DosageDoseValuePositive` ist Sache des Profils. 1.0.x hatte Dosis `0` ebenfalls gerendert.
+  - `boundsDuration.value` und der Mindestabstand müssen nicht mehr größer als `0` sein (`TimingValuesPositive`, `DosageLimitsPositive`). Nicht numerische Werte führen weiterhin zum Abbruch, jetzt mit `… muss numerisch sein.`
+  - `doseRange.low.unit` ist nicht mehr verpflichtend: Die Einheit erscheint nur einmal im Text und stammt aus `high.unit`. Ist `low.unit` vorhanden und weicht ab, bricht der Algorithmus weiterhin ab.
+  - Im 4‑Schema führt eine doppelte Belegung desselben Tagesabschnitts nur noch bei **unterschiedlicher** Dosis zum Abbruch (`Doppelte Belegung des Tagesabschnitts '{code}' mit unterschiedlicher Dosis.`), wie in allen anderen Schemata. Dieselbe Dosis zweimal ergibt denselben Text.
+- Eine explizit mit `0` belegte Position des 4‑Schemas gilt als belegt. In der ausgeschriebenen Segmentform bleibt sie erhalten (`morgens — je 0 Stück, abends — je 1 bis 2 Stück`); bisher wäre sie mit einer nicht belegten Position verwechselt worden und entfallen. Auch die Duplikatprüfung der Wochentags-Kombination unterscheidet jetzt zwischen `0` und „nicht belegt".
+
 ### Referenzimplementierung und Repository
 
 #### Added
 
 - Testfälle für `period = 1` mit `periodMax` in `d`, `wk` und `mo`.
+- Testfälle für Dosis `0`, negative Dosis, `boundsDuration = 0`, fehlendes und abweichendes `doseRange.low.unit`, doppelte `when`-Belegung mit gleicher Dosis sowie explizite `0` in der ausgeschriebenen Form und in der Duplikatprüfung.
 
 ## [2.0.0-ballot] - 2026-08-30
 

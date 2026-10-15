@@ -390,9 +390,10 @@ class MedicationDosageTextGenerator:
 
         Example output: "1-0-2-0 Stück"
         """
-        # Initialize dose amounts for each time period (default to 0)
-        dose_amounts = {code: 0 for code in self.WHEN_CODES_ORDER}
-        assigned_slots = set()  # bereits belegte when-Positionen (Duplikaterkennung)
+        # None = nicht belegt. Eine explizit mit 0 belegte Position muss davon
+        # unterscheidbar bleiben, damit sie in der ausgeschriebenen Form nicht
+        # entfaellt (siehe _render_when_doses).
+        dose_amounts = {code: None for code in self.WHEN_CODES_ORDER}
         unit_text = ""
 
         # Process each dosage instruction to extract dose amounts
@@ -411,10 +412,14 @@ class MedicationDosageTextGenerator:
                 if when_code not in dose_amounts:
                     raise ValueError(
                         f"Nicht unterstützter Tagesabschnitt (when): '{when_code}'.")
-                if when_code in assigned_slots:
+                # Dieselbe Dosis zweimal ergibt denselben Text; nur eine
+                # abweichende Dosis ist nicht darstellbar (wie in den anderen
+                # Schemata).
+                existing = dose_amounts[when_code]
+                if existing is not None and existing != dose_value:
                     raise ValueError(
-                        f"Doppelte Belegung des Tagesabschnitts '{when_code}' im 4-Schema.")
-                assigned_slots.add(when_code)
+                        f"Doppelte Belegung des Tagesabschnitts '{when_code}' "
+                        "mit unterschiedlicher Dosis.")
                 dose_amounts[when_code] = dose_value
 
         # Feste Dosen -> kompakt "1-0-2-0"; sobald eine Position variabel ist,
@@ -429,10 +434,12 @@ class MedicationDosageTextGenerator:
         Render eine MORN/NOON/EVE/NIGHT-Dosisbelegung.
 
         Feste Dosen ergeben die kompakte, positionelle Notation
-        "1-0-2-0 [Einheit]". Sobald eine Position variabel ist (Bereich, z. B.
-        "1 bis 2"), wird das Schema gemäß Option 2 in die ausgeschriebene
-        Segmentform überführt: nur belegte (nicht-null) Positionen erscheinen als
-        "morgens — je 1 bis 2 Stück, abends — je 2 Stück".
+        "1-0-2-0 [Einheit]"; nicht belegte Positionen (None) erscheinen als 0.
+        Sobald eine Position variabel ist (Bereich, z. B. "1 bis 2"), wird das
+        Schema gemäß Option 2 in die ausgeschriebene Segmentform überführt: nur
+        belegte Positionen erscheinen als "morgens — je 1 bis 2 Stück,
+        abends — je 2 Stück". Eine explizit mit 0 belegte Position ist belegt
+        und bleibt erhalten ("morgens — je 0 Stück").
 
         `force_written` erzwingt die ausgeschriebene Form auch für eine für sich
         genommen feste Belegung. Die Wochentags-Kombination nutzt das, damit die
@@ -443,15 +450,17 @@ class MedicationDosageTextGenerator:
             isinstance(value, str) for value in dose_amounts.values())
 
         if not has_variable:
-            pattern = "-".join(self._format_decimal_value(dose_amounts[code])
-                               for code in self.WHEN_CODES_ORDER)
+            pattern = "-".join(
+                "0" if dose_amounts[code] is None
+                else self._format_decimal_value(dose_amounts[code])
+                for code in self.WHEN_CODES_ORDER)
             return f"{pattern} {unit_text}" if unit_text else pattern
 
         segments = []
         for code in self.WHEN_CODES_ORDER:
             value = dose_amounts[code]
-            # Unbelegte Positionen (0) entfallen in der ausgeschriebenen Form.
-            if not isinstance(value, str) and value == 0:
+            # Unbelegte Positionen entfallen in der ausgeschriebenen Form.
+            if value is None:
                 continue
             formatted = value if isinstance(value, str) else self._format_decimal_value(value)
             dose = f"je {formatted} {unit_text}" if unit_text else f"je {formatted}"
@@ -625,8 +634,10 @@ class MedicationDosageTextGenerator:
                 raise ValueError("doseQuantity.value ist für die Textgenerierung erforderlich.")
             if not unit:
                 raise ValueError("doseQuantity.unit ist für die Textgenerierung erforderlich.")
-            if self._dose_value_as_number(dose_value, 'doseQuantity.value') <= 0:
-                raise ValueError("doseQuantity.value muss größer als 0 sein.")
+            # Nur die Lesbarkeit wird geprüft, nicht der Wertebereich: "je 0 Stück"
+            # ist ein eindeutiger Text. Ob 0 zulässig ist, entscheidet das Profil
+            # (DosageDoseValuePositive), nicht der Algorithmus.
+            self._dose_value_as_number(dose_value, 'doseQuantity.value')
             return (dose_value, unit)
 
         if 'doseRange' in first_dose:
@@ -638,17 +649,16 @@ class MedicationDosageTextGenerator:
                 raise ValueError("doseRange.high.value ist für die Textgenerierung erforderlich.")
             if not high.get('unit'):
                 raise ValueError("doseRange.high.unit ist für die Textgenerierung erforderlich.")
-            if self._dose_value_as_number(high.get('value'), 'doseRange.high.value') <= 0:
-                raise ValueError("doseRange.high.value muss größer als 0 sein.")
+            self._dose_value_as_number(high.get('value'), 'doseRange.high.value')
 
             if low:
                 if low.get('value') is None:
                     raise ValueError("doseRange.low.value ist für die Textgenerierung erforderlich.")
-                if not low.get('unit'):
-                    raise ValueError("doseRange.low.unit ist für die Textgenerierung erforderlich.")
-                if self._dose_value_as_number(low.get('value'), 'doseRange.low.value') < 0:
-                    raise ValueError("doseRange.low.value darf nicht negativ sein.")
-                if low.get('unit') != high.get('unit'):
+                self._dose_value_as_number(low.get('value'), 'doseRange.low.value')
+                # Die Einheit erscheint nur einmal im Text und stammt aus high.
+                # low.unit wird deshalb nicht verlangt; ist sie vorhanden und
+                # weicht ab, würde der Text sie unterschlagen - dann Abbruch.
+                if low.get('unit') and low.get('unit') != high.get('unit'):
                     raise ValueError("doseRange.low.unit und doseRange.high.unit müssen übereinstimmen.")
                 value = (
                     f"{self._format_decimal_value(low.get('value'))} bis "
@@ -809,10 +819,11 @@ class MedicationDosageTextGenerator:
         duration_unit = duration.get('code')
         if duration_value is None:
             raise ValueError(f"{field_name}.value ist für die Textgenerierung erforderlich.")
+        # Wertebereich wird nicht geprüft; "für 0 Tage" ist ein eindeutiger Text.
+        # TimingValuesPositive bzw. DosageLimitsPositive sind Sache des Profils.
         if (isinstance(duration_value, bool) or
-                not isinstance(duration_value, (int, float)) or
-                duration_value <= 0):
-            raise ValueError(f"{field_name}.value muss größer als 0 sein.")
+                not isinstance(duration_value, (int, float))):
+            raise ValueError(f"{field_name}.value muss numerisch sein.")
         if not duration_unit:
             raise ValueError(f"{field_name}.code ist für die Textgenerierung erforderlich.")
         formatted_value = self._format_decimal_value(duration_value)
@@ -1250,14 +1261,15 @@ class MedicationDosageTextGenerator:
             # For each day and each when code, set the dose
             for day_code in day_codes:
                 if day_code not in day_to_patterns:
-                    day_to_patterns[day_code] = {code: 0 for code in self.WHEN_CODES_ORDER}
+                    # None = nicht belegt; eine explizite 0 ist eine Belegung.
+                    day_to_patterns[day_code] = {code: None for code in self.WHEN_CODES_ORDER}
 
                 for when_code in when_codes:
                     if when_code not in day_to_patterns[day_code]:
                         raise ValueError(
                             f"Nicht unterstützter Tagesabschnitt (when): '{when_code}'.")
                     existing = day_to_patterns[day_code][when_code]
-                    if existing != 0 and existing != dose_value:
+                    if existing is not None and existing != dose_value:
                         raise ValueError(
                             f"Doppelte Belegung der Kombination aus Wochentag '{day_code}' "
                             f"und Zeit-/Tagesabschnitt '{when_code}' mit unterschiedlicher Dosis.")
