@@ -413,7 +413,7 @@ class MedicationDosageTextTest(unittest.TestCase):
             "alle 8 Stunden: je 1 bis 2 Stück",
         )
 
-    def test_zero_is_allowed_only_as_the_lower_bound_of_a_range(self):
+    def test_zero_as_lower_bound_of_a_range_is_rendered(self):
         dose_range_low = {
             "timing": {"repeat": {"when": ["MORN"]}},
             "doseAndRate": [{
