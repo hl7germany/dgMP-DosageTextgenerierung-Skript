@@ -20,7 +20,7 @@ Der gesamte Fließtext dieser Seite ist verbindlich, ebenso die Codeblöcke mit 
 2. Der Text wäre **falsch oder mehrdeutig**: Er würde eine Angabe der Ressource unterschlagen oder ließe sich in zwei Bedeutungen lesen.
 3. Ein gelesenes Feld hat den **falschen JSON-Datentyp**.
 
-In diesen Fällen bricht der Algorithmus ab; es gibt keinen Ersatz- oder Teiltext. Ein Wert von `0` ist kein Abbruchgrund; ein negativer Dosiswert führt zum Abbruch, weil er keine Anweisung darstellt (Grund 1). Jede Meldung ist unter [Fehler und Validierung](#fehler-und-validierung) festgelegt; die Abschnitte dieser Seite verweisen mit „Grund 1“ bis „Grund 3“ auf die Aufzählung oben.
+In diesen Fällen bricht der Algorithmus ab; es gibt keinen Ersatz- oder Teiltext. Ein Wert von `0` ist kein Abbruchgrund; ein negativer Dosiswert führt zum Abbruch, weil er keine sinnvolle Anweisung darstellt (Grund 1). Jede Meldung ist unter [Fehler und Validierung](#fehler-und-validierung) festgelegt; die Abschnitte dieser Seite verweisen mit „Grund 1“ bis „Grund 3“ auf die Aufzählung oben.
 
 Jeder strukturiert erzeugte Text ist ein Fragment in einer Zeile: Der Algorithmus schreibt den Textanfang nicht groß (`bei Kopfschmerzen: …`, `3 x täglich: …`) und hängt keinen Schlusspunkt an; ein Punkt am Ende kann nur aus einem übernommenen Teil stammen (Dosiereinheit, Hinweis). Die Freitext-Dosierung wird unverändert übernommen.
 
