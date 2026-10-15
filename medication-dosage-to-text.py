@@ -313,11 +313,30 @@ class MedicationDosageTextGenerator:
             if name in dosage:
                 for extension in self._require_list(dosage[name], name):
                     self._require_object(extension, f"{name}[]")
+                    if "url" in extension:
+                        self._require_string(extension["url"], f"{name}[].url")
+                    if "valueCodeableConcept" in extension:
+                        concept = self._require_object(
+                            extension["valueCodeableConcept"], f"{name}[].valueCodeableConcept")
+                        if "text" in concept:
+                            self._require_string(concept["text"], f"{name}[].valueCodeableConcept.text")
+                    if "valueDuration" in extension:
+                        self._check_quantity_types(extension["valueDuration"], f"{name}[].valueDuration")
         if "doseAndRate" in dosage:
             for item in self._require_list(dosage["doseAndRate"], "doseAndRate"):
                 self._require_object(item, "doseAndRate[]")
+                if "doseQuantity" in item:
+                    self._check_quantity_types(item["doseQuantity"], "doseQuantity")
+                if "doseRange" in item:
+                    dose_range = self._require_object(item["doseRange"], "doseRange")
+                    for bound in ("low", "high"):
+                        if bound in dose_range:
+                            self._check_quantity_types(dose_range[bound], f"doseRange.{bound}")
         if "maxDosePerPeriod" in dosage:
-            self._require_object(dosage["maxDosePerPeriod"], "maxDosePerPeriod")
+            max_dose = self._require_object(dosage["maxDosePerPeriod"], "maxDosePerPeriod")
+            for part in ("numerator", "denominator"):
+                if part in max_dose:
+                    self._check_quantity_types(max_dose[part], f"maxDosePerPeriod.{part}")
 
         if "timing" not in dosage:
             return
@@ -325,6 +344,13 @@ class MedicationDosageTextGenerator:
         if "repeat" not in timing:
             return
         repeat = self._require_object(timing["repeat"], "timing.repeat")
+        if "boundsDuration" in repeat:
+            self._check_quantity_types(repeat["boundsDuration"], "timing.repeat.boundsDuration")
+        if "boundsPeriod" in repeat:
+            bounds_period = self._require_object(repeat["boundsPeriod"], "timing.repeat.boundsPeriod")
+            for name in ("start", "end"):
+                if name in bounds_period:
+                    self._require_string(bounds_period[name], f"timing.repeat.boundsPeriod.{name}")
         for name in ("frequency", "frequencyMax"):
             if name in repeat:
                 self._require_integer(repeat[name], f"timing.repeat.{name}")
@@ -337,9 +363,16 @@ class MedicationDosageTextGenerator:
             if name in repeat:
                 for entry in self._require_list(repeat[name], f"timing.repeat.{name}"):
                     self._require_string(entry, f"timing.repeat.{name}[]")
-        for name in ("boundsDuration", "boundsPeriod"):
-            if name in repeat:
-                self._require_object(repeat[name], f"timing.repeat.{name}")
+
+    def _check_quantity_types(self, quantity, path):
+        """Quantity/Duration: value decimal, unit und code string."""
+        quantity = self._require_object(quantity, path)
+        if "value" in quantity:
+            self._require_decimal(quantity["value"], f"{path}.value")
+        for name in ("unit", "code", "system"):
+            if name in quantity:
+                self._require_string(quantity[name], f"{path}.{name}")
+        return quantity
 
     def _require_day_code(self, day_code):
         """Die Wochentags-Tabelle ist abschließend. Ein Code außerhalb würde
@@ -740,7 +773,7 @@ class MedicationDosageTextGenerator:
             if self._require_decimal(high.get('value'), 'doseRange.high.value') <= 0:
                 raise ValueError("doseRange.high.value muss größer als 0 sein.")
 
-            if low:
+            if low is not None:
                 if low.get('value') is None:
                     raise ValueError("doseRange.low.value ist für die Textgenerierung erforderlich.")
                 if low.get('unit') is not None:
@@ -958,15 +991,20 @@ class MedicationDosageTextGenerator:
 
         if not re.fullmatch(
             r'\d{4}-\d{2}-\d{2}'
-            r'T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d'
+            r'T(?:[01]\d|2[0-3]):[0-5]\d:(?:[0-5]\d|60)'
             r'(?:\.\d+)?'
             r'(?:Z|[+-](?:(?:0\d|1[0-3]):[0-5]\d|14:00))',
             value
         ):
             raise ValueError(error_message)
 
+        # Sekunden werden nicht dargestellt. FHIR erlaubt beliebig viele
+        # Bruchteilstellen und die Schaltsekunde 60; datetime.fromisoformat
+        # versteht vor Python 3.11 nur 3 oder 6 Bruchteilstellen und nie :60.
+        # Deshalb Sekunden samt Bruchteilen vor dem Parsen auf :00 setzen.
+        normalized = re.sub(r'(T\d{2}:\d{2}):\d{2}(?:\.\d+)?', r'\1:00', value, count=1)
         try:
-            parsed_datetime = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            parsed_datetime = datetime.fromisoformat(normalized.replace("Z", "+00:00"))
             berlin_datetime = parsed_datetime.astimezone(self.OUTPUT_TIMEZONE)
         except ValueError:
             raise ValueError(error_message) from None
@@ -1013,7 +1051,7 @@ class MedicationDosageTextGenerator:
 
         match = re.fullmatch(
             r'((?:[01]\d|2[0-3])):([0-5]\d)'
-            r'(?::[0-5]\d(?:\.\d+)?)?',
+            r'(?::(?:[0-5]\d|60)(?:\.\d+)?)?',
             time_string
         )
         if not match:

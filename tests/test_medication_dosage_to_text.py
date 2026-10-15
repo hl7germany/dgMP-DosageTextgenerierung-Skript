@@ -847,11 +847,61 @@ class FieldTypeTest(unittest.TestCase):
               "maxDosePerPeriod": {"numerator": {"value": 2, "unit": "Stück"},
                                    "denominator": {"value": "1", "code": "d"}}},
              "maxDosePerPeriod.denominator.value muss numerisch sein."),
+            ({"asNeededBoolean": True, "doseAndRate": self.DOSE,
+              "maxDosePerPeriod": {"numerator": "2 Stück", "denominator": {"value": 1, "code": "d"}}},
+             "maxDosePerPeriod.numerator muss ein Objekt sein."),
+            # Extensions
+            ({"asNeededBoolean": True, "doseAndRate": self.DOSE,
+              "extension": [{"url": MODULE.MedicationDosageTextGenerator.URL_AS_NEEDED_FOR,
+                             "valueCodeableConcept": "Kopfschmerzen"}]},
+             r"extension\[\].valueCodeableConcept muss ein Objekt sein."),
+            ({"asNeededBoolean": True, "doseAndRate": self.DOSE,
+              "modifierExtension": [{"url": MODULE.MedicationDosageTextGenerator.URL_MINDESTABSTAND,
+                                     "valueDuration": {"value": "4", "code": "h"}}]},
+             r"modifierExtension\[\].valueDuration.value muss numerisch sein."),
+            # Zeitrahmen
+            ({**when, "timing": {"repeat": {"when": ["MORN"], "boundsPeriod": {"start": 2026}}}},
+             "timing.repeat.boundsPeriod.start muss ein String sein."),
+            ({**when, "timing": {"repeat": {"when": ["MORN"], "boundsDuration": {"value": "7", "code": "d"}}}},
+             "timing.repeat.boundsDuration.value muss numerisch sein."),
+            # Dosis-Unterfelder werden vor der Schema-Erkennung geprueft
+            ({"timing": {"repeat": {"frequency": 1}}, "doseAndRate": [{"doseQuantity": {"value": "2", "unit": "Stück"}}]},
+             "doseQuantity.value muss numerisch sein."),
         )
         for dosage, error in cases:
             with self.subTest(error=error):
                 with self.assertRaisesRegex(ValueError, error):
                     self.generator.generate_dosage_text(self.request(dosage))
+
+    def test_empty_dose_range_low_counts_as_present(self):
+        dosage = {
+            "timing": {"repeat": {"when": ["MORN"]}},
+            "doseAndRate": [{"doseRange": {"low": {}, "high": {"value": 2, "unit": "Stück"}}}],
+        }
+        with self.assertRaisesRegex(ValueError, "doseRange.low.value ist für die Textgenerierung erforderlich"):
+            self.generator.generate_dosage_text(self.request(dosage))
+
+    def test_bounds_period_accepts_any_fraction_digits_and_leap_second(self):
+        """FHIR erlaubt beliebig viele Bruchteilstellen und :60; Python 3.10
+        verstand nur 3 oder 6 Stellen. Sekunden werden nicht dargestellt."""
+        for start in ("2026-06-05T23:30:45.1Z", "2026-06-05T23:30:45.1234567Z",
+                      "2026-06-05T23:30:60Z", "2026-06-05T23:30:45Z"):
+            with self.subTest(start=start):
+                dosage = {
+                    "timing": {"repeat": {"when": ["MORN"], "boundsPeriod": {"start": start}}},
+                    "doseAndRate": self.DOSE,
+                }
+                self.assertEqual(
+                    self.generator.generate_dosage_text(self.request(dosage)),
+                    "ab dem 06.06.2026 um 01:30 Uhr: 1-0-0-0 Stück",
+                )
+
+    def test_time_of_day_accepts_leap_second(self):
+        dosage = {"timing": {"repeat": {"timeOfDay": ["08:00:60"]}}, "doseAndRate": self.DOSE}
+        self.assertEqual(
+            self.generator.generate_dosage_text(self.request(dosage)),
+            "täglich: 08:00 Uhr — je 1 Stück",
+        )
 
     def test_dosage_list_must_be_a_list(self):
         with self.assertRaisesRegex(ValueError, "dosageInstruction muss eine Liste sein."):
