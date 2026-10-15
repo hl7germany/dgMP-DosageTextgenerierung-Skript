@@ -12,8 +12,8 @@ script itself.
 
 The script supports various dosage schemas:
 - FreeText: User-provided text instructions
-- AsNeeded: Pure as-needed dosage (e.g., "Bei Kopfschmerzen: je 1 Stück")
-- 4-Schema: Morning-noon-evening-night pattern (e.g., "1-0-2-0 Stück")
+- AsNeeded: Pure as-needed dosage (e.g., "bei Kopfschmerzen: je 1 Stück")
+- 4-Schema: Morning-noon-evening-night pattern (e.g., "täglich: 1-0-2-0 Stück")
 - TimeOfDay: Specific times (e.g., "täglich: 08:00 Uhr, 20:00 Uhr — je 1 Stück")
 - DayOfWeek: Specific weekdays (e.g., "montags — je 1 Stück; mittwochs — je 2 Stück")
 - Interval: Regular intervals (e.g., "alle 8 Stunden: je 1 Stück")
@@ -129,10 +129,10 @@ class MedicationDosageTextGenerator:
             resource (dict): FHIR MedicationRequest, MedicationDispense, or MedicationStatement
 
         Returns:
-            str: German dosage text (e.g., "1-0-2-0 Stück" or "täglich 08:00 Uhr — je 1 Stück")
+            str: German dosage text (e.g., "täglich: 1-0-2-0 Stück" or "täglich: 08:00 Uhr — je 1 Stück")
 
         Examples:
-            4-Schema: "1-0-2-0 Stück"
+            4-Schema: "täglich: 1-0-2-0 Stück"
             TimeOfDay: "täglich: 08:00 Uhr — je 1 Stück, 20:00 Uhr — je 2 Stück"
             DayOfWeek: "montags — je 1 Stück; mittwochs — je 2 Stück"
             Interval: "alle 8 Stunden: je 1 Stück"
@@ -180,7 +180,7 @@ class MedicationDosageTextGenerator:
         # Die Erkennung stützt sich auf das erste Dosage-Element. Gehörte ein
         # späteres Element zu einem anderen Schema, würde es bei der Textbildung
         # übergangen — und mit ihm eine vollständige Gabe: Aus „morgens 1 Stück"
-        # plus „montags 2 Stück" entstünde kommentarlos „1-0-0-0 Stück". Die
+        # plus „montags 2 Stück" entstünde kommentarlos „täglich: 1-0-0-0 Stück". Die
         # Invarianten TimingOnlyOneType und TimingOnlyWhenOrTimeOfDay schließen
         # das aus; der Algorithmus verlässt sich darauf nicht, weil eine
         # unterschlagene Dosis der gefährlichste Ausgang wäre.
@@ -217,7 +217,7 @@ class MedicationDosageTextGenerator:
         result = generator_method(dosage_instructions)
 
         # FreeText wird unverändert übernommen; alle anderen Schemata werden
-        # abschließend normalisiert (Leerzeichen) und bei Bedarf großgeschrieben.
+        # abschließend normalisiert (Leerzeichen).
         if schema_type != self.SCHEMA_FREE_TEXT:
             result = self._finalize_text(result)
         return result
@@ -513,19 +513,19 @@ class MedicationDosageTextGenerator:
         Generate text for 4-Schema: morning-noon-evening-night pattern.
 
         The 4-Schema represents doses at four daily time points using a compact
-        notation: "morning-noon-evening-night" (e.g., "1-0-2-0 Stück").
+        notation: "morning-noon-evening-night" (e.g., "täglich: 1-0-2-0 Stück").
 
         Args:
             dosage_instructions (list): List containing dosage instructions with 'when' codes
 
         Returns:
-            str: Formatted text like "1-0-2-0 Stück" or "für 7 Tage: 2-1-2-1 mg"
+            str: Formatted text like "täglich: 1-0-2-0 Stück" or "für 7 Tage täglich: 2-1-2-1 mg"
 
         Example FHIR input:
             - Dosage with when=['MORN'], doseQuantity={value: 1, unit: 'Stück'}
             - Dosage with when=['EVE'], doseQuantity={value: 2, unit: 'Stück'}
 
-        Example output: "1-0-2-0 Stück"
+        Example output: "täglich: 1-0-2-0 Stück"
         """
         # Initialize dose amounts for each time period (default to 0)
         dose_amounts = {code: 0 for code in self.WHEN_CODES_ORDER}
@@ -558,7 +558,9 @@ class MedicationDosageTextGenerator:
         # wird gemäß Option 2 die ausgeschriebene Segmentform verwendet
         # (siehe _render_when_doses).
         dose_pattern = self._render_when_doses(dose_amounts, unit_text)
-        text = self._assemble(dosage_instructions[0], "", dose_pattern)
+        # Marker "täglich" wie beim Uhrzeiten-Schema: Das nackte Muster
+        # "1-0-2-0" lässt offen, dass es jeden Tag gilt.
+        text = self._assemble(dosage_instructions[0], "täglich", dose_pattern)
         return self._append_trailing_instructions(text, dosage_instructions[0])
 
     def _render_when_doses(self, dose_amounts, unit_text, force_written=False):
@@ -615,10 +617,12 @@ class MedicationDosageTextGenerator:
         if not dosage_instructions:
             return ""
 
-        # Extract and combine all text values
+        # Freitext unverändert, auch Rand-Leerraum: FreeTextMatchesRenderedText
+        # verlangt exakte Gleichheit mit Dosage.text; ein Trim machte sie fuer
+        # solche Texte unmoeglich.
         text_parts = []
         for dosage in dosage_instructions:
-            text_content = dosage.get('text', '').strip()
+            text_content = dosage.get('text', '')
             if text_content:
                 text_parts.append(text_content)
 
@@ -889,7 +893,7 @@ class MedicationDosageTextGenerator:
                 if middle:
                     raise ValueError(
                         "Ein Mindestabstand ist nur bei reiner Bedarfsmedikation "
-                        "zulaessig, nicht zusammen mit einem strukturierten Rhythmus."
+                        "zulässig, nicht zusammen mit einem strukturierten Rhythmus."
                     )
                 right_parts.append(f"im Abstand von mindestens {minimum_interval}")
             if middle:
@@ -1542,11 +1546,11 @@ class MedicationDosageTextGenerator:
         {Mindestabstand} ]je {Dosis}[ — nicht mehr als {Maximalmenge} {Zeitraum}]
         ({Zeitraum} = "in 24 Stunden" bei 24 h bzw. "pro Tag" bei 1 d)
 
-        Bei strukturiertem Bedarf wird der Mindestabstand stattdessen nach dem
-        Schema-Kern als ", mit mindestens ... Abstand" ausgegeben. Der Doppelpunkt
-        hinter dem Einnahmeanlass, Zeitrahmen und Mindestabstand werden von
-        _assemble gesetzt; die Maximalmenge und der Großbuchstabe am Zeilenanfang
-        werden zentral ergänzt (_append_trailing_instructions / _finalize_text).
+        Mindestabstand und Maximalmenge sind nur hier zulässig; zusammen mit einem
+        strukturierten Rhythmus bricht der Algorithmus ab. Der Doppelpunkt hinter dem
+        Einnahmeanlass, Zeitrahmen und Mindestabstand werden von _assemble
+        gesetzt; die Maximalmenge wird zentral ergänzt
+        (_append_trailing_instructions).
         """
         if not dosage_instructions:
             return ""
@@ -1585,12 +1589,12 @@ class MedicationDosageTextGenerator:
             duration = extension.get('valueDuration')
             if not duration:
                 raise ValueError(
-                    "MindestabstandZwischenGaben.valueDuration ist "
+                    "MinimumIntervalBetweenAdministrations.valueDuration ist "
                     "für die Textgenerierung erforderlich."
                 )
             return self._format_duration_text(
                 duration,
-                field_name="MindestabstandZwischenGaben.valueDuration"
+                field_name="MinimumIntervalBetweenAdministrations.valueDuration"
             )
         return ""
 
@@ -1664,7 +1668,7 @@ class MedicationDosageTextGenerator:
                 if dosage.get('timing'):
                     raise ValueError(
                         "Eine Maximalmenge ist nur bei reiner Bedarfsmedikation "
-                        "zulaessig, nicht zusammen mit einem strukturierten Rhythmus."
+                        "zulässig, nicht zusammen mit einem strukturierten Rhythmus."
                     )
                 text = f"{text} — {max_dose_text}"
 
