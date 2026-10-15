@@ -23,16 +23,33 @@ Daraus folgt für jeden Eintrag:
 #### Changed
 
 - Das 4‑Schema erhält wie das Uhrzeiten-Schema den Marker `täglich`: Aus `1-0-2-0 Stück` wird `täglich: 1-0-2-0 Stück`, mit Zeitrahmen `für 5 Tage täglich: 1-1-1-1 Kapseln`, bei Bedarf `bei Bedarf: täglich 1-0-2-0 Stück`. Die ausgeschriebene Segmentform bei variabler Dosis erhält denselben Marker (`täglich: morgens — je 1 bis 2 Stück`). Das Muster allein ließ offen, dass es an jedem Tag gilt; in der HD-Studie war die Form mit `täglich` nachweislich besser verständlich. Wochentags-Kombinationen (`montags 1-0-1-0 Stück`) bleiben unverändert.
+- Freitext wird unverändert übernommen, auch führender und abschließender Leerraum; der bisherige Trim entfällt. `FreeTextMatchesRenderedText` verlangt exakte Gleichheit mit `Dosage.text` — ein getrimmter Text konnte diese Invariante für Texte mit Rand-Leerraum nie erfüllen.
 
 #### Fixed
 
 - Die Kurzformen `täglich`, `wöchentlich` und `monatlich` gelten nur noch für eine feste Periode von `1` ohne `periodMax`. Bisher fiel bei `period = 1` mit `periodMax` die Obergrenze weg: Aus `frequency = 1`, `period = 1`, `periodMax = 3`, `periodUnit = d` wurde `täglich` statt `alle 1 bis 3 Tage`. Bei einer Frequenz größer als `1` entsprechend `2 x alle 1 bis 3 Tage` statt `2 x täglich`.
+- Widersprüche in der Spezifikation beseitigt. Das festgelegte Verhalten ändert sich nicht; die Referenzimplementierung setzte es bereits so um.
+  - Schritt 8 des Gesamtalgorithmus verlangte bei Bedarf noch einen Großbuchstaben am Textanfang. Seit 2.0.0-ballot ist jeder erzeugte Text ein kleingeschriebenes Fragment.
+  - Zwei Beispiele im Schema für Bedarfsmedikation kombinierten eine Maximalmenge mit Uhrzeiten beziehungsweise einem Intervall; das führt seit 2.0.0-ballot zum Abbruch. Sie zeigen jetzt den strukturierten Bedarf ohne Maximalmenge. Die Regel, nach der die Maximalmenge hinter dem letzten von mehreren Segmenten steht, entfällt: Mehrere Segmente setzen einen Rhythmus voraus, die Maximalmenge schließt ihn aus.
+  - Der Abbruch „Mindestabstand zusammen mit einem strukturierten Rhythmus" fehlte in der Fehlerliste; er ist ergänzt. Die Meldungen zu Mindestabstand und Maximalmenge schreiben `zulässig` statt `zulaessig` — das Zeichenrepertoire verlangt die NFC-Umlaute auch in Meldungen.
+  - Das Zeichenrepertoire behauptete, der gesamte Text sei NFC-normalisiert, zugleich bleiben übernommene Input-Teile ausdrücklich unverändert. Jetzt: Die erzeugten Wortbestandteile sind NFC; der Gesamttext ist es genau dann, wenn es der Input ist.
+  - Die Spezifikation nannte die Invarianten `MindestabstandOnlyPureAsNeeded` und `MindestabstandUnitMatchesCode`; im IG heißen sie `MinimumIntervalOnlyPureAsNeeded` und `MinimumIntervalUnitMatchesCode`.
+  - Die Einleitung nannte als aktuelle Version `2.0.0`, der Abschnitt Versionierung `2.0.0-ballot`; beide sagen jetzt `2.0.0-ballot`.
+  - Die Normalisierung erfasst jedes Unicode-Leerraumzeichen (auch U+00A0) aus übernommenen Feldern; die Aussage „weder ersetzt noch normalisiert" gilt für die übrigen Zeichen. Bisher widersprachen sich beide Sätze.
+  - Doppelpunkt-Regel präzisiert: Zeitrahmen und Intervall teilen sich einen Doppelpunkt; bei Bedarfsmedikation steht das Intervall rechts davon. Die reine Bedarfsdosierung kann keinen Zeitrahmen tragen (er liegt in `timing.repeat`); das Muster erweckte einen anderen Eindruck.
+  - Die vom Algorithmus nicht gelesenen Felder verweisen auf die „Liste der aktuell nicht unterstützten Dosierkonfigurationen", wie der IG sie nennt, nicht mehr auf „zukünftig unterstützte".
 
 ### Referenzimplementierung und Repository
 
 #### Added
 
 - Testfälle für `period = 1` mit `periodMax` in `d`, `wk` und `mo`.
+- Testfälle für strukturierten Bedarf mit Uhrzeiten und mit Intervall sowie für die Fehlermeldungen zum Mindestabstand.
+
+#### Fixed
+
+- Die Fehlermeldungen zum Mindestabstand nennen wie in der Spezifikation festgelegt `MinimumIntervalBetweenAdministrations.valueDuration` statt des alten Namens `MindestabstandZwischenGaben.valueDuration`.
+- Kommentare, die noch die Großschreibung bei Bedarf und den entfallenen Baustein `, mit mindestens … Abstand` beschrieben, sind korrigiert.
 
 ## [2.0.0-ballot] - 2026-08-30
 

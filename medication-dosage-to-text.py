@@ -12,7 +12,7 @@ script itself.
 
 The script supports various dosage schemas:
 - FreeText: User-provided text instructions
-- AsNeeded: Pure as-needed dosage (e.g., "Bei Kopfschmerzen: je 1 Stück")
+- AsNeeded: Pure as-needed dosage (e.g., "bei Kopfschmerzen: je 1 Stück")
 - 4-Schema: Morning-noon-evening-night pattern (e.g., "täglich: 1-0-2-0 Stück")
 - TimeOfDay: Specific times (e.g., "täglich: 08:00 Uhr, 20:00 Uhr — je 1 Stück")
 - DayOfWeek: Specific weekdays (e.g., "montags — je 1 Stück; mittwochs — je 2 Stück")
@@ -209,7 +209,7 @@ class MedicationDosageTextGenerator:
         result = generator_method(dosage_instructions)
 
         # FreeText wird unverändert übernommen; alle anderen Schemata werden
-        # abschließend normalisiert (Leerzeichen) und bei Bedarf großgeschrieben.
+        # abschließend normalisiert (Leerzeichen).
         if schema_type != self.SCHEMA_FREE_TEXT:
             result = self._finalize_text(result)
         return result
@@ -481,10 +481,12 @@ class MedicationDosageTextGenerator:
         if not dosage_instructions:
             return ""
 
-        # Extract and combine all text values
+        # Freitext unverändert, auch Rand-Leerraum: FreeTextMatchesRenderedText
+        # verlangt exakte Gleichheit mit Dosage.text; ein Trim machte sie fuer
+        # solche Texte unmoeglich.
         text_parts = []
         for dosage in dosage_instructions:
-            text_content = dosage.get('text', '').strip()
+            text_content = dosage.get('text', '')
             if text_content:
                 text_parts.append(text_content)
 
@@ -760,7 +762,7 @@ class MedicationDosageTextGenerator:
                 if middle:
                     raise ValueError(
                         "Ein Mindestabstand ist nur bei reiner Bedarfsmedikation "
-                        "zulaessig, nicht zusammen mit einem strukturierten Rhythmus."
+                        "zulässig, nicht zusammen mit einem strukturierten Rhythmus."
                     )
                 right_parts.append(f"im Abstand von mindestens {minimum_interval}")
             if middle:
@@ -1410,11 +1412,11 @@ class MedicationDosageTextGenerator:
         {Mindestabstand} ]je {Dosis}[ — nicht mehr als {Maximalmenge} {Zeitraum}]
         ({Zeitraum} = "in 24 Stunden" bei 24 h bzw. "pro Tag" bei 1 d)
 
-        Bei strukturiertem Bedarf wird der Mindestabstand stattdessen nach dem
-        Schema-Kern als ", mit mindestens ... Abstand" ausgegeben. Der Doppelpunkt
-        hinter dem Einnahmeanlass, Zeitrahmen und Mindestabstand werden von
-        _assemble gesetzt; die Maximalmenge und der Großbuchstabe am Zeilenanfang
-        werden zentral ergänzt (_append_trailing_instructions / _finalize_text).
+        Mindestabstand und Maximalmenge sind nur hier zulässig; zusammen mit einem
+        strukturierten Rhythmus bricht der Algorithmus ab. Der Doppelpunkt hinter dem
+        Einnahmeanlass, Zeitrahmen und Mindestabstand werden von _assemble
+        gesetzt; die Maximalmenge wird zentral ergänzt
+        (_append_trailing_instructions).
         """
         if not dosage_instructions:
             return ""
@@ -1453,12 +1455,12 @@ class MedicationDosageTextGenerator:
             duration = extension.get('valueDuration')
             if not duration:
                 raise ValueError(
-                    "MindestabstandZwischenGaben.valueDuration ist "
+                    "MinimumIntervalBetweenAdministrations.valueDuration ist "
                     "für die Textgenerierung erforderlich."
                 )
             return self._format_duration_text(
                 duration,
-                field_name="MindestabstandZwischenGaben.valueDuration"
+                field_name="MinimumIntervalBetweenAdministrations.valueDuration"
             )
         return ""
 
@@ -1528,7 +1530,7 @@ class MedicationDosageTextGenerator:
                 if dosage.get('timing'):
                     raise ValueError(
                         "Eine Maximalmenge ist nur bei reiner Bedarfsmedikation "
-                        "zulaessig, nicht zusammen mit einem strukturierten Rhythmus."
+                        "zulässig, nicht zusammen mit einem strukturierten Rhythmus."
                     )
                 text = f"{text} — {max_dose_text}"
 

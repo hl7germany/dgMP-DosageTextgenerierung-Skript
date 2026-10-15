@@ -1,3 +1,4 @@
+import re
 import unittest
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
@@ -338,6 +339,53 @@ class SchemaOutputTest(unittest.TestCase):
         }
         with self.assertRaises(ValueError):
             self.generator.generate_dosage_text(self._resource([dosage, dosage]))
+
+    def test_mindestabstand_errors_name_the_extension(self):
+        # Fehlermeldungen nennen die kanonische Extension, nicht den alten Namen
+        # MindestabstandZwischenGaben.
+        cases = (
+            ({}, "MinimumIntervalBetweenAdministrations.valueDuration ist "
+                 "für die Textgenerierung erforderlich."),
+            ({"valueDuration": {"code": "h"}},
+             "MinimumIntervalBetweenAdministrations.valueDuration.value ist "
+             "für die Textgenerierung erforderlich."),
+        )
+        for extension, message in cases:
+            with self.subTest(message=message):
+                dosage = {
+                    "asNeededBoolean": True,
+                    "modifierExtension": [{"url": self.URL_MINDESTABSTAND, **extension}],
+                    "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
+                }
+                with self.assertRaisesRegex(ValueError, re.escape(message)):
+                    self.generator.generate_dosage_text(self._resource([dosage]))
+
+    # ── AsNeeded (strukturiert) ───────────────────────────────────────────────
+
+    def test_structured_as_needed_with_time_of_day(self):
+        dosage_a = {
+            "asNeededBoolean": True,
+            "timing": {"repeat": {"timeOfDay": ["08:00:00"]}},
+            "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
+        }
+        dosage_b = {
+            "asNeededBoolean": True,
+            "timing": {"repeat": {"timeOfDay": ["20:00:00"]}},
+            "doseAndRate": [{"doseQuantity": {"value": 2, "unit": "Stück"}}],
+        }
+        self.assertEqual("bei Bedarf: täglich 08:00 Uhr — je 1 Stück, 20:00 Uhr — je 2 Stück",
+                         self.generator.generate_dosage_text(self._resource([dosage_a, dosage_b])))
+
+    def test_structured_as_needed_with_interval(self):
+        dosage = {
+            "asNeededBoolean": True,
+            "extension": [{"url": self.URL_AS_NEEDED_FOR,
+                           "valueCodeableConcept": {"text": "Kopfschmerzen"}}],
+            "timing": {"repeat": {"frequency": 1, "period": 8, "periodUnit": "h"}},
+            "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
+        }
+        self.assertEqual("bei Kopfschmerzen: alle 8 Stunden je 1 Stück",
+                         self.generator.generate_dosage_text(self._resource([dosage])))
 
     # ── 4-Schema ──────────────────────────────────────────────────────────────
 
