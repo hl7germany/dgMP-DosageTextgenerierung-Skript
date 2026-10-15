@@ -384,7 +384,7 @@ class MedicationDosageTextGenerator:
             if name in quantity:
                 self._require_string(quantity[name], f"{path}.{name}")
         # Ein comparator ("<", ">=", ...) veraendert die Bedeutung des Wertes;
-        # der Text kennt dafuer keine Form und wuerde ihn unterschlagen
+        # der Text kann ihn nicht wiedergeben und wuerde ihn unterschlagen
         # ("je 2 Stück" fuer "< 2").
         if "comparator" in quantity:
             raise ValueError(f"{path}.comparator wird nicht unterstützt.")
