@@ -887,13 +887,10 @@ class FieldTypeTest(unittest.TestCase):
         for start in ("2026-06-05T23:30:45.1Z", "2026-06-05T23:30:45.1234567Z",
                       "2026-06-05T23:30:60Z", "2026-06-05T23:30:45Z"):
             with self.subTest(start=start):
-                dosage = {
-                    "timing": {"repeat": {"when": ["MORN"], "boundsPeriod": {"start": start}}},
-                    "doseAndRate": self.DOSE,
-                }
+                dosage = self.interval(boundsPeriod={"start": start})
                 self.assertEqual(
                     self.generator.generate_dosage_text(self.request(dosage)),
-                    "ab dem 06.06.2026 um 01:30 Uhr: 1-0-0-0 Stück",
+                    "ab dem 06.06.2026 um 01:30 Uhr alle 8 Stunden: je 1 Stück",
                 )
 
     def test_time_of_day_accepts_leap_second(self):
