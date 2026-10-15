@@ -1062,5 +1062,136 @@ class FieldTypeTest(unittest.TestCase):
         self.assertEqual(result.stdout.strip(), "alle 8 Stunden: je 2,50 mg")
 
 
+class SilentOmissionTest(unittest.TestCase):
+    """Der Algorithmus bricht ab, statt eine Angabe der Ressource zu
+    unterschlagen oder mehrdeutig wiederzugeben. Diese Faelle rutschten
+    bisher durch (Befunde des Reviews gegen Spec und IG-Beispiele)."""
+
+    URL_AS_NEEDED_FOR = MODULE.MedicationDosageTextGenerator.URL_AS_NEEDED_FOR
+    URL_MINDESTABSTAND = MODULE.MedicationDosageTextGenerator.URL_MINDESTABSTAND
+
+    def setUp(self):
+        self.generator = MODULE.MedicationDosageTextGenerator()
+
+    def request(self, *dosages):
+        return {"resourceType": "MedicationRequest", "dosageInstruction": list(dosages)}
+
+    @staticmethod
+    def dosage(dose, repeat=None, unit="Stück", **extra):
+        dosage = {"doseAndRate": [{"doseQuantity": {"value": dose, "unit": unit}}], **extra}
+        if repeat is not None:
+            dosage["timing"] = {"repeat": repeat}
+        return dosage
+
+    def text(self, *dosages):
+        return self.generator.generate_dosage_text(self.request(*dosages))
+
+    # -- doppelte Uhrzeit --------------------------------------------------
+
+    def test_same_time_with_different_dose_is_rejected_in_time_schemas(self):
+        cases = (
+            ({"timeOfDay": ["08:00:00"]}, {"timeOfDay": ["08:00:00"]}),
+            ({"dayOfWeek": ["mon"], "timeOfDay": ["08:00:00"]},
+             {"dayOfWeek": ["mon"], "timeOfDay": ["08:00:00"]}),
+            # HH:MM und HH:MM:SS sind dieselbe Uhrzeit
+            ({"timeOfDay": ["08:00"]}, {"timeOfDay": ["08:00:00"]}),
+        )
+        for first, second in cases:
+            with self.subTest(first=first):
+                with self.assertRaisesRegex(ValueError, "Doppelte Belegung der Uhrzeit '08:00 Uhr'"):
+                    self.text(self.dosage(1, first), self.dosage(2, second))
+
+    def test_same_time_with_same_dose_is_rendered_once(self):
+        self.assertEqual(
+            self.text(self.dosage(1, {"timeOfDay": ["08:00:00", "08:00:00"]}),
+                      self.dosage(1, {"timeOfDay": ["08:00:00"]})),
+            "täglich: 08:00 Uhr — je 1 Stück",
+        )
+
+    # -- Wochentags-Kombination: when und timeOfDay gemischt ---------------
+
+    def test_day_combination_rejects_mixed_when_and_time_of_day_across_elements(self):
+        a = self.dosage(1, {"dayOfWeek": ["mon"], "timeOfDay": ["08:00:00"]})
+        b = self.dosage(2, {"dayOfWeek": ["mon"], "when": ["MORN"]})
+        c = self.dosage(2, {"dayOfWeek": ["wed"], "when": ["MORN"]})
+        for pair in ((a, b), (b, a), (a, c), (c, a)):
+            with self.subTest(pair=[d["timing"]["repeat"] for d in pair]):
+                with self.assertRaisesRegex(ValueError, "dürfen nicht gemischt werden"):
+                    self.text(*pair)
+
+    # -- Intervall mit mehreren Elementen ------------------------------------
+
+    def test_interval_schema_rejects_more_than_one_element(self):
+        a = self.dosage(1, {"frequency": 1, "period": 8, "periodUnit": "h"})
+        b = self.dosage(2, {"frequency": 1, "period": 12, "periodUnit": "h"})
+        with self.assertRaisesRegex(ValueError, "Wiederkehrende Intervalle erlauben genau ein Dosage-Element"):
+            self.text(a, b)
+
+    # -- Mindestabstand, Maximalmenge, Anlass ------------------------------
+
+    def test_minimum_interval_is_rejected_with_weekday_rhythm(self):
+        for repeat in ({"dayOfWeek": ["mon"]}, {"dayOfWeek": ["mon"], "when": ["MORN"]}):
+            with self.subTest(repeat=repeat):
+                dosage = self.dosage(1, repeat, asNeededBoolean=True, modifierExtension=[{
+                    "url": self.URL_MINDESTABSTAND, "valueDuration": {"value": 4, "code": "h"}}])
+                with self.assertRaisesRegex(ValueError, "Mindestabstand ist nur bei reiner Bedarfsmedikation"):
+                    self.text(dosage)
+
+    def test_as_needed_fields_without_as_needed_flag_are_rejected(self):
+        repeat = {"frequency": 1, "period": 8, "periodUnit": "h"}
+        cases = (
+            (self.dosage(1, repeat, extension=[{"url": self.URL_AS_NEEDED_FOR,
+                                               "valueCodeableConcept": {"text": "Kopfschmerzen"}}]),
+             "Ein Einnahmeanlass \\(asNeededFor\\) setzt asNeededBoolean = true voraus"),
+            (self.dosage(1, repeat, modifierExtension=[{"url": self.URL_MINDESTABSTAND,
+                                                       "valueDuration": {"value": 4, "code": "h"}}]),
+             "Ein Mindestabstand setzt asNeededBoolean = true voraus"),
+            (self.dosage(1, repeat, maxDosePerPeriod={"numerator": {"value": 4, "unit": "Stück"},
+                                                     "denominator": {"value": 1, "code": "d"}}),
+             "Eine Maximalmenge setzt asNeededBoolean = true voraus"),
+            (self.dosage(1, {"when": ["MORN"]}, maxDosePerPeriod={"numerator": {"value": 4, "unit": "Stück"},
+                                                                 "denominator": {"value": 1, "code": "d"}}),
+             "Eine Maximalmenge setzt asNeededBoolean = true voraus"),
+        )
+        for dosage, error in cases:
+            with self.subTest(error=error):
+                with self.assertRaisesRegex(ValueError, error):
+                    self.text(dosage)
+
+    # -- Einheit ------------------------------------------------------------
+
+    def test_differing_dose_units_across_elements_are_rejected(self):
+        cases = (
+            ({"when": ["MORN"]}, {"when": ["EVE"]}),
+            ({"dayOfWeek": ["mon"]}, {"dayOfWeek": ["wed"]}),
+            ({"dayOfWeek": ["mon"], "when": ["MORN"]}, {"dayOfWeek": ["wed"], "when": ["MORN"]}),
+        )
+        for first, second in cases:
+            with self.subTest(first=first):
+                with self.assertRaisesRegex(ValueError, "Abweichende Dosis-Einheiten 'Stück' und 'mg'"):
+                    self.text(self.dosage(1, first), self.dosage(2, second, unit="mg"))
+
+    # -- frequencyMax in der Intervall-Kombination ---------------------------
+
+    def test_frequency_max_is_not_allowed_in_interval_combination(self):
+        dosage = self.dosage(1, {"frequency": 1, "frequencyMax": 2, "period": 2,
+                                 "periodUnit": "d", "when": ["MORN"]})
+        with self.assertRaisesRegex(ValueError, "keinem unterstützten Dosierungsschema"):
+            self.text(dosage)
+
+    # -- "dieselbe Dosis" ------------------------------------------------------
+
+    def test_same_dose_means_same_text_and_first_value_wins(self):
+        # 1 und 1.0 sind numerisch gleich, aber verschiedene Texte -> Konflikt
+        with self.assertRaisesRegex(ValueError, "Doppelte Belegung des Tagesabschnitts 'MORN'"):
+            self.text(self.dosage(1, {"when": ["MORN"]}), self.dosage(Decimal("1.0"), {"when": ["MORN"]}))
+        with self.assertRaisesRegex(ValueError, "Doppelte Belegung des Wochentags 'mon'"):
+            self.text(self.dosage(1, {"dayOfWeek": ["mon"]}), self.dosage(Decimal("1.0"), {"dayOfWeek": ["mon"]}))
+        # gleiche Darstellung: ein Text, unabhaengig von der Reihenfolge
+        a, b = self.dosage(1, {"when": ["MORN"]}), self.dosage(Decimal("1"), {"when": ["MORN"]})
+        self.assertEqual(self.text(a, b), "täglich: 1-0-0-0 Stück")
+        self.assertEqual(self.text(b, a), "täglich: 1-0-0-0 Stück")
+
+
 if __name__ == "__main__":
     unittest.main()

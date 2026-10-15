@@ -492,9 +492,11 @@ class MedicationDosageTextGenerator:
             return self.SCHEMA_TIME_OF_DAY
 
         # Schema 7: Äußeres, nicht tägliches Intervall mit konkreten Zeitpunkten.
-        # frequency ist hier redundant, aber optional zulässig.
+        # frequency ist hier redundant, aber optional zulässig; frequencyMax
+        # nicht - die Zeitpunkte legen die Zahl der Gaben fest, eine Spanne
+        # daneben wuerde unterschlagen.
         if (is_non_daily_pattern and (has_time_of_day or has_when_codes) and
-                not has_day_of_week and
+                not has_day_of_week and 'frequencyMax' not in repeat_element and
                 repeat_element.get('periodUnit') in ('d', 'wk', 'mo')):
             return self.SCHEMA_INTERVAL_TIME_COMBO
 
@@ -543,6 +545,12 @@ class MedicationDosageTextGenerator:
             dose_value, dose_unit = self._extract_dose_quantity(dosage)
             if not unit_text:
                 unit_text = dose_unit
+            elif dose_unit != unit_text:
+                # Das Muster traegt eine gemeinsame Einheit; eine abweichende
+                # Einheit eines weiteren Elements wuerde unterschlagen.
+                raise ValueError(
+                    f"Abweichende Dosis-Einheiten '{unit_text}' und '{dose_unit}' "
+                    "lassen sich nicht in einem gemeinsamen Muster darstellen.")
 
             # Assign dose value to each specified time period
             for when_code in when_codes:
@@ -553,11 +561,12 @@ class MedicationDosageTextGenerator:
                 # abweichende Dosis ist nicht darstellbar (wie in den anderen
                 # Schemata).
                 existing = dose_amounts[when_code]
-                if existing is not None and existing != dose_value:
+                if existing is None:
+                    dose_amounts[when_code] = dose_value
+                elif self._dose_key(existing) != self._dose_key(dose_value):
                     raise ValueError(
                         f"Doppelte Belegung des Tagesabschnitts '{when_code}' "
                         "mit unterschiedlicher Dosis.")
-                dose_amounts[when_code] = dose_value
 
         # Feste Dosen -> kompakt "1-0-2-0"; sobald eine Position variabel ist,
         # wird gemäß Option 2 die ausgeschriebene Segmentform verwendet
@@ -716,6 +725,22 @@ class MedicationDosageTextGenerator:
 
         time_dose_pairs.sort(key=lambda pair: pair[0])
 
+        # Dieselbe Uhrzeit (HH:MM) mit abweichender Dosis ist mehrdeutig und
+        # fuehrt zum Abbruch - ueber alle Dosage-Elemente hinweg, wie bei der
+        # Intervall-Kombination. Dieselbe Uhrzeit mit derselben Dosis ergibt
+        # denselben Text und wird nur einmal ausgegeben.
+        dose_by_time = {}
+        unique_pairs = []
+        for raw_time, formatted_time, dose_text in time_dose_pairs:
+            known = dose_by_time.get(formatted_time)
+            if known is None:
+                dose_by_time[formatted_time] = dose_text
+                unique_pairs.append((raw_time, formatted_time, dose_text))
+            elif known != dose_text:
+                raise ValueError(
+                    f"Doppelte Belegung der Uhrzeit '{formatted_time}' mit unterschiedlicher Dosis.")
+        time_dose_pairs = unique_pairs
+
         segments = []
         for _, formatted_time, dose_text in time_dose_pairs:
             if segments and segments[-1][1] == dose_text:
@@ -808,6 +833,15 @@ class MedicationDosageTextGenerator:
 
         raise ValueError("Dosisangabe in doseAndRate[0] fehlt.")
 
+    def _dose_key(self, dose_value):
+        """Vergleichsschluessel fuer "dieselbe Dosis": die Textdarstellung.
+
+        Numerische Gleichheit (Decimal('1.0') == 1) reichte nicht: Beide Werte
+        ergeben verschiedene Texte ("1,0" und "1"), und welcher gewinnt, hinge
+        von der Reihenfolge der Dosage-Elemente ab.
+        """
+        return dose_value if isinstance(dose_value, str) else self._format_decimal_value(dose_value)
+
     def _extract_dose_text_with_prefix(self, dosage):
         """
         Extract dose as German text with 'je' prefix.
@@ -899,8 +933,10 @@ class MedicationDosageTextGenerator:
                 # Ein strukturierter Rhythmus legt den Abstand zwischen zwei Gaben
                 # bereits fest. Den Mindestabstand daneben auszugeben ergaebe eine
                 # widerspruechliche Anweisung, ihn stillschweigend zu unterschlagen
-                # eine sicherheitsrelevante Auslassung - deshalb Abbruch.
-                if middle:
+                # eine sicherheitsrelevante Auslassung - deshalb Abbruch. Kriterium
+                # ist das timing, nicht der Zwischenteil: Wochentagsschemata tragen
+                # ihren Rhythmus im Kern und haetten sonst durchgerutscht.
+                if dosage.get('timing'):
                     raise ValueError(
                         "Ein Mindestabstand ist nur bei reiner Bedarfsmedikation "
                         "zulässig, nicht zusammen mit einem strukturierten Rhythmus."
@@ -912,6 +948,15 @@ class MedicationDosageTextGenerator:
                 right_parts.append(core)
             right = " ".join(right_parts)
             return f"{left}: {right}" if right else left
+
+        # Nicht-Bedarf: Einnahmeanlass und Mindestabstand setzen das
+        # Bedarfskennzeichen voraus. Sie stillschweigend zu uebergehen waere eine
+        # Auslassung - eine modifierExtension darf nie ignoriert werden.
+        if self._extract_as_needed_for_text(dosage):
+            raise ValueError(
+                "Ein Einnahmeanlass (asNeededFor) setzt asNeededBoolean = true voraus.")
+        if self._extract_minimum_interval_text(dosage):
+            raise ValueError("Ein Mindestabstand setzt asNeededBoolean = true voraus.")
 
         # Nicht-Bedarf: Zeitrahmen und Intervall/Marker links, Kern rechts.
         left = " ".join(part for part in [bounds_text, middle] if part)
@@ -1131,14 +1176,21 @@ class MedicationDosageTextGenerator:
             dose_value, dose_unit = self._extract_dose_quantity(dosage)
             if not unit_text:
                 unit_text = dose_unit
+            elif dose_unit != unit_text:
+                # Das Muster traegt eine gemeinsame Einheit; eine abweichende
+                # Einheit eines weiteren Elements wuerde unterschlagen.
+                raise ValueError(
+                    f"Abweichende Dosis-Einheiten '{unit_text}' und '{dose_unit}' "
+                    "lassen sich nicht in einem gemeinsamen Muster darstellen.")
 
             # Associate this dose with each specified day
             for day_code in day_codes:
                 self._require_day_code(day_code)
-                if day_code in day_to_dose and day_to_dose[day_code] != dose_value:
+                if day_code not in day_to_dose:
+                    day_to_dose[day_code] = dose_value
+                elif self._dose_key(day_to_dose[day_code]) != self._dose_key(dose_value):
                     raise ValueError(
                         f"Doppelte Belegung des Wochentags '{day_code}' mit unterschiedlicher Dosis.")
-                day_to_dose[day_code] = dose_value
 
         if not day_to_dose:
             return ""
@@ -1183,6 +1235,11 @@ class MedicationDosageTextGenerator:
         """
         if not dosage_instructions:
             return ""
+
+        # Ein Intervall laesst sich nicht aggregieren; ein zweites Element
+        # entfiele stillschweigend (wie beim reinen Bedarf: Abbruch).
+        if len(dosage_instructions) != 1:
+            raise ValueError("Wiederkehrende Intervalle erlauben genau ein Dosage-Element.")
 
         # For interval schema, use the first (and typically only) dosage
         dosage = dosage_instructions[0]
@@ -1313,18 +1370,19 @@ class MedicationDosageTextGenerator:
         if not dosage_instructions:
             return ""
 
-        # Check whether this uses timeOfDay or when codes
-        first_dosage = dosage_instructions[0]
-        timing = first_dosage.get('timing', {})
-        repeat_element = timing.get('repeat', {})
-
-        has_time_of_day = 'timeOfDay' in repeat_element and repeat_element['timeOfDay']
-        has_when_codes = 'when' in repeat_element and repeat_element['when']
-
-        # Delegate to appropriate sub-type generator. Die Schema-Erkennung
-        # garantiert timeOfDay oder when; timeOfDay und when gemeinsam ist
-        # bereits in generate_dosage_text ausgeschlossen (tim-10).
-        if has_time_of_day and not has_when_codes:
+        # Der Untertyp (Uhrzeiten oder Tagesabschnitte) wird ueber ALLE Elemente
+        # bestimmt. Beide Untertypen fallen unter dieselbe Schema-Regel, die
+        # Schema-Gleichheitspruefung greift also nicht; entschiede allein das
+        # erste Element, entfiele eine Gabe des anderen Untertyps stillschweigend
+        # ("mon 08:00" + "mon MORN" -> nur die Uhrzeit).
+        repeats = [dosage.get('timing', {}).get('repeat', {}) for dosage in dosage_instructions]
+        uses_time_of_day = any(repeat.get('timeOfDay') for repeat in repeats)
+        uses_when = any(repeat.get('when') for repeat in repeats)
+        if uses_time_of_day and uses_when:
+            raise ValueError(
+                "Wochentags-Kombinationen mit Uhrzeiten und mit Tagesabschnitten "
+                "dürfen nicht gemischt werden.")
+        if uses_time_of_day:
             return self._generate_dayofweek_timeofday_combination(dosage_instructions)
         return self._generate_dayofweek_when_combination(dosage_instructions)
 
@@ -1395,6 +1453,12 @@ class MedicationDosageTextGenerator:
             dose_value, dose_unit = self._extract_dose_quantity(dosage)
             if not unit_text:
                 unit_text = dose_unit
+            elif dose_unit != unit_text:
+                # Das Muster traegt eine gemeinsame Einheit; eine abweichende
+                # Einheit eines weiteren Elements wuerde unterschlagen.
+                raise ValueError(
+                    f"Abweichende Dosis-Einheiten '{unit_text}' und '{dose_unit}' "
+                    "lassen sich nicht in einem gemeinsamen Muster darstellen.")
 
             # For each day and each when code, set the dose
             for day_code in day_codes:
@@ -1408,11 +1472,12 @@ class MedicationDosageTextGenerator:
                         raise ValueError(
                             f"Nicht unterstützter Tagesabschnitt (when): '{when_code}'.")
                     existing = day_to_patterns[day_code][when_code]
-                    if existing is not None and existing != dose_value:
+                    if existing is None:
+                        day_to_patterns[day_code][when_code] = dose_value
+                    elif self._dose_key(existing) != self._dose_key(dose_value):
                         raise ValueError(
                             f"Doppelte Belegung der Kombination aus Wochentag '{day_code}' "
                             f"und Zeit-/Tagesabschnitt '{when_code}' mit unterschiedlicher Dosis.")
-                    day_to_patterns[day_code][when_code] = dose_value
 
         if not day_to_patterns:
             return ""
@@ -1493,7 +1558,7 @@ class MedicationDosageTextGenerator:
             if 'timeOfDay' in repeat_element and repeat_element['timeOfDay']:
                 for time_of_day in repeat_element['timeOfDay']:
                     if time_of_day in time_to_dosages:
-                        if self._extract_dose_quantity(time_to_dosages[time_of_day][0]) != self._extract_dose_quantity(dosage):
+                        if self._extract_dose_text_with_prefix(time_to_dosages[time_of_day][0]) != self._extract_dose_text_with_prefix(dosage):
                             raise ValueError(
                                 f"Doppelte Belegung des Zeit-Schlüssels '{time_of_day}' mit unterschiedlicher Dosis.")
                     else:
@@ -1508,7 +1573,7 @@ class MedicationDosageTextGenerator:
                         raise ValueError(
                             f"Nicht unterstützter Tagesabschnitt (when): '{when_code}'.")
                     if when_code in time_to_dosages:
-                        if self._extract_dose_quantity(time_to_dosages[when_code][0]) != self._extract_dose_quantity(dosage):
+                        if self._extract_dose_text_with_prefix(time_to_dosages[when_code][0]) != self._extract_dose_text_with_prefix(dosage):
                             raise ValueError(
                                 f"Doppelte Belegung des Zeit-Schlüssels '{when_code}' mit unterschiedlicher Dosis.")
                     else:
@@ -1673,15 +1738,16 @@ class MedicationDosageTextGenerator:
         # nachgestellt. Ein strukturierter Rhythmus legt die Menge im
         # Bezugszeitraum bereits fest; die Angabe daneben stillschweigend zu
         # uebergehen waere eine sicherheitsrelevante Auslassung.
-        if self._is_as_needed(dosage):
-            max_dose_text = self._extract_max_dose_text(dosage)
-            if max_dose_text:
-                if dosage.get('timing'):
-                    raise ValueError(
-                        "Eine Maximalmenge ist nur bei reiner Bedarfsmedikation "
-                        "zulässig, nicht zusammen mit einem strukturierten Rhythmus."
-                    )
-                text = f"{text} — {max_dose_text}"
+        max_dose_text = self._extract_max_dose_text(dosage)
+        if max_dose_text:
+            if not self._is_as_needed(dosage):
+                raise ValueError("Eine Maximalmenge setzt asNeededBoolean = true voraus.")
+            if dosage.get('timing'):
+                raise ValueError(
+                    "Eine Maximalmenge ist nur bei reiner Bedarfsmedikation "
+                    "zulässig, nicht zusammen mit einem strukturierten Rhythmus."
+                )
+            text = f"{text} — {max_dose_text}"
 
         # Verabreichungsweg (route) ist im dgMP-Profil 0..0 und wird nicht dargestellt.
 
