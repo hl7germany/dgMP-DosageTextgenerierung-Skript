@@ -576,10 +576,11 @@ Die formale Definition zulässiger Felder und Kombinationen liegt in den Timing-
 * doppelte Belegung desselben Zeit-Schlüssels mit unterschiedlicher Dosis in einer Intervall-Kombination: Abbruch mit `ValueError("Doppelte Belegung des Zeit-Schlüssels '{zeit}' mit unterschiedlicher Dosis.")`
 * Zeiteinheit außerhalb der [Einheiten-Tabelle](#einheiten-und-pluralisierung) in `periodUnit`, `boundsDuration.code` oder beim Mindestabstand: Abbruch mit `ValueError("Nicht unterstützte Zeiteinheit: '{code}'.")`
 
-**Vorbedingung der Textgenerierung ist eine gegen das Profil validierte Ressource.** Der Algorithmus ist kein Validator und ersetzt keinen: Er prüft weder Wertebereiche (etwa `DosageDoseValuePositive`, `TimingValuesPositive`, `DosageLimitsPositive`) noch Kardinalitäten oder Invarianten, die den Text nicht berühren. Eine Prüfung findet nur dort statt, wo sie für den Text selbst nötig ist, und zwar aus genau zwei Gründen:
+**Vorbedingung der Textgenerierung ist eine gegen das Profil validierte Ressource.** Der Algorithmus ist kein Validator und ersetzt keinen: Er prüft weder Wertebereiche (etwa `DosageDoseValuePositive`, `TimingValuesPositive`, `DosageLimitsPositive`) noch Kardinalitäten oder Invarianten, die den Text nicht berühren. Eine Prüfung findet nur dort statt, wo sie für den Text selbst nötig ist, und zwar aus genau drei Gründen:
 
 * Der Text ist **nicht bildbar** — eine Angabe fehlt, ist nicht lesbar oder liegt außerhalb der festgelegten Tabellen.
 * Der Text wäre **falsch oder mehrdeutig** — er würde eine Angabe der Ressource unterschlagen oder könnte in zwei Bedeutungen gelesen werden.
+* Ein gelesenes Feld hat den **falschen JSON-Datentyp** — etwa ein String, wo FHIR eine Zahl vorschreibt. Oft ließe sich daraus ein Text bilden (`"2"`, `2.5` als Frequenz); eine validierte Ressource enthält solche Werte aber nicht, und sie stillschweigend umzudeuten hieße, Annahmen zu treffen, die dem Algorithmus nicht zustehen.
 
 In diesen Fällen **bricht der Algorithmus ab, statt einen zweifelhaften Text zu erzeugen**; es gibt keinen Ersatz- oder Teiltext. Alles andere ist Sache der Validierung. Ein Wert von `0` oder ein negativer Wert ist deshalb kein Abbruchgrund: Der Text gibt die Ressource wieder, er beurteilt sie nicht.
 
