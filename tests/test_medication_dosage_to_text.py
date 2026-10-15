@@ -1067,6 +1067,51 @@ class FieldTypeTest(unittest.TestCase):
         self.assertEqual(result.stdout.strip(), "alle 8 Stunden: je 2,50 mg")
 
 
+class CommandLineTest(unittest.TestCase):
+    """Die Kommandozeile ist die Schnittstelle, ueber die der IG-Build das Skript
+    aufruft: Text auf stdout und Exit-Code 0, sonst "Fehler: ..." auf stderr und
+    Exit-Code 1."""
+
+    def run_cli(self, *args, content=None):
+        path = None
+        if content is not None:
+            with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as handle:
+                handle.write(content)
+                path = handle.name
+            args = (path,)
+        try:
+            return subprocess.run([sys.executable, str(MODULE_PATH), *args],
+                                  capture_output=True, text=True, encoding="utf-8")
+        finally:
+            if path:
+                os.unlink(path)
+
+    def test_without_argument_prints_usage(self):
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Verwendung:", result.stderr)
+        self.assertEqual(result.stdout, "")
+
+    def test_missing_file(self):
+        result = self.run_cli("/nicht/vorhanden.json")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Fehler: Datei '/nicht/vorhanden.json' nicht gefunden.", result.stderr)
+
+    def test_invalid_json(self):
+        result = self.run_cli(content="{kein json")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Fehler: Ungültiges JSON", result.stderr)
+        self.assertEqual(result.stdout, "")
+
+    def test_abort_is_reported_with_message(self):
+        resource = {"resourceType": "MedicationRequest", "dosageInstruction": [
+            {"timing": {"repeat": {"when": ["MORN"]}}}]}
+        result = self.run_cli(content=json.dumps(resource))
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stderr.strip(), "Fehler: doseAndRate ist für die Textgenerierung erforderlich.")
+        self.assertEqual(result.stdout, "")
+
+
 class SilentOmissionTest(unittest.TestCase):
     """Der Algorithmus bricht ab, statt eine Angabe der Ressource zu
     unterschlagen oder mehrdeutig wiederzugeben. Diese Faelle rutschten
@@ -1181,6 +1226,17 @@ class SilentOmissionTest(unittest.TestCase):
         self.assertEqual(
             self.text(self.dosage(1, {"timeOfDay": ["08:00:00"]}, unit="Tbl. ", patientInstruction="X")),
             "täglich: 08:00 Uhr — je 1 Tbl. Hinweis: X")
+
+    def test_same_dose_twice_is_rendered_once(self):
+        """Dieselbe Dosis mehrfach ergibt denselben Text, auch im Wochentags-
+        Schema und in der Wochentags-Kombination."""
+        self.assertEqual(
+            self.text(self.dosage(1, {"dayOfWeek": ["mon"]}), self.dosage(1, {"dayOfWeek": ["mon", "wed"]})),
+            "montags — je 1 Stück; mittwochs — je 1 Stück")
+        self.assertEqual(
+            self.text(self.dosage(1, {"dayOfWeek": ["mon"], "when": ["MORN"]}),
+                      self.dosage(1, {"dayOfWeek": ["mon"], "when": ["MORN", "EVE"]})),
+            "montags 1-0-1-0 Stück")
 
     def test_whitespace_unit_counts_as_missing(self):
         with self.assertRaisesRegex(ValueError, "doseQuantity.unit ist für die Textgenerierung erforderlich."):

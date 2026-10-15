@@ -16,6 +16,21 @@ Daraus folgt für jeden Eintrag:
 
 Ändert sich nur die Referenzimplementierung, bleibt die Versionsnummer stehen.
 
+## [Unreleased]
+
+### Referenzimplementierung und Repository
+
+#### Added
+
+- `tests/test_spec_examples.py`: Meta-Test für die Textbeispiele der Spezifikation. Jeder vollständige Beispieltext im Fließtext muss von einem Testfall exakt erzeugt werden, jeder Baustein (etwa `je 1 bis 2 Stück`) in einer erwarteten Ausgabe vorkommen; ein neues Beispiel ohne Testfall lässt den Test scheitern. Vier Beispiele, die bisher kein Test erzeugte, sind ergänzt.
+- `tests/test_properties.py`: Eigenschaftstests über 1500 Zufallsressourcen mit festem Seed — Abbruch nur mit `ValueError`, Form des strukturierten Textes (eine Zeile, kein Rand-Leerraum, kein Großbuchstabe am Anfang), Unabhängigkeit von der Reihenfolge der `Dosage`-Elemente bei gleichen Rahmen-Angaben, gleicher Text mit Decimal- und float-Parser für Zahlen ohne nachfolgende Nullen.
+- Testfälle für ungültige Kalenderdaten in `boundsPeriod`, unbekannte `when`-Codes in der Wochentags-Kombination, eine fremde `extension` neben dem Einnahmeanlass, dieselbe Dosis mehrfach im Wochentags-Schema und in der Wochentags-Kombination, eine leere `doseAndRate`-Liste, `timing` ohne `repeat` und eine Maximalmenge ohne Zähler.
+- Testfälle für die Kommandozeile, über die der IG-Build das Skript aufruft: Aufruf ohne Argument, fehlende Datei, ungültiges JSON und Abbruch (`Fehler: …` auf stderr, Exit-Code 1, leere Ausgabe).
+
+#### Removed
+
+- Unerreichbare Zweige: die Prüfung auf eine leere Liste in zehn schemaspezifischen Generatoren und in der Schema-Erkennung (`generate_dosage_text` gibt bei leerer Liste vorher `""` zurück), leere Zwischenergebnisse in Uhrzeiten-, Wochentags- und Wochentags-Kombinations-Schema, der leere Text in der Normalisierung und die Kurzform `täglich` in der Intervall-Kombination (`1 d` ohne `periodMax` ist ein Tagesmuster und führt nie zu Regel 7).
+
 ## [2.0.0-rc.1] - 2026-10-15
 
 Release Candidate für 2.0.0. Die Einträge beschreiben die Unterschiede zu 2.0.0-ballot; weitere Release Candidates beschreiben jeweils die Unterschiede zum vorigen.

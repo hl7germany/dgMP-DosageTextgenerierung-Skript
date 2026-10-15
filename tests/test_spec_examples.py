@@ -4,6 +4,11 @@
 SpecExamplesTest: Jedes Textbeispiel der Spezifikation wird als FHIR-Ressource
 nachgebaut und muss zeichengenau erzeugt werden.
 
+SpecTextExamplesTest: Jedes Textbeispiel im Fliesstext der Spezifikation
+kommt in einer erwarteten Ausgabe vor - ein vollstaendiger Text exakt, ein
+Baustein (etwa `je 1 bis 2 Stück`) als Teil einer Ausgabe. Ein neues Beispiel
+ohne Testfall laesst den Test scheitern.
+
 ErrorListTest: Jeder Eintrag der Fehlerliste ("Fehler und Validierung") hat
 mindestens einen Fall, der genau diese Meldung auslöst. Ein Meta-Test liest die
 Meldungen aus der Spezifikation und prüft, dass jede von einem Fall abgedeckt
@@ -244,6 +249,18 @@ EXAMPLES = (
      "alle 2 Tage: abends — je 2 Stück, 08:00 Uhr — je 1 Stück"),
     ("Hinweis: Punkt mit nachfolgendem Leerraum", req(d(dq(1, "Tbl. "), {"when": ["MORN"]}, patientInstruction="X")),
      "täglich: 1-0-0-0 Tbl. Hinweis: X"),
+    ("Wochentag: ein Tag", req(d(dq(1), {"dayOfWeek": ["mon"]})), "montags — je 1 Stück"),
+    ("Bedarf mit Wochentag: ein Tag", req(d(dq(1), {"dayOfWeek": ["mon"]}, asNeededBoolean=True)),
+     "bei Bedarf: montags — je 1 Stück"),
+    ("Wochentags-Kombination ausgeschrieben: mehrere Tagesabschnitte eines Tages",
+     req(d(dr(1, 2), {"dayOfWeek": ["mon"], "when": ["MORN"]}), d(dq(2), {"dayOfWeek": ["mon"], "when": ["EVE"]})),
+     "montags morgens — je 1 bis 2 Stück, abends — je 2 Stück"),
+    ("Hinweis", req(d(dq(1), EVERY_8_H, patientInstruction="Mit ausreichend Wasser einnehmen")),
+     "alle 8 Stunden: je 1 Stück. Hinweis: Mit ausreichend Wasser einnehmen"),
+    ("Einnahmeanlass: fremde Extension wird ignoriert",
+     req(d(dq(1), asNeededBoolean=True,
+           extension=[{"url": "http://example.org/andere", "valueString": "x"}, *reason("Kopfschmerzen")])),
+     "bei Kopfschmerzen: je 1 Stück"),
     ("Freitext", req({"text": "Nach Bedarf bei Schmerzen"}), "Nach Bedarf bei Schmerzen"),
 )
 
@@ -264,6 +281,9 @@ ERROR_CASES = (
      "Reine Bedarfsmedikation erlaubt genau ein Dosage-Element."),
     ("ohne doseAndRate", req({"timing": {"repeat": {"when": ["MORN"]}}}),
      "doseAndRate ist für die Textgenerierung erforderlich."),
+    ("doseAndRate leere Liste", req(d([], {"when": ["MORN"]})), "doseAndRate ist für die Textgenerierung erforderlich."),
+    ("timing ohne repeat", req({"timing": {"code": {"text": "BID"}}, "doseAndRate": dq(1)}),
+     "Die Dosierung entspricht keinem unterstützten Dosierungsschema."),
     ("doseAndRate[0] leer", req(d([{}], {"when": ["MORN"]})), "Dosisangabe in doseAndRate[0] fehlt."),
     ("doseQuantity ohne value", req(d([{"doseQuantity": {"unit": "Stück"}}], {"when": ["MORN"]})),
      "doseQuantity.value ist für die Textgenerierung erforderlich."),
@@ -306,6 +326,13 @@ ERROR_CASES = (
     ("boundsPeriod.end unvollständig", req(d(dq(1), {"when": ["MORN"], "boundsPeriod": {"end": "2026-06"}})),
      "boundsPeriod.end muss ein parsebares FHIR-dateTime mit vollständigem Datum im Format JJJJ-MM-TT sein; "
      "eine Uhrzeit erfordert eine Zeitzone."),
+    ("boundsPeriod: Kalenderdatum ungültig", req(d(dq(1), {"when": ["MORN"], "boundsPeriod": {"start": "2026-02-30"}})),
+     "boundsPeriod.start muss ein parsebares FHIR-dateTime mit vollständigem Datum im Format JJJJ-MM-TT sein; "
+     "eine Uhrzeit erfordert eine Zeitzone."),
+    ("boundsPeriod: Kalenderdatum mit Uhrzeit ungültig",
+     req(d(dq(1), {"timeOfDay": ["08:00:00"], "boundsPeriod": {"start": "2026-02-30T08:00:00+01:00"}})),
+     "boundsPeriod.start muss ein parsebares FHIR-dateTime mit vollständigem Datum im Format JJJJ-MM-TT sein; "
+     "eine Uhrzeit erfordert eine Zeitzone."),
     ("timeOfDay nicht nullaufgefüllt", req(d(dq(1), {"timeOfDay": ["8:00"]})),
      "timeOfDay muss im Format HH:MM oder HH:MM:SS[.Bruchteile] angegeben sein."),
     ("asNeededFor ohne Text",
@@ -341,11 +368,16 @@ ERROR_CASES = (
      req(d(dq(1), asNeededBoolean=True, maxDosePerPeriod={"numerator": {"value": 4, "unit": "Stück"},
                                                           "denominator": {"value": 1}})),
      "maxDosePerPeriod.denominator.code ist für die Textgenerierung erforderlich."),
+    ("Maximalmenge ohne Zähler",
+     req(d(dq(1), asNeededBoolean=True, maxDosePerPeriod={"denominator": {"value": 1, "code": "d"}})),
+     "maxDosePerPeriod.numerator.value ist für die Textgenerierung erforderlich."),
     ("Maximalmenge nicht numerisch", req(d(dq(1), asNeededBoolean=True, maxDosePerPeriod=max_dose("4", 1, "d"))),
      "maxDosePerPeriod.numerator.value muss numerisch sein."),
     ("Maximalmenge Nenner", req(d(dq(1), asNeededBoolean=True, maxDosePerPeriod=max_dose(2, 12, "h"))),
      "maxDosePerPeriod.denominator muss 1 d oder 24 h sein."),
     ("when-Code", req(d(dq(1), {"when": ["XYZ"]})), "Nicht unterstützter Tagesabschnitt (when): 'XYZ'."),
+    ("when-Code in der Wochentags-Kombination", req(d(dq(1), {"dayOfWeek": ["mon"], "when": ["XYZ"]})),
+     "Nicht unterstützter Tagesabschnitt (when): 'XYZ'."),
     ("dayOfWeek-Code", req(d(dq(1), {"dayOfWeek": ["xyz"]})), "Nicht unterstützter Wochentag (dayOfWeek): 'xyz'."),
     ("Duplikat 4-Schema", req(d(dq(1), {"when": ["MORN"]}), d(dq(2), {"when": ["MORN"]})),
      "Doppelte Belegung des Tagesabschnitts 'MORN' mit unterschiedlicher Dosis."),
@@ -435,6 +467,43 @@ class SpecExamplesTest(unittest.TestCase):
         for name, resource, expected in EXAMPLES:
             with self.subTest(name):
                 self.assertEqual(generator.generate_dosage_text(resource), expected)
+
+
+DAYS = "montags|dienstags|mittwochs|donnerstags|freitags|samstags|sonntags"
+# Vollstaendiger Text: beginnt wie ein erzeugter Text und enthaelt den Doppelpunkt
+# oder ein Wochentagssegment.
+COMPLETE_TEXT = re.compile(
+    rf"^(täglich: |wöchentlich: |monatlich: |alle .+: |bei .+: |für .+: |ab dem .+: |vom .+: "
+    rf"|bis zum .+: |\d+( bis \d+)? x .+: |({DAYS}) )")
+# Baustein: beginnt wie ein Teil eines erzeugten Textes.
+TEXT_FRAGMENT = re.compile(
+    r"^(je |morgens|mittags|abends|zur Nacht|\d\d:\d\d Uhr|täglich$|wöchentlich$|monatlich$|alle |bei "
+    r"|für |ab dem |vom |bis zum |\d+( bis \d+)? x |im Abstand|nicht mehr als|in 24|pro Tag|Hinweis:)")
+
+
+def spec_text_examples():
+    """Inline-Code im Fliesstext der Spezifikation, der wie ein erzeugter Text
+    aussieht; Codebloecke (Muster, Pseudocode) und Platzhalter bleiben aussen vor."""
+    body = re.sub(r"```.*?```", "", SPEC_PATH.read_text(encoding="utf-8"), flags=re.S)
+    spans = {span for span in re.findall(r"`([^`\n]+)`", body)
+             if not re.search(r"[{}<>\[\]…=_]|ValueError|\.\.\.|^\w+\.\w+", span)}
+    complete = {span for span in spans if COMPLETE_TEXT.match(span) and (" — " in span or ": " in span)}
+    fragments = {span for span in spans - complete if TEXT_FRAGMENT.match(span)}
+    return complete, fragments
+
+
+class SpecTextExamplesTest(unittest.TestCase):
+    def test_every_spec_text_example_is_generated(self):
+        complete, fragments = spec_text_examples()
+        outputs = [expected for _, _, expected in EXAMPLES]
+        self.assertGreater(len(complete), 20)
+        for text in sorted(complete):
+            with self.subTest(text):
+                self.assertIn(text, outputs, f"Kein Testfall erzeugt das Beispiel: {text}")
+        for text in sorted(fragments):
+            with self.subTest(text):
+                self.assertTrue(any(text in output for output in outputs),
+                                f"Baustein in keiner erwarteten Ausgabe: {text}")
 
 
 class ErrorListTest(unittest.TestCase):
