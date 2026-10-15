@@ -28,7 +28,7 @@ Die Verarbeitung erfolgt in dieser Reihenfolge:
 5. Das Darstellungsschema wird ausschließlich anhand des **ersten** `Dosage`-Elements und in der unter [Schema-Erkennung](#schema-erkennung) angegebenen Priorität bestimmt. Trifft keine Regel zu, wird abgebrochen; es wird **kein** Ersatztext erzeugt.
 6. Der schemaspezifische Generator sammelt die benötigten Dosis-/Zeitsegmente. Je nach Schema werden alle `Dosage`-Elemente oder nur das erste verarbeitet; die genaue Aggregation ist unter [Aggregation mehrerer Dosage-Elemente](#aggregation-mehrerer-dosage-elemente) festgelegt.
 7. Der Generator setzt Zeitrahmen, Bedarfsangaben, Rhythmus und Kerntext zusammen. Danach werden – außer bei Freitext – Maximalmenge und `patientInstruction` ergänzt.
-8. Abschließend wird der Text – außer bei Freitext – normalisiert. Ist das erste `Dosage`-Element als Bedarf gekennzeichnet, wird zusätzlich exakt das erste Zeichen des Ergebnisses in einen Großbuchstaben umgewandelt.
+8. Abschließend wird der Text – außer bei Freitext – normalisiert.
 
 Das folgende Pseudocode-Gerüst zeigt den vollständigen Kontrollfluss:
 
@@ -463,13 +463,13 @@ Bei einer **reinen Bedarfsdosierung** muss die Ressource genau ein `Dosage`-Elem
 * Ist kein Einnahmeanlass angegeben, wird generisch `bei Bedarf` gesetzt.
 * Auch hier wird **nicht** großgeschrieben; `bei Kopfschmerzen: …` und `bei Bedarf: …` bleiben Fragmente wie jeder andere erzeugte Text.
 * Ein optionaler **Mindestabstand** (`modifierExtension[MinimumIntervalBetweenAdministrations]`) steht rechts des Doppelpunkts vor der Dosis. Er ist nur bei reiner Bedarfsdosierung zulässig; bei strukturiertem Bedarf folgt dort stattdessen das jeweilige Schema (Intervall, 4‑Schema …).
-  Die **Maximalmenge** wird genau einmal am Ende der Dosierungsanweisung angefügt. Enthält die Anweisung mehrere Uhrzeit-, Tagesabschnitts- oder Wochentagssegmente, steht die Maximalmenge nach dem letzten Segment. Sie gilt für die Gesamtmenge im angegebenen Zeitraum. Ein anschließender `Hinweis: ` folgt erst danach.
+* Die **Maximalmenge** ist ebenfalls nur bei reiner Bedarfsdosierung zulässig (siehe [Maximalmenge](#maximalmenge-maxdoseperperiod)) und wird mit Gedankenstrich hinter der Dosis angefügt. Ein anschließender `Hinweis: ` folgt erst danach.
 
 *Beispiele:*
 
 * `bei Kopfschmerzen: im Abstand von mindestens 4 Stunden je 1 Stück — nicht mehr als 6 Stück in 24 Stunden`
-* `bei Bedarf: täglich 08:00 Uhr — je 1 Stück, 20:00 Uhr — je 2 Stück — nicht mehr als 6 Stück pro Tag`
-* `bei Kopfschmerzen: alle 8 Stunden je 1 Stück — nicht mehr als 4 Stück in 24 Stunden`
+* `bei Bedarf: täglich 08:00 Uhr — je 1 Stück, 20:00 Uhr — je 2 Stück`
+* `bei Kopfschmerzen: alle 8 Stunden je 1 Stück`
 * `bei Bedarf: täglich 1-0-2-0 Stück`
 
 ### Freitext-Dosierung
