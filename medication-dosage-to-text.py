@@ -383,9 +383,9 @@ class MedicationDosageTextGenerator:
         for name in ("unit", "code"):
             if name in quantity:
                 self._require_string(quantity[name], f"{path}.{name}")
-        # Ein comparator ("<", ">=", ...) veraendert die Bedeutung des Wertes;
-        # der Text kann ihn nicht wiedergeben und wuerde ihn unterschlagen
-        # ("je 2 Stück" fuer "< 2").
+        # Fuer einen comparator ("<", ">=", ...) ist keine Darstellung
+        # definiert; Bereiche und Obergrenzen traegt die Ressource als
+        # doseRange bzw. maxDosePerPeriod.
         if "comparator" in quantity:
             raise ValueError(f"{path}.comparator wird nicht unterstützt.")
         return quantity
