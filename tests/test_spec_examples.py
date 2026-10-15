@@ -242,6 +242,8 @@ EXAMPLES = (
      req(d(dq(1), {"period": 2, "periodUnit": "d", "timeOfDay": ["08:00:00"]}),
          d(dq(2), {"period": 2, "periodUnit": "d", "when": ["EVE"]})),
      "alle 2 Tage: abends — je 2 Stück, 08:00 Uhr — je 1 Stück"),
+    ("Hinweis: Punkt mit nachfolgendem Leerraum", req(d(dq(1, "Tbl. "), {"when": ["MORN"]}, patientInstruction="X")),
+     "täglich: 1-0-0-0 Tbl. Hinweis: X"),
     ("Freitext", req({"text": "Nach Bedarf bei Schmerzen"}), "Nach Bedarf bei Schmerzen"),
 )
 
@@ -267,6 +269,9 @@ ERROR_CASES = (
      "doseQuantity.value ist für die Textgenerierung erforderlich."),
     ("doseQuantity ohne unit", req(d([{"doseQuantity": {"value": 1}}], {"when": ["MORN"]})),
      "doseQuantity.unit ist für die Textgenerierung erforderlich."),
+    ("Dosiswert negativ", req(d(dq(-1), {"when": ["MORN"]})), "doseQuantity.value darf nicht negativ sein."),
+    ("doseRange.low negativ", req(d(dr(-1, 2), {"when": ["MORN"]})), "doseRange.low.value darf nicht negativ sein."),
+    ("doseRange.high negativ", req(d(dr(None, -2), {"when": ["MORN"]})), "doseRange.high.value darf nicht negativ sein."),
     ("Dosiswert nicht numerisch", req(d(dq("2"), {"when": ["MORN"]})), "doseQuantity.value muss numerisch sein."),
     ("doseRange ohne high", req(d([{"doseRange": {"low": {"value": 1, "unit": "Stück"}}}], {"when": ["MORN"]})),
      "doseRange.high.value ist für die Textgenerierung erforderlich."),
@@ -361,6 +366,9 @@ ERROR_CASES = (
      req(d(dq(1), {"period": 2, "periodUnit": "d", "when": ["MORN"]}),
          d(dq(2), {"period": 3, "periodUnit": "d", "when": ["EVE"]})),
      "Alle Dosage-Elemente einer Intervall-Kombination müssen denselben Einnahmerhythmus tragen."),
+    ("unbekannte modifierExtension",
+     req(d(dq(1), {"when": ["MORN"]}, modifierExtension=[{"url": "http://example.org/x", "valueBoolean": True}])),
+     "Nicht unterstützte modifierExtension: 'http://example.org/x'."),
     ("comparator", req(d([{"doseQuantity": {"value": 2, "unit": "Stück", "comparator": "<"}}], {"when": ["MORN"]})),
      "doseQuantity.comparator wird nicht unterstützt."),
     ("comparator Maximalmenge",

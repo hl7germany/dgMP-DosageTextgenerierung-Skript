@@ -590,16 +590,21 @@ class MedicationDosageTextTest(unittest.TestCase):
                         self.medication_request(self.dosage(value, {"when": ["MORN"]}))
                     )
 
-    def test_negative_dose_is_rendered_not_rejected(self):
-        """Auch negative Werte sind Sache des Profils; der Text gibt die
-        Ressource wieder, statt sie zu beurteilen."""
-        self.assertEqual(
+    def test_negative_dose_is_rejected(self):
+        """Eine negative Dosis ist keine Anweisung; Dosis 0 bleibt darstellbar."""
+        with self.assertRaisesRegex(ValueError, "doseQuantity.value darf nicht negativ sein."):
             self.generator.generate_dosage_text(
                 self.medication_request(
                     self.dosage(-1, {"frequency": 1, "period": 8, "periodUnit": "h"})
                 )
+            )
+        self.assertEqual(
+            self.generator.generate_dosage_text(
+                self.medication_request(
+                    self.dosage(0, {"frequency": 1, "period": 8, "periodUnit": "h"})
+                )
             ),
-            "alle 8 Stunden: je -1 Stück",
+            "alle 8 Stunden: je 0 Stück",
         )
 
     def test_patient_instruction_is_appended_once(self):
@@ -1167,6 +1172,15 @@ class SilentOmissionTest(unittest.TestCase):
         dosage = self.dosage(1, {"when": ["MORN"], "boundsDuration": {"value": 7, "code": "d", "comparator": ">"}})
         with self.assertRaisesRegex(ValueError, "timing.repeat.boundsDuration.comparator wird nicht unterstützt."):
             self.text(dosage)
+
+    def test_unknown_modifier_extension_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "Nicht unterstützte modifierExtension: 'http://example.org/x'."):
+            self.text(self.dosage(1, {"when": ["MORN"]}, modifierExtension=[{"url": "http://example.org/x"}]))
+
+    def test_trailing_whitespace_before_hint_period(self):
+        self.assertEqual(
+            self.text(self.dosage(1, {"timeOfDay": ["08:00:00"]}, unit="Tbl. ", patientInstruction="X")),
+            "täglich: 08:00 Uhr — je 1 Tbl. Hinweis: X")
 
     def test_whitespace_unit_counts_as_missing(self):
         with self.assertRaisesRegex(ValueError, "doseQuantity.unit ist für die Textgenerierung erforderlich."):
