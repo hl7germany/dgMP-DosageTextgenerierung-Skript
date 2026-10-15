@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 
 import importlib.util
+import json
+import os
+import subprocess
+import sys
+import tempfile
 import unittest
 import pathlib
+from decimal import Decimal
 from pathlib import Path
 
 
@@ -870,10 +876,12 @@ class FieldTypeTest(unittest.TestCase):
                         self.request({"timing": {"repeat": repeat}, "doseAndRate": self.DOSE})
                     )
 
-    def test_numbers_drop_trailing_zeros_and_never_use_exponent_notation(self):
-        """Der Text haengt nicht davon ab, ob der JSON-Parser nachfolgende Nullen
-        erhaelt (BigDecimal) oder verwirft (float), und str(float) darf nie als
-        "1e-05" durchschlagen."""
+    def test_numbers_keep_the_precision_of_the_resource(self):
+        """FHIR: Die Genauigkeit eines decimal einschliesslich nachfolgender Nullen
+        traegt Bedeutung und ist auch fuer die Darstellung zu erhalten. Das
+        setzt Decimal-Werte voraus (parse_float=Decimal); ein float hat die
+        Nullen beim Einlesen verloren und wird bestmoeglich ausgegeben.
+        Exponentialschreibweise wird nie erzeugt."""
         def dose(value, unit="Stück"):
             return self.request({
                 "timing": {"repeat": {"frequency": 1, "period": 8, "periodUnit": "h"}},
@@ -881,18 +889,44 @@ class FieldTypeTest(unittest.TestCase):
             })
 
         cases = (
-            (dose(2.50), "alle 8 Stunden: je 2,5 Stück"),
-            (dose(1.0), "alle 8 Stunden: je 1 Stück"),
+            (dose(Decimal("2.50")), "alle 8 Stunden: je 2,50 Stück"),
+            (dose(Decimal("1.0")), "alle 8 Stunden: je 1,0 Stück"),
+            (dose(Decimal("1")), "alle 8 Stunden: je 1 Stück"),
+            (dose(Decimal("1E-2"), "mg"), "alle 8 Stunden: je 0,01 mg"),
+            (dose(Decimal("1E+2"), "mg"), "alle 8 Stunden: je 100 mg"),
             (dose(100), "alle 8 Stunden: je 100 Stück"),
+            (dose(2.5), "alle 8 Stunden: je 2,5 Stück"),
             (dose(1.25), "alle 8 Stunden: je 1,25 Stück"),
             (dose(0.00001, "mg"), "alle 8 Stunden: je 0,00001 mg"),
-            (self.request(self.interval(period=1.5, periodUnit="d",
-                                        boundsDuration={"value": 2.0, "code": "wk"})),
-             "für 2 Wochen alle 1,5 Tage: je 1 Stück"),
+            (self.request(self.interval(period=Decimal("1.5"), periodUnit="d",
+                                        boundsDuration={"value": Decimal("2.0"), "code": "wk"})),
+             "für 2,0 Wochen alle 1,5 Tage: je 1 Stück"),
         )
         for resource, expected in cases:
             with self.subTest(expected=expected):
                 self.assertEqual(self.generator.generate_dosage_text(resource), expected)
+
+    def test_cli_reads_json_with_decimal_precision(self):
+        """Die CLI liest mit parse_float=Decimal; 2.50 bleibt 2,50."""
+        resource = {
+            "resourceType": "MedicationRequest",
+            "dosageInstruction": [{
+                "timing": {"repeat": {"frequency": 1, "period": 8, "periodUnit": "h"}},
+                "doseAndRate": [{"doseQuantity": {"value": 2.50, "unit": "mg"}}],
+            }],
+        }
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as handle:
+            # Literal mit nachfolgender Null schreiben; json.dump(2.50) ergaebe 2.5.
+            handle.write(json.dumps(resource).replace("2.5", "2.50"))
+            path = handle.name
+        try:
+            result = subprocess.run(
+                [sys.executable, str(MODULE_PATH), path],
+                capture_output=True, text=True, check=True,
+            )
+        finally:
+            os.unlink(path)
+        self.assertEqual(result.stdout.strip(), "alle 8 Stunden: je 2,50 mg")
 
 
 if __name__ == "__main__":

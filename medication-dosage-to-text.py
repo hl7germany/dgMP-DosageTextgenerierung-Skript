@@ -277,8 +277,12 @@ class MedicationDosageTextGenerator:
         decimal und wird wie jeder andere falsche Typ abgewiesen; ihn
         stillschweigend zu konvertieren würde Werte annehmen, die eine validierte
         Ressource nicht enthalten kann. bool ist in Python ein int-Subtyp und
-        wird deshalb ausdrücklich ausgeschlossen."""
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
+        wird deshalb ausdrücklich ausgeschlossen.
+
+        Decimal ist zugelassen, weil nur ein mit parse_float=Decimal geparstes
+        JSON die Genauigkeit erhält, die FHIR fuer decimal verlangt (2.50 ist
+        nicht 2.5); ein float hat sie beim Einlesen bereits verloren."""
+        if isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
             raise ValueError(f"{field_name} muss numerisch sein.")
         return value
 
@@ -910,9 +914,8 @@ class MedicationDosageTextGenerator:
             self._require_string(duration_unit, f"{field_name}.code")
         if duration_value is None:
             raise ValueError(f"{field_name}.value ist für die Textgenerierung erforderlich.")
-        if (isinstance(duration_value, bool) or
-                not isinstance(duration_value, (int, float)) or
-                duration_value <= 0):
+        self._require_decimal(duration_value, f"{field_name}.value")
+        if duration_value <= 0:
             raise ValueError(f"{field_name}.value muss größer als 0 sein.")
         if not duration_unit:
             raise ValueError(f"{field_name}.code ist für die Textgenerierung erforderlich.")
@@ -976,19 +979,21 @@ class MedicationDosageTextGenerator:
 
     def _format_decimal_value(self, value):
         """
-        Zahl mit deutschem Dezimalkomma darstellen.
+        Zahl mit deutschem Dezimalkomma und der Genauigkeit der Ressource
+        darstellen.
 
-        Nachfolgende Nullen hinter dem Komma entfallen (1.0 -> "1", 2.50 ->
-        "2,5"); damit ist der Text unabhängig davon, ob der JSON-Parser der
-        jeweiligen Sprache solche Nullen erhält (BigDecimal) oder verwirft
-        (float). Exponentialschreibweise wird nie erzeugt: str(0.00001) wäre
-        "1e-05", Decimal formatiert "0,00001".
+        FHIR verlangt, die Genauigkeit eines decimal einschließlich nachfolgender
+        Nullen auch für die Darstellung zu erhalten (2.50 ist nicht 2.5). Das
+        gelingt nur, wenn der Wert als Decimal ankommt - die CLI liest JSON mit
+        parse_float=Decimal. Ein float hat die Nullen beim Einlesen bereits
+        verloren; er wird über str() (nicht über die Binärdarstellung) in ein
+        Decimal überführt und bestmöglich ausgegeben.
 
-        Der Umweg über str() vermeidet die Binärdarstellung des float
-        (Decimal(2.5) ist exakt, Decimal(0.1) ist es nicht).
+        Exponentialschreibweise wird nie erzeugt: 1E-2 formatiert als "0,01",
+        1E+2 als "100".
         """
-        text = format(Decimal(str(value)).normalize(), 'f')
-        return text.replace('.', ',')
+        decimal_value = value if isinstance(value, Decimal) else Decimal(str(value))
+        return format(decimal_value, 'f').replace('.', ',')
 
     def _format_time_german(self, time_string):
         """
@@ -1682,7 +1687,9 @@ def main():
 
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
-            resource = json.load(file)
+            # parse_float=Decimal: FHIR verlangt den Erhalt der Genauigkeit
+            # (2.50 ist nicht 2.5); ein float verwirft nachfolgende Nullen.
+            resource = json.load(file, parse_float=Decimal)
 
         generator = MedicationDosageTextGenerator()
         result = generator.generate_dosage_text(resource)
