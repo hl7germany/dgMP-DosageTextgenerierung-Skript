@@ -31,6 +31,15 @@ Daraus folgt für jeden Eintrag:
   - `doseRange.low.unit` ist nicht mehr verpflichtend: Die Einheit erscheint nur einmal im Text und stammt aus `high.unit`. Ist `low.unit` vorhanden und weicht ab, bricht der Algorithmus weiterhin ab.
   - Im 4‑Schema führt eine doppelte Belegung desselben Tagesabschnitts nur noch bei **unterschiedlicher** Dosis zum Abbruch (`Doppelte Belegung des Tagesabschnitts '{code}' mit unterschiedlicher Dosis.`), wie in allen anderen Schemata. Dieselbe Dosis zweimal ergibt denselben Text.
 - Eine explizit mit `0` belegte Position des 4‑Schemas gilt als belegt. In der ausgeschriebenen Segmentform bleibt sie erhalten (`täglich: morgens — je 0 Stück, abends — je 1 bis 2 Stück`); bisher wäre sie mit einer nicht belegten Position verwechselt worden und entfallen. Auch die Duplikatprüfung der Wochentags-Kombination unterscheidet jetzt zwischen `0` und „nicht belegt".
+- Angaben, die der Text bisher stillschweigend unterschlug, führen jetzt zum Abbruch — alle Fälle bestanden schon vor 2.0.0‑ballot und widersprachen dem Grundsatz, dass der Algorithmus abbricht, statt eine Angabe zu übergehen:
+  - Dieselbe Uhrzeit (`HH:MM`) mit unterschiedlicher Dosis im Uhrzeiten-Schema und in der Wochentags-Kombination (`täglich: 08:00 Uhr — je 1 Stück, 08:00 Uhr — je 2 Stück` war mehrdeutig und reihenfolgeabhängig). Mit derselben Dosis wird die Uhrzeit nur einmal ausgegeben.
+  - Wochentags-Kombination mit Uhrzeiten **und** Tagesabschnitten über mehrere Elemente: Bisher entschied das erste Element über den Untertyp, eine Gabe des anderen entfiel (`mon 08:00 (1 Stück)` + `mon MORN (2 Stück)` → `montags 08:00 Uhr — je 1 Stück`).
+  - Mehr als ein `Dosage`-Element im Intervall-Schema: Bisher wurde nur das erste ausgegeben.
+  - Mindestabstand bei Wochentagsschemata: Die Prüfung „nur ohne strukturierten Rhythmus" sah den Rhythmus im Zwischenteil des Textes nach, den Wochentagsschemata nicht haben, und ließ `bei Bedarf: im Abstand von mindestens 4 Stunden montags — je 1 Stück` durch. Maßgeblich ist jetzt das `timing`.
+  - Einnahmeanlass, Mindestabstand und Maximalmenge ohne `asNeededBoolean = true` wurden stillschweigend verworfen; die Spezifikation sagte für die Maximalmenge sogar „wird gar nicht gelesen". Jetzt Abbruch — eine `modifierExtension` darf nie ignoriert werden, und alle drei sind Angaben der Ressource.
+  - Abweichende Dosis-Einheit eines weiteren Elements im 4‑Schema, Wochentags-Schema und in der Wochentags-Kombination mit Tagesabschnitten (`MORN 1 Stück` + `EVE 2 mg` → `täglich: 1-0-2-0 Stück`). `DosageDoseUnitSameCode` vergleicht nur den Code, nicht die Anzeigeeinheit.
+  - `frequencyMax` in der Intervall-Kombination (Regel 7) wurde unterschlagen; jetzt greift keine Regel und der Algorithmus bricht ab, wie es die Spezifikation seit 2.0.0‑ballot für konkrete Zeitpunkte verlangt.
+  - „Dieselbe Dosis" in den Duplikatprüfungen bedeutet dieselbe Textdarstellung: `1` und `1,0` sind verschieden. Bisher galten sie numerisch als gleich, der spätere Wert überschrieb den ersten, und der Text (`1-0-0-0` oder `1,0-0-0-0`) hing von der Reihenfolge der Elemente ab.
 
 #### Fixed
 

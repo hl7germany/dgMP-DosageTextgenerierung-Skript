@@ -47,7 +47,7 @@ class RegressionOrderingTest(unittest.TestCase):
         self.assertIn("08:00 Uhr", output_1)
         self.assertIn("20:00 Uhr", output_1)
 
-    def test_day_time_combo_duplicate_slot_is_not_summed(self):
+    def test_day_time_combo_duplicate_slot_different_dose_raises_value_error(self):
         dosage_a = {
             "timing": {
                 "repeat": {
@@ -67,11 +67,11 @@ class RegressionOrderingTest(unittest.TestCase):
             "doseAndRate": [{"doseQuantity": {"value": 2, "unit": "Stueck"}}],
         }
 
-        output = self.generator.generate_dosage_text(self._resource([dosage_a, dosage_b]))
-
-        self.assertNotIn("je 3", output)
-        self.assertIn("je 1 Stueck", output)
-        self.assertIn("je 2 Stueck", output)
+        # Dieselbe Uhrzeit mit unterschiedlicher Dosis ist mehrdeutig: Abbruch,
+        # wie in der Intervall-Kombination. Bisher wurden beide Segmente
+        # ausgegeben ("08:00 Uhr - je 1 Stueck, 08:00 Uhr - je 2 Stueck").
+        with self.assertRaisesRegex(ValueError, "Doppelte Belegung der Uhrzeit '08:00 Uhr'"):
+            self.generator.generate_dosage_text(self._resource([dosage_a, dosage_b]))
 
     def test_day_when_combo_duplicate_slot_different_dose_raises_value_error(self):
         # Spec: doppelte Belegung von Wochentag+Tagesabschnitt mit abweichender Dosis → ValueError
