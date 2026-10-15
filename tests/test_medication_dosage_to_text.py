@@ -760,6 +760,16 @@ class MedicationDosageTextTest(unittest.TestCase):
         ):
             self.generator.generate_dosage_text(resource)
 
+    def test_free_text_is_passed_through_including_surrounding_whitespace(self):
+        """FreeTextMatchesRenderedText verlangt exakte Gleichheit mit Dosage.text;
+        ein Trim machte sie fuer Texte mit Rand-Leerraum unmoeglich."""
+        self.assertEqual(
+            self.generator.generate_dosage_text(
+                self.medication_request({"text": "  Nach Bedarf\nbei Schmerzen "})
+            ),
+            "  Nach Bedarf\nbei Schmerzen ",
+        )
+
     def test_unsupported_resource_type_raises_error(self):
         with self.assertRaisesRegex(
             ValueError,

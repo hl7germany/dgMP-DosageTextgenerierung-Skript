@@ -481,10 +481,12 @@ class MedicationDosageTextGenerator:
         if not dosage_instructions:
             return ""
 
-        # Extract and combine all text values
+        # Freitext unverändert, auch Rand-Leerraum: FreeTextMatchesRenderedText
+        # verlangt exakte Gleichheit mit Dosage.text; ein Trim machte sie fuer
+        # solche Texte unmoeglich.
         text_parts = []
         for dosage in dosage_instructions:
-            text_content = dosage.get('text', '').strip()
+            text_content = dosage.get('text', '')
             if text_content:
                 text_parts.append(text_content)
 
