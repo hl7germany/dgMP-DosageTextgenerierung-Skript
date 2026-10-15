@@ -346,7 +346,7 @@ class SchemaOutputTest(unittest.TestCase):
             "timing": {"repeat": {"period": 1, "periodUnit": "d", "when": ["MORN", "EVE"]}},
             "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
         }
-        self.assertEqual("1-0-1-0 Stück",
+        self.assertEqual("täglich: 1-0-1-0 Stück",
                          self.generator.generate_dosage_text(self._resource([dosage])))
 
     def test_4_schema_all_positions_across_multiple_dosages(self):
@@ -358,7 +358,7 @@ class SchemaOutputTest(unittest.TestCase):
             "timing": {"repeat": {"period": 1, "periodUnit": "d", "when": ["EVE"]}},
             "doseAndRate": [{"doseQuantity": {"value": 2, "unit": "Stück"}}],
         }
-        self.assertEqual("1-1-2-0 Stück",
+        self.assertEqual("täglich: 1-1-2-0 Stück",
                          self.generator.generate_dosage_text(self._resource([dosage_a, dosage_b])))
 
     def test_4_schema_with_bounds_duration(self):
@@ -367,7 +367,7 @@ class SchemaOutputTest(unittest.TestCase):
                                   "period": 1, "periodUnit": "d", "when": ["MORN", "EVE"]}},
             "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Kapsel"}}],
         }
-        self.assertEqual("für 7 Tage: 1-0-1-0 Kapsel",
+        self.assertEqual("für 7 Tage täglich: 1-0-1-0 Kapsel",
                          self.generator.generate_dosage_text(self._resource([dosage])))
 
     def test_4_schema_dose_range_switches_to_written_form(self):
@@ -686,7 +686,7 @@ class MixedSchemaTest(unittest.TestCase):
     def test_same_schema_across_elements_still_works(self):
         self.assertEqual(
             self._text(self._dosage(1, when=["MORN"]), self._dosage(2, when=["EVE"])),
-            "1-0-2-0 Stück",
+            "täglich: 1-0-2-0 Stück",
         )
 
     def test_legacy_fields_in_only_one_element_do_not_split_the_schema(self):
@@ -695,7 +695,7 @@ class MixedSchemaTest(unittest.TestCase):
                 self._dosage(1, when=["MORN"]),
                 self._dosage(2, when=["EVE"], frequency=2, period=1, periodUnit="d"),
             ),
-            "1-0-2-0 Stück",
+            "täglich: 1-0-2-0 Stück",
         )
 
 
