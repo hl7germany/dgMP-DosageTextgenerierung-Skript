@@ -18,6 +18,12 @@ Daraus folgt für jeden Eintrag:
 
 ## [Unreleased]
 
+### Algorithmus
+
+#### Changed
+
+- Ein abweichender Einnahmerhythmus (`period`, `periodMax`, `periodUnit`) eines weiteren Elements der Intervall-Kombination führt nicht mehr zum Abbruch. Der Rhythmus zählt wie Zeitrahmen, Bedarfsangaben und Hinweis zu den Rahmen-Angaben, die aus dem ersten Element gelesen werden; ihre Gleichheit sichert das Profil (`TimingOnlyOneTimeForInterval`, das im Medication IG DE jetzt auch `periodMax` vergleicht). Die Meldung `Alle Dosage-Elemente einer Intervall-Kombination müssen denselben Einnahmerhythmus tragen.` entfällt. Für eine gegen das Profil validierte Ressource ändert sich kein Text.
+
 ### Referenzimplementierung und Repository
 
 #### Added

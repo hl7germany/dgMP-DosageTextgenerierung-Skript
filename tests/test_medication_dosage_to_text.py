@@ -1150,18 +1150,16 @@ class SilentOmissionTest(unittest.TestCase):
                       self.dosage(1, {"period": 2, "periodUnit": "d", "timeOfDay": ["08:00:00"]})),
             "alle 2 Tage: 08:00 Uhr — je 1 Stück")
 
-    def test_interval_combination_rejects_differing_rhythm(self):
-        """Der Rhythmus eines weiteren Elements darf nicht stillschweigend
-        durch den des ersten ersetzt werden."""
+    def test_interval_combination_reads_rhythm_from_first_element(self):
+        """Der Rhythmus ist eine Rahmen-Angabe: Er stammt aus dem ersten
+        Element, ohne Abbruch bei Abweichung; die Gleichheit sichert das Profil
+        (TimingOnlyOneTimeForInterval)."""
         first = self.dosage(1, {"period": 2, "periodUnit": "d", "when": ["MORN"]})
-        for other in ({"period": 3, "periodUnit": "d"}, {"period": 2, "periodUnit": "wk"},
-                      {"period": 2, "periodMax": 3, "periodUnit": "d"}):
+        for other in ({"period": 2, "periodUnit": "d"}, {"period": 3, "periodUnit": "d"}):
             with self.subTest(other=other):
-                with self.assertRaisesRegex(ValueError, "denselben Einnahmerhythmus"):
-                    self.text(first, self.dosage(2, {**other, "when": ["EVE"]}))
-        self.assertEqual(
-            self.text(first, self.dosage(2, {"period": 2, "periodUnit": "d", "when": ["EVE"]})),
-            "alle 2 Tage: morgens — je 1 Stück, abends — je 2 Stück")
+                self.assertEqual(
+                    self.text(first, self.dosage(2, {**other, "when": ["EVE"]})),
+                    "alle 2 Tage: morgens — je 1 Stück, abends — je 2 Stück")
 
     # -- Vorbedingungen der Bedarfs-Bausteine in jedem Element ---------------
 
