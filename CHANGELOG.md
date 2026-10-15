@@ -20,26 +20,62 @@ Daraus folgt für jeden Eintrag:
 
 ### Algorithmus
 
-#### Fixed
-
-- Die Kurzformen `täglich`, `wöchentlich` und `monatlich` gelten nur noch für eine feste Periode von `1` ohne `periodMax`. Bisher fiel bei `period = 1` mit `periodMax` die Obergrenze weg: Aus `frequency = 1`, `period = 1`, `periodMax = 3`, `periodUnit = d` wurde `täglich` statt `alle 1 bis 3 Tage`. Bei einer Frequenz größer als `1` entsprechend `2 x alle 1 bis 3 Tage` statt `2 x täglich`.
-
 #### Changed
 
+- Das 4‑Schema erhält wie das Uhrzeiten-Schema den Marker `täglich`: Aus `1-0-2-0 Stück` wird `täglich: 1-0-2-0 Stück`, mit Zeitrahmen `für 5 Tage täglich: 1-1-1-1 Kapseln`, bei Bedarf `bei Bedarf: täglich 1-0-2-0 Stück`. Die ausgeschriebene Segmentform bei variabler Dosis erhält denselben Marker (`täglich: morgens — je 1 bis 2 Stück`). Das Muster allein ließ offen, dass es an jedem Tag gilt; in der HD-Studie war die Form mit `täglich` nachweislich besser verständlich. Wochentags-Kombinationen (`montags 1-0-1-0 Stück`) bleiben unverändert.
+- Freitext wird unverändert übernommen, auch führender und abschließender Leerraum; der bisherige Trim entfällt. `FreeTextMatchesRenderedText` verlangt exakte Gleichheit mit `Dosage.text` — ein getrimmter Text konnte diese Invariante für Texte mit Rand-Leerraum nie erfüllen.
 - Der Algorithmus prüft keine Wertebereiche mehr. Vorbedingung der Textgenerierung ist eine gegen das Profil validierte Ressource; der Algorithmus bricht nur noch ab, wenn der Text nicht bildbar wäre oder eine Angabe unterschlagen beziehungsweise mehrdeutig wiedergeben würde. Der Abschnitt „Fehler und Validierung" benennt diese Gründe; als dritter kommt ein falscher JSON-Datentyp hinzu, weil eine validierte Ressource ihn nicht enthält und der Algorithmus ihn nicht umdeuten darf. Konkret entfallen:
   - `doseQuantity.value`, `doseRange.high.value` und `doseRange.low.value` müssen nicht mehr größer als `0` beziehungsweise nicht negativ sein. `je 0 Stück` ist ein eindeutiger Text; `DosageDoseValuePositive` ist Sache des Profils. 1.0.x hatte Dosis `0` ebenfalls gerendert.
   - `boundsDuration.value` und der Mindestabstand müssen nicht mehr größer als `0` sein (`TimingValuesPositive`, `DosageLimitsPositive`). Nicht numerische Werte führen weiterhin zum Abbruch, jetzt mit `… muss numerisch sein.`
   - `period` und `periodMax` waren schon bisher nicht auf ihren Wertebereich geprüft; durch die Korrektur der Kurzformen werden negative Werte jetzt sichtbar (`alle 1 bis -2 Tage` statt `täglich`). Ein Nenner der Maximalmenge außerhalb von `1 d`/`24 h` — auch `-24 h` — bricht weiterhin ab, weil es dafür keine Wortform gibt; das ist kein Wertebereich, sondern „nicht bildbar".
   - `doseRange.low.unit` ist nicht mehr verpflichtend: Die Einheit erscheint nur einmal im Text und stammt aus `high.unit`. Ist `low.unit` vorhanden und weicht ab, bricht der Algorithmus weiterhin ab.
   - Im 4‑Schema führt eine doppelte Belegung desselben Tagesabschnitts nur noch bei **unterschiedlicher** Dosis zum Abbruch (`Doppelte Belegung des Tagesabschnitts '{code}' mit unterschiedlicher Dosis.`), wie in allen anderen Schemata. Dieselbe Dosis zweimal ergibt denselben Text.
-- Eine explizit mit `0` belegte Position des 4‑Schemas gilt als belegt. In der ausgeschriebenen Segmentform bleibt sie erhalten (`morgens — je 0 Stück, abends — je 1 bis 2 Stück`); bisher wäre sie mit einer nicht belegten Position verwechselt worden und entfallen. Auch die Duplikatprüfung der Wochentags-Kombination unterscheidet jetzt zwischen `0` und „nicht belegt".
+- Eine explizit mit `0` belegte Position des 4‑Schemas gilt als belegt. In der ausgeschriebenen Segmentform bleibt sie erhalten (`täglich: morgens — je 0 Stück, abends — je 1 bis 2 Stück`); bisher wäre sie mit einer nicht belegten Position verwechselt worden und entfallen. Auch die Duplikatprüfung der Wochentags-Kombination unterscheidet jetzt zwischen `0` und „nicht belegt".
+
+#### Fixed
+
+- Die Kurzformen `täglich`, `wöchentlich` und `monatlich` gelten nur noch für eine feste Periode von `1` ohne `periodMax`. Bisher fiel bei `period = 1` mit `periodMax` die Obergrenze weg: Aus `frequency = 1`, `period = 1`, `periodMax = 3`, `periodUnit = d` wurde `täglich` statt `alle 1 bis 3 Tage`. Bei einer Frequenz größer als `1` entsprechend `2 x alle 1 bis 3 Tage` statt `2 x täglich`.
+- Widersprüche in der Spezifikation beseitigt. Das festgelegte Verhalten ändert sich nicht; die Referenzimplementierung setzte es bereits so um.
+  - Schritt 8 des Gesamtalgorithmus verlangte bei Bedarf noch einen Großbuchstaben am Textanfang. Seit 2.0.0-ballot ist jeder erzeugte Text ein kleingeschriebenes Fragment.
+  - Zwei Beispiele im Schema für Bedarfsmedikation kombinierten eine Maximalmenge mit Uhrzeiten beziehungsweise einem Intervall; das führt seit 2.0.0-ballot zum Abbruch. Sie zeigen jetzt den strukturierten Bedarf ohne Maximalmenge. Die Regel, nach der die Maximalmenge hinter dem letzten von mehreren Segmenten steht, entfällt: Mehrere Segmente setzen einen Rhythmus voraus, die Maximalmenge schließt ihn aus.
+  - Der Abbruch „Mindestabstand zusammen mit einem strukturierten Rhythmus" fehlte in der Fehlerliste; er ist ergänzt. Die Meldungen zu Mindestabstand und Maximalmenge schreiben `zulässig` statt `zulaessig` — das Zeichenrepertoire verlangt die NFC-Umlaute auch in Meldungen.
+  - Das Zeichenrepertoire behauptete, der gesamte Text sei NFC-normalisiert, zugleich bleiben übernommene Input-Teile ausdrücklich unverändert. Jetzt: Die erzeugten Wortbestandteile sind NFC; der Gesamttext ist es genau dann, wenn es der Input ist.
+  - Die Spezifikation nannte die Invarianten `MindestabstandOnlyPureAsNeeded` und `MindestabstandUnitMatchesCode`; im IG heißen sie `MinimumIntervalOnlyPureAsNeeded` und `MinimumIntervalUnitMatchesCode`.
+  - Die Einleitung nannte als aktuelle Version `2.0.0`, der Abschnitt Versionierung `2.0.0-ballot`; beide sagen jetzt `2.0.0-ballot`.
+  - Die Normalisierung erfasst jedes Unicode-Leerraumzeichen (auch U+00A0) aus übernommenen Feldern; die Aussage „weder ersetzt noch normalisiert" gilt für die übrigen Zeichen. Bisher widersprachen sich beide Sätze.
+  - Doppelpunkt-Regel präzisiert: Zeitrahmen und Intervall teilen sich einen Doppelpunkt; bei Bedarfsmedikation steht das Intervall rechts davon. Die reine Bedarfsdosierung kann keinen Zeitrahmen tragen (er liegt in `timing.repeat`); das Muster erweckte einen anderen Eindruck.
+  - Die vom Algorithmus nicht gelesenen Felder verweisen auf die „Liste der aktuell nicht unterstützten Dosierkonfigurationen", wie der IG sie nennt, nicht mehr auf „zukünftig unterstützte".
+- Jedes gelesene Feld muss den JSON-Datentyp seines FHIR-Typs haben (neuer Schritt 3 des Gesamtalgorithmus); ein falscher Typ führt zum Abbruch statt zu stillschweigend falschem Text. Bisher wurde nur bei einigen Feldern geprüft, und die Lücken verfälschten den Text:
+  - Numerische Strings als Dosiswert (`"value": "2"`) wurden akzeptiert, aber nicht wie Zahlen formatiert: `"2"` kippte das 4‑Schema in die ausgeschriebene Form (`morgens — je 2 Stück` statt `2-0-0-0 Stück`), `"1.5"` ergab `je 1.5 Stück` ohne Dezimalkomma. Die Spezifikation hatte numerische Strings ausdrücklich zugelassen; FHIR `decimal` ist im JSON eine Zahl.
+  - `period = "1"` (String) wurde nicht als Tagesmuster erkannt und ergab `alle 1 Tage` statt `täglich`; `period = true` ergab `alle 1 Stunde`.
+  - `frequency = "2"` und `frequency = 2.5` wurden ausgegeben, obwohl `positiveInt` eine ganze Zahl verlangt; `frequency = true` zählte als `1`.
+  - `asNeededBoolean = "true"` galt nicht als Bedarf: Mit Timing wurde der Text ohne `bei Bedarf` erzeugt — das Bedarfskennzeichen fehlte.
+  - `doseQuantity.unit = 5` erschien als `1-0-0-0 5`.
+  - `dayOfWeek = "mon"` (String statt Liste) ergab `m — …; o — …; n — …`.
+  - Nicht-String in `text` oder `patientInstruction` und ein Objekt statt Liste in `doseAndRate` führten zu einem Python-Laufzeitfehler statt zu `ValueError`.
+- Ein `dayOfWeek`-Code außerhalb der Wochentags-Tabelle führt zum Abbruch (`Nicht unterstützter Wochentag (dayOfWeek): '{code}'.`), wie bei `when`. Bisher erschien er roh im Text (`xyz — je 1 Stück`).
+- Zahlen werden mit der Genauigkeit der Ressource ausgegeben (`1.0` → `1,0`, `2.50` → `2,50`), wie FHIR es für `decimal` verlangt — Genauigkeit einschließlich nachfolgender Nullen trägt Bedeutung und ist auch für die Darstellung zu erhalten. Die bisherige Regel `1.0` → `1` entfällt. Exponentialschreibweise aus der Ressource wird als Dezimalzahl ausgegeben (`1e-2` → `0,01`). Bisher hing die Darstellung vom JSON-Parser und der Float-Darstellung der Implementierung ab; zwei konforme Implementierungen konnten für dieselbe Ressource verschiedene Texte liefern. Die Referenzimplementierung liest JSON jetzt mit `parse_float=Decimal`.
+- Der Fehlerlisten-Eintrag „Intervall-Kombination ohne `period` oder `periodUnit`" ist gestrichen. Der Fall ist unerreichbar: Die Schema-Erkennung verlangt beide Schlüssel, die Typprüfung einen numerischen Wert.
+- `boundsPeriod` akzeptiert wie FHIR beliebig viele Sekundenbruchteile und die Schaltsekunde `60`; `timeOfDay` ebenfalls `60`. Bisher brach die Referenzimplementierung unter Python 3.10 bei einer oder sieben Bruchteilstellen ab (`datetime.fromisoformat` versteht dort nur drei oder sechs), obwohl Spezifikation und FHIR den Wert erlauben. Sekunden werden ohnehin nicht dargestellt.
+- Die Fehlerliste nennt die Meldungen zu `boundsDuration`, `boundsPeriod`, `maxDosePerPeriod` und zum Mindestabstand wörtlich und legt die Pfadkonvention fest (`[]` für Listenelemente, `Dosage` und `dosageInstruction`/`dosage` oberhalb des Elements).
+- Ein leeres `doseRange.low` (`{}`) gilt als vorhanden und bricht mit `doseRange.low.value ist für die Textgenerierung erforderlich.` ab; bisher wurde es wie ein fehlendes `low` behandelt (`je bis zu 2 Stück`).
 
 ### Referenzimplementierung und Repository
 
 #### Added
 
 - Testfälle für `period = 1` mit `periodMax` in `d`, `wk` und `mo`.
+- Testfälle für strukturierten Bedarf mit Uhrzeiten und mit Intervall sowie für die Fehlermeldungen zum Mindestabstand.
 - Testfälle für Dosis `0`, negative Dosis, `boundsDuration = 0`, fehlendes und abweichendes `doseRange.low.unit`, doppelte `when`-Belegung mit gleicher Dosis sowie explizite `0` in der ausgeschriebenen Form und in der Duplikatprüfung.
+
+#### Fixed
+
+- Die Fehlermeldungen zum Mindestabstand nennen wie in der Spezifikation festgelegt `MinimumIntervalBetweenAdministrations.valueDuration` statt des alten Namens `MindestabstandZwischenGaben.valueDuration`.
+- Kommentare, die noch die Großschreibung bei Bedarf und den entfallenen Baustein `, mit mindestens … Abstand` beschrieben, sind korrigiert.
+
+#### Removed
+
+- Unerreichbare Zweige: die Prüfung auf fehlendes `period`/`periodUnit` in der Intervall-Kombination, der Fallback in der Wochentags-Kombination für „weder `timeOfDay` noch `when`" sowie die Behandlung einer fehlenden Dosis-Einheit in vier Ausgabestellen — die Einheit ist Pflicht, `_extract_dose_quantity` bricht ohne sie ab.
 
 ## [2.0.0-ballot] - 2026-08-30
 

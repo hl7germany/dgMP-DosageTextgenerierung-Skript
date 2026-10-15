@@ -1,3 +1,4 @@
+import re
 import unittest
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
@@ -339,6 +340,53 @@ class SchemaOutputTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.generator.generate_dosage_text(self._resource([dosage, dosage]))
 
+    def test_mindestabstand_errors_name_the_extension(self):
+        # Fehlermeldungen nennen die kanonische Extension, nicht den alten Namen
+        # MindestabstandZwischenGaben.
+        cases = (
+            ({}, "MinimumIntervalBetweenAdministrations.valueDuration ist "
+                 "für die Textgenerierung erforderlich."),
+            ({"valueDuration": {"code": "h"}},
+             "MinimumIntervalBetweenAdministrations.valueDuration.value ist "
+             "für die Textgenerierung erforderlich."),
+        )
+        for extension, message in cases:
+            with self.subTest(message=message):
+                dosage = {
+                    "asNeededBoolean": True,
+                    "modifierExtension": [{"url": self.URL_MINDESTABSTAND, **extension}],
+                    "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
+                }
+                with self.assertRaisesRegex(ValueError, re.escape(message)):
+                    self.generator.generate_dosage_text(self._resource([dosage]))
+
+    # ── AsNeeded (strukturiert) ───────────────────────────────────────────────
+
+    def test_structured_as_needed_with_time_of_day(self):
+        dosage_a = {
+            "asNeededBoolean": True,
+            "timing": {"repeat": {"timeOfDay": ["08:00:00"]}},
+            "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
+        }
+        dosage_b = {
+            "asNeededBoolean": True,
+            "timing": {"repeat": {"timeOfDay": ["20:00:00"]}},
+            "doseAndRate": [{"doseQuantity": {"value": 2, "unit": "Stück"}}],
+        }
+        self.assertEqual("bei Bedarf: täglich 08:00 Uhr — je 1 Stück, 20:00 Uhr — je 2 Stück",
+                         self.generator.generate_dosage_text(self._resource([dosage_a, dosage_b])))
+
+    def test_structured_as_needed_with_interval(self):
+        dosage = {
+            "asNeededBoolean": True,
+            "extension": [{"url": self.URL_AS_NEEDED_FOR,
+                           "valueCodeableConcept": {"text": "Kopfschmerzen"}}],
+            "timing": {"repeat": {"frequency": 1, "period": 8, "periodUnit": "h"}},
+            "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
+        }
+        self.assertEqual("bei Kopfschmerzen: alle 8 Stunden je 1 Stück",
+                         self.generator.generate_dosage_text(self._resource([dosage])))
+
     # ── 4-Schema ──────────────────────────────────────────────────────────────
 
     def test_4_schema_basic(self):
@@ -346,7 +394,7 @@ class SchemaOutputTest(unittest.TestCase):
             "timing": {"repeat": {"period": 1, "periodUnit": "d", "when": ["MORN", "EVE"]}},
             "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
         }
-        self.assertEqual("1-0-1-0 Stück",
+        self.assertEqual("täglich: 1-0-1-0 Stück",
                          self.generator.generate_dosage_text(self._resource([dosage])))
 
     def test_4_schema_all_positions_across_multiple_dosages(self):
@@ -358,7 +406,7 @@ class SchemaOutputTest(unittest.TestCase):
             "timing": {"repeat": {"period": 1, "periodUnit": "d", "when": ["EVE"]}},
             "doseAndRate": [{"doseQuantity": {"value": 2, "unit": "Stück"}}],
         }
-        self.assertEqual("1-1-2-0 Stück",
+        self.assertEqual("täglich: 1-1-2-0 Stück",
                          self.generator.generate_dosage_text(self._resource([dosage_a, dosage_b])))
 
     def test_4_schema_with_bounds_duration(self):
@@ -367,7 +415,7 @@ class SchemaOutputTest(unittest.TestCase):
                                   "period": 1, "periodUnit": "d", "when": ["MORN", "EVE"]}},
             "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Kapsel"}}],
         }
-        self.assertEqual("für 7 Tage: 1-0-1-0 Kapsel",
+        self.assertEqual("für 7 Tage täglich: 1-0-1-0 Kapsel",
                          self.generator.generate_dosage_text(self._resource([dosage])))
 
     def test_4_schema_dose_range_switches_to_written_form(self):
@@ -686,7 +734,7 @@ class MixedSchemaTest(unittest.TestCase):
     def test_same_schema_across_elements_still_works(self):
         self.assertEqual(
             self._text(self._dosage(1, when=["MORN"]), self._dosage(2, when=["EVE"])),
-            "1-0-2-0 Stück",
+            "täglich: 1-0-2-0 Stück",
         )
 
     def test_legacy_fields_in_only_one_element_do_not_split_the_schema(self):
@@ -695,7 +743,7 @@ class MixedSchemaTest(unittest.TestCase):
                 self._dosage(1, when=["MORN"]),
                 self._dosage(2, when=["EVE"], frequency=2, period=1, periodUnit="d"),
             ),
-            "1-0-2-0 Stück",
+            "täglich: 1-0-2-0 Stück",
         )
 
 

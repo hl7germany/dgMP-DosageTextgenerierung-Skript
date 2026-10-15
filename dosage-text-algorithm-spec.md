@@ -1,10 +1,10 @@
 Diese Seite beschreibt die Erzeugung eines menschenlesbaren Dosierungstextes aus einer gesamten Arzneimittel‑Ressource (`MedicationRequest`, `MedicationDispense` oder `MedicationStatement`).
 
-**Verbindlich ist der auf dieser Seite beschriebene Algorithmus.** Er ist die normative Festlegung der Textgenerierung; Implementierungen müssen ihn nachbilden, unabhängig von der gewählten Programmiersprache. Die aktuelle Version des Algorithmus ist **2.0.0** (siehe [Versionierung](#versionierung)).
+**Verbindlich ist der auf dieser Seite beschriebene Algorithmus.** Er ist die normative Festlegung der Textgenerierung; Implementierungen müssen ihn nachbilden, unabhängig von der gewählten Programmiersprache. Die aktuelle Version des Algorithmus ist **2.0.0-ballot** (siehe [Versionierung](#versionierung)).
 
 Zur Veranschaulichung steht eine **Beispielimplementierung** als [Python-Skript](https://github.com/hl7germany/dgMP-DosageTextgenerierung-Skript/blob/main/medication-dosage-to-text.py) bereit, mit der auch die Beispieltexte dieses Implementation Guides erzeugt werden. Das Skript führt die umgesetzte Algorithmus-Version in `__version__`; sie entspricht der hier angegebenen.
 
-Voraussetzung für eine erfolgreiche Texterzeugung ist stets ein **profilkonformer Input**; im Profil gestrichene Elemente sind nicht Teil der Verarbeitung. Der Algorithmus ist kein Ersatz für die FHIR-Profilvalidierung: Er prüft einige nicht zulässige Konstellationen defensiv, führt aber keine vollständige Invariantenprüfung durch.
+Voraussetzung für eine erfolgreiche Texterzeugung ist stets ein **profilkonformer Input**; im Profil gestrichene Elemente sind nicht Teil der Verarbeitung. Der Algorithmus ist kein Ersatz für die FHIR-Profilvalidierung und führt keine Invariantenprüfung durch; welche Konstellationen zum Abbruch führen und warum, legt [Fehler und Validierung](#fehler-und-validierung) fest.
 
 Diese Seite stellt zwei Aspekte dar: **Teil A** beschreibt, wie jede einzelne Angabe einer `Dosage` in Text überführt wird. **Teil B** beschreibt, wie diese Bausteine je zulässigem Schema zu einem vollständigen Dosierungstext zusammengesetzt werden.
 
@@ -23,18 +23,22 @@ Die Verarbeitung erfolgt in dieser Reihenfolge:
    * `MedicationDispense.dosageInstruction`
    * `MedicationStatement.dosage`
 2. Bei einem anderen Ressourcentyp wird mit einem Fehler abgebrochen (`Unsupported resource type: {resourceType}`). Ist die gelesene Liste leer oder fehlt sie, ist das Ergebnis ein leerer String.
-3. Setzt eines der `Dosage`-Elemente `timeOfDay` **und** `when` gemeinsam, wird abgebrochen. Beides zugleich ist bereits durch die FHIR-Basisinvariante `tim-10` ausgeschlossen; ohne diese Prüfung würde je nach Schema eine der beiden Angaben stillschweigend verworfen.
-4. Enthält die Liste eine reine Bedarfsdosierung (`asNeededBoolean = true` ohne `timing`) und insgesamt nicht genau ein `Dosage`-Element, wird die Verarbeitung abgebrochen.
-5. Das Darstellungsschema wird ausschließlich anhand des **ersten** `Dosage`-Elements und in der unter [Schema-Erkennung](#schema-erkennung) angegebenen Priorität bestimmt. Trifft keine Regel zu, wird abgebrochen; es wird **kein** Ersatztext erzeugt.
-6. Der schemaspezifische Generator sammelt die benötigten Dosis-/Zeitsegmente. Je nach Schema werden alle `Dosage`-Elemente oder nur das erste verarbeitet; die genaue Aggregation ist unter [Aggregation mehrerer Dosage-Elemente](#aggregation-mehrerer-dosage-elemente) festgelegt.
-7. Der Generator setzt Zeitrahmen, Bedarfsangaben, Rhythmus und Kerntext zusammen. Danach werden – außer bei Freitext – Maximalmenge und `patientInstruction` ergänzt.
-8. Abschließend wird der Text – außer bei Freitext – normalisiert. Ist das erste `Dosage`-Element als Bedarf gekennzeichnet, wird zusätzlich exakt das erste Zeichen des Ergebnisses in einen Großbuchstaben umgewandelt.
+3. Jedes gelesene Feld muss den JSON-Datentyp seines FHIR-Typs haben: `decimal` eine Zahl, `positiveInt` eine ganze Zahl, `boolean` ein boolescher Wert, `string` und `code` ein String, Listenfelder (`dayOfWeek`, `when`, `timeOfDay`, `doseAndRate`, `extension`, `modifierExtension`) eine Liste, Strukturfelder (`timing`, `timing.repeat`, `boundsDuration`, `boundsPeriod`, die Elemente von `doseAndRate` mit `doseQuantity`, `doseRange`, `low`, `high`, `maxDosePerPeriod` mit `numerator` und `denominator`, die Elemente von `extension` und `modifierExtension` mit `valueCodeableConcept` beziehungsweise `valueDuration`) ein Objekt. Ein falscher Typ führt zum Abbruch. Geprüft wird nur der Typ, nicht der Wertebereich; der ist Sache der Profilvalidierung. Die Prüfung erfolgt vor der Schema-Erkennung, weil ein falscher Typ dort stillschweigend in die Irre führte (ein `period` von `"1"` ist nicht `1` und ergäbe `alle 1 Tage` statt `täglich`; ein `asNeededBoolean` von `"true"` ist nicht `true` und unterschlüge den Bedarf).
+4. Setzt eines der `Dosage`-Elemente `timeOfDay` **und** `when` gemeinsam, wird abgebrochen. Beides zugleich ist bereits durch die FHIR-Basisinvariante `tim-10` ausgeschlossen; ohne diese Prüfung würde je nach Schema eine der beiden Angaben stillschweigend verworfen.
+5. Enthält die Liste eine reine Bedarfsdosierung (`asNeededBoolean = true` ohne `timing`) und insgesamt nicht genau ein `Dosage`-Element, wird die Verarbeitung abgebrochen.
+6. Das Darstellungsschema wird ausschließlich anhand des **ersten** `Dosage`-Elements und in der unter [Schema-Erkennung](#schema-erkennung) angegebenen Priorität bestimmt. Trifft keine Regel zu, wird abgebrochen; es wird **kein** Ersatztext erzeugt.
+7. Der schemaspezifische Generator sammelt die benötigten Dosis-/Zeitsegmente. Je nach Schema werden alle `Dosage`-Elemente oder nur das erste verarbeitet; die genaue Aggregation ist unter [Aggregation mehrerer Dosage-Elemente](#aggregation-mehrerer-dosage-elemente) festgelegt.
+8. Der Generator setzt Zeitrahmen, Bedarfsangaben, Rhythmus und Kerntext zusammen. Danach werden – außer bei Freitext – Maximalmenge und `patientInstruction` ergänzt.
+9. Abschließend wird der Text – außer bei Freitext – normalisiert.
 
 Das folgende Pseudocode-Gerüst zeigt den vollständigen Kontrollfluss:
 
 ```text
 dosierungen = extrahiereDosierungen(resource)
 wenn dosierungen leer: return ""
+
+wenn irgendein gelesenes Feld den falschen JSON-Datentyp hat:
+  Fehler
 
 wenn irgendeine dosierung timeOfDay und when gemeinsam setzt:
   Fehler
@@ -68,7 +72,7 @@ Es wird ausschließlich `doseAndRate[0]` ausgewertet. Ist dort `doseQuantity` vo
 
 Nur die untere Grenze (`low` ohne `high`) ist **nicht zulässig** und wird durch die Invariante `DoseRangeHighRequiredWhenLowPresent` ausgeschlossen.
 
-Ganzzahlige Werte werden ohne Nachkommastelle dargestellt; überflüssige Dezimalstelle und Komma entfallen (`1.0` → `1`). Dezimalwerte werden mit **deutschem Dezimalkomma** ausgegeben (z. B. `1,5`). Die maximale Anzahl von Nachkommastellen ist nicht eingeschränkt; Werte werden verlustfrei ohne Rundung übernommen. Die Verantwortung für sinnvolle Präzision (z. B. nicht mehr als 2 Nachkommastellen) liegt beim aufrufenden System.
+Dezimalwerte werden mit **deutschem Dezimalkomma** ausgegeben (z. B. `1,5`). Die Zahl wird mit **genau der Genauigkeit** ausgegeben, mit der sie in der Ressource steht: `1` → `1`, `1.0` → `1,0`, `2.50` → `2,50`. FHIR legt fest, dass die Genauigkeit eines `decimal` einschließlich nachfolgender Nullen Bedeutung trägt (`0.010` ist nicht `0.01`) und auch für die Darstellung zu erhalten ist. Eine Implementierung muss das JSON deshalb mit einem Parser lesen, der diese Genauigkeit erhält (etwa `BigDecimal`, in Python `parse_float=Decimal`); ein Gleitkomma-Parser verwirft nachfolgende Nullen bereits beim Einlesen, und der Text wäre dann nicht reproduzierbar. Exponentialschreibweise aus der Ressource wird als Dezimalzahl ausgegeben (`1e-2` → `0,01`). Die Anzahl der Nachkommastellen ist nicht eingeschränkt; Werte werden ohne Rundung übernommen. Dieselbe Darstellung gilt für alle Zahlen im Text (Frequenz, Periode, Dauer, Mindestabstand, Maximalmenge). Die Verantwortung für sinnvolle Präzision (z. B. nicht mehr als 2 Nachkommastellen) liegt beim aufrufenden System.
 
 
 Eine Dosis ist in **jedem** strukturierten Schema erforderlich. Fehlt `doseAndRate` ganz, bricht der Algorithmus ab — es wird weder ein Segment stillschweigend übersprungen noch eine Dosieranweisung ohne Dosis erzeugt. Profilkonformer Input enthält immer eine Dosis: `DosageStructuredRequiresBoth` erzwingt „`timing` impliziert `doseAndRate`", und für die reine Bedarfsdosierung verlangt `DosageStructuredOrFreeText` ebenfalls `doseAndRate`.
@@ -97,7 +101,7 @@ Start- und/oder Endzeitpunkt werden vorangestellt:
 * Start und Ende: `vom {Startdatum}[ um {Uhrzeit}] bis zum {Enddatum}[ um {Uhrzeit}]`
 * nur Ende: `bis zum {Enddatum}[ um {Uhrzeit}]`
 
-Das Datum wird im Format `TT.MM.JJJJ`, eine vorhandene Uhrzeit im Format `HH:MM Uhr` ausgegeben. Sekunden werden nicht dargestellt.
+Das Datum wird im Format `TT.MM.JJJJ`, eine vorhandene Uhrzeit im Format `HH:MM Uhr` ausgegeben. Sekunden und Sekundenbruchteile werden nicht dargestellt; FHIR erlaubt beliebig viele Bruchteilstellen und die Schaltsekunde `60`, beides wird akzeptiert.
 
 `boundsPeriod` und `boundsDuration` dürfen nicht gleichzeitig vorhanden sein. Andernfalls bricht die Textgenerierung ab. Ein vorhandenes `boundsPeriod` muss `start` und/oder `end` enthalten. Jeder vorhandene Wert muss als FHIR-`dateTime` mit vollständigem Datum `JJJJ-MM-TT` parsebar sein. Bei einer reinen Datumsangabe erfolgt keine Zeitzonenverarbeitung. Enthält der Wert eine Uhrzeit, muss gemäß FHIR eine Zeitzone als `Z` oder Offset vorhanden sein. Der Zeitpunkt wird in die verbindliche IANA-Zielzeitzone `Europe/Berlin` umgerechnet; erst danach werden das gegebenenfalls verschobene Datum sowie Stunde und Minute formatiert. Die Umrechnung berücksichtigt automatisch Sommer- und Winterzeit.
 
@@ -166,11 +170,11 @@ Wochentage werden, sofern vorhanden, in kanonischer Reihenfolge (Montag bis Sonn
 | `sat` | samstags |
 | `sun` | sonntags |
 
-Die Tabelle ist **abschließend** und deckt die required gebundene FHIR-Codeliste `DaysOfWeek` vollständig ab.
+Die Tabelle ist **abschließend** und deckt die required gebundene FHIR-Codeliste `DaysOfWeek` vollständig ab. Ein Code außerhalb der Tabelle führt zum Abbruch — er würde sonst roh im Text erscheinen.
 
 ### Konkrete Zeiten (`timeOfDay`)
 
-Uhrzeiten werden anhand ihres Eingabestrings aufsteigend sortiert und im Format `HH:MM Uhr` ausgegeben (z. B. `08:00 Uhr`). Akzeptiert werden nullaufgefüllte Werte im Format `HH:MM` oder `HH:MM:SS` mit optionalen Sekundenbruchteilen. Stunde und Minute werden übernommen, Sekunden und Sekundenbruchteile entfallen. Ein nicht parsebarer oder außerhalb des zulässigen Uhrzeitbereichs liegender Wert führt zum Abbruch.
+Uhrzeiten werden anhand ihres Eingabestrings aufsteigend sortiert und im Format `HH:MM Uhr` ausgegeben (z. B. `08:00 Uhr`). Akzeptiert werden nullaufgefüllte Werte im Format `HH:MM` oder `HH:MM:SS` mit optionalen Sekundenbruchteilen. Stunde und Minute werden übernommen, Sekunden und Sekundenbruchteile entfallen (auch die Schaltsekunde `60` wird akzeptiert). Ein nicht parsebarer oder außerhalb des zulässigen Uhrzeitbereichs liegender Wert führt zum Abbruch.
 Die lexikographische Sortierung des Eingabestrings ist dabei äquivalent zur chronologischen Sortierung, weil FHIR `timeOfDay`-Werte nullaufgefüllt sein müssen (d. h. `08:00:00` statt `8:00:00`): Zwei Werte `HH1:MM1` und `HH2:MM2` sind genau dann in lexikographischer Reihenfolge, wenn HH1 < HH2, oder HH1 = HH2 und MM1 ≤ MM2.
 Alle Uhrzeiten werden über **sämtliche** `Dosage`-Elemente hinweg eingesammelt und gemeinsam aufsteigend sortiert. Die Reihenfolge der `Dosage`-Elemente in der Ressource hat damit keinen Einfluss auf die Reihenfolge der Uhrzeiten im Text.
 
@@ -193,7 +197,7 @@ Die unterstützten Codes werden wie folgt abgebildet:
 | `EVE` | abends |
 | `NIGHT` | zur Nacht |
 
-Die Tabelle ist **abschließend**; `when` ist required an `TimingWhenDgMPVS` gebunden, das genau diese vier Codes enthält. Ein Code außerhalb der Tabelle führt zum Abbruch — er würde sonst bei der Belegung übersprungen und ergäbe einen Text, der die zugehörige Gabe unterschlägt (etwa `0-0-0-0 Stück` trotz angegebener Dosis).
+Die Tabelle ist **abschließend**; `when` ist required an `TimingWhenDgMPVS` gebunden, das genau diese vier Codes enthält. Ein Code außerhalb der Tabelle führt zum Abbruch — er würde sonst bei der Belegung übersprungen und ergäbe einen Text, der die zugehörige Gabe unterschlägt (etwa `täglich: 0-0-0-0 Stück` trotz angegebener Dosis).
 
 Ferner dürfen `when` und `timeOfDay` nicht gemeinsam auftreten (FHIR-Basisinvariante `tim-10`); der Algorithmus bricht in diesem Fall ab.
 
@@ -214,9 +218,9 @@ Ausgewertet werden nur Extensions mit der exakten kanonischen URL aus der [Feldr
 
 ### Mindestabstand zwischen Gaben
 
-Der Mindestabstand ist **ausschließlich bei einer reinen Bedarfsdosierung** zulässig, also bei `asNeededBoolean = true` ohne `timing` (Invariante `MindestabstandOnlyPureAsNeeded`). Der Baustein lautet `im Abstand von mindestens {Wert} {Zeiteinheit}` und steht vor der Dosis. Tritt er zusammen mit einem strukturierten Rhythmus auf, bricht der Algorithmus ab: Der Rhythmus legt den Abstand zwischen zwei Gaben bereits fest, eine zweite und schwächere Untergrenze daneben ließe offen, welche Angabe gilt — und den Mindestabstand stillschweigend zu übergehen wäre eine sicherheitsrelevante Auslassung. Der Algorithmus durchsucht `modifierExtension` nach der exakten kanonischen URL `MinimumIntervalBetweenAdministrations` und verwendet die erste passende Extension. `valueDuration`, `valueDuration.value` und `valueDuration.code` sind verpflichtend — im Profil auf `1..1` gesetzt und zusätzlich vom Algorithmus geprüft; der Wert muss numerisch sein. Andernfalls bricht der Algorithmus mit einem Fehler ab. Der Wertebereich wird nicht geprüft (`DosageLimitsPositive` ist Sache des Profils). Die Formatierung des Wertes und der Einheit entspricht `boundsDuration`, jedoch ohne das Wort `für`.
+Der Mindestabstand ist **ausschließlich bei einer reinen Bedarfsdosierung** zulässig, also bei `asNeededBoolean = true` ohne `timing` (Invariante `MinimumIntervalOnlyPureAsNeeded`). Der Baustein lautet `im Abstand von mindestens {Wert} {Zeiteinheit}` und steht vor der Dosis. Tritt er zusammen mit einem strukturierten Rhythmus auf, bricht der Algorithmus ab: Der Rhythmus legt den Abstand zwischen zwei Gaben bereits fest, eine zweite und schwächere Untergrenze daneben ließe offen, welche Angabe gilt — und den Mindestabstand stillschweigend zu übergehen wäre eine sicherheitsrelevante Auslassung. Der Algorithmus durchsucht `modifierExtension` nach der exakten kanonischen URL `MinimumIntervalBetweenAdministrations` und verwendet die erste passende Extension. `valueDuration`, `valueDuration.value` und `valueDuration.code` sind verpflichtend — im Profil auf `1..1` gesetzt und zusätzlich vom Algorithmus geprüft; der Wert muss numerisch sein. Andernfalls bricht der Algorithmus mit einem Fehler ab. Der Wertebereich wird nicht geprüft (`DosageLimitsPositive` ist Sache des Profils). Die Formatierung des Wertes und der Einheit entspricht `boundsDuration`, jedoch ohne das Wort `für`.
 
-Als Zeiteinheit sind **ausschließlich Minuten (`min`) und Stunden (`h`)** zulässig; `valueDuration.code` ist required an `MindestabstandUnitsOfTimeDgMPVS` gebunden, `valueDuration.system` ist auf UCUM festgelegt. Die Anzeigeeinheit `valueDuration.unit` muss zum Code passen (Invariante `MindestabstandUnitMatchesCode`) — der erzeugte Text leitet die Einheit aus `.code` ab, sodass ein abweichendes `.unit` sonst der Ressource widerspräche.
+Als Zeiteinheit sind **ausschließlich Minuten (`min`) und Stunden (`h`)** zulässig; `valueDuration.code` ist required an `MindestabstandUnitsOfTimeDgMPVS` gebunden, `valueDuration.system` ist auf UCUM festgelegt. Die Anzeigeeinheit `valueDuration.unit` muss zum Code passen (Invariante `MinimumIntervalUnitMatchesCode`) — der erzeugte Text leitet die Einheit aus `.code` ab, sodass ein abweichendes `.unit` sonst der Ressource widerspräche.
 
 `valueDuration.comparator` ist auf `0..0` gestrichen: Ein Mindestabstand „> 4 Stunden" wäre unbestimmt, und die Textgenerierung stellt ausschließlich den exakten Wert dar.
 
@@ -237,17 +241,17 @@ Ist `maxDosePerPeriod` vorhanden, müssen `numerator.value`, `numerator.unit`, `
 
 Ergänzende Einnahmehinweise werden aus `patientInstruction` (einzelner String, `0..1`) als abschließender Satz mit vorangestelltem `Hinweis:` wiedergegeben (z. B. `Hinweis: Mit ausreichend Wasser einnehmen`). Führender und abschließender Leerraum des Feldwerts wird entfernt; ein danach leerer Wert wird nicht ausgegeben.
 
-Der Hinweis wird als **eigener Satz** angehängt. Der bisherige strukturierte Dosierungstext erhält einen abschließenden Punkt, gefolgt von `Hinweis: {Text}`. Ist bereits ein Punkt vorhanden, wird kein zweiter ergänzt. Bei profilkonformen Eingaben erzeugt der Algorithmus den Punkt regulär beim Anhängen des Hinweises. Beispiel: `1-0-1-0 Stück. Hinweis: Nach dem Essen`.
+Der Hinweis wird als **eigener Satz** angehängt. Der bisherige strukturierte Dosierungstext erhält einen abschließenden Punkt, gefolgt von `Hinweis: {Text}`. Ist bereits ein Punkt vorhanden, wird kein zweiter ergänzt. Bei profilkonformen Eingaben erzeugt der Algorithmus den Punkt regulär beim Anhängen des Hinweises. Beispiel: `täglich: 1-0-1-0 Stück. Hinweis: Nach dem Essen`.
 
 `additionalInstruction` wird **nicht** verwendet und ist im Profil `DosageDgMP` auf `0..0` gestrichen; es bleibt für künftige strukturierte Zusatzangaben reserviert.
 
-Auch `route` wird vom Algorithmus nicht gelesen oder ausgegeben; es steht in der Liste zukünftig unterstützter Dosierkonfigurationen (siehe [Beispiele von erzeugten Dosiertexten](https://ig.fhir.de/igs/medication/dosierung-beispiele.html)).
+Auch `route` wird vom Algorithmus nicht gelesen oder ausgegeben; es steht in der Liste der aktuell nicht unterstützten Dosierkonfigurationen (siehe [Beispiele von erzeugten Dosiertexten](https://ig.fhir.de/igs/medication/dosierung-beispiele.html)).
 
-`doseAndRate.rateQuantity`, `.rateRatio` und `.rateRange` werden vom Algorithmus nicht gelesen; sie stehen ebenfalls in der Liste zukünftig unterstützter Dosierkonfigurationen.
+`doseAndRate.rateQuantity`, `.rateRatio` und `.rateRange` werden vom Algorithmus nicht gelesen; sie stehen ebenfalls in der Liste der aktuell nicht unterstützten Dosierkonfigurationen.
 
 ### Trennzeichen
 
-* **Doppelpunkt mit Leerzeichen** (`: `) trennt die Dosieranweisung in zwei Abschnitte. Links des Doppelpunkts stehen, sofern vorhanden, der Zeitrahmen, der Einnahmeanlass und das Intervall.
+* **Doppelpunkt mit Leerzeichen** (`: `) trennt die Dosieranweisung in zwei Abschnitte. In den strukturierten Schemata stehen links des Doppelpunkts, sofern vorhanden, der Zeitrahmen und das Intervall beziehungsweise der Marker `täglich`; beide teilen sich einen Doppelpunkt (`für 7 Tage alle 2 Tage: …`). Bei Bedarfsmedikation steht der Doppelpunkt hinter dem Einnahmeanlass, das Intervall rechts davon (`bei Kopfschmerzen: alle 8 Stunden je 1 Stück`).
 * **Gedankenstrich mit Leerzeichen** (` — `) verbindet eine Zeit- oder Abschnittsangabe mit der zugehörigen Dosis sowie die Dosis mit der Maximalmenge im Falle einer Bedarfsmedikation.
 * **Komma mit Leerzeichen** (`, `) trennt aufeinanderfolgende Segmente unterschiedlicher **Tages- oder Uhrzeiten**, unabhängig davon, ob sie aus derselben oder aus verschiedenen `Dosage`-Einträgen stammen.
 * **Semikolon mit Leerzeichen** (`; `) trennt aufeinanderfolgende **Wochentagssegmente**, unabhängig davon, ob sie aus derselben oder aus verschiedenen `Dosage`-Einträgen stammen.
@@ -268,15 +272,15 @@ Die folgenden Zeichen sind für den erzeugten Text **verbindlich festgelegt**. M
 | `x` | U+0078 | LATIN SMALL LETTER X | Frequenzmarker in `3 x täglich` | `×` U+00D7, `✕` U+2715 |
 | ` ` | U+0020 | SPACE | einziges Trennzeichen zwischen Wörtern | `&nbsp;` U+00A0, U+2009, U+202F |
 
-Für die Umlaute in den festen Wortbestandteilen (`täglich`, `wöchentlich`, `für`) gilt die **vorkomponierte NFC-Form**: `ä` U+00E4, `ö` U+00F6, `ü` U+00FC — **nicht** die zerlegte Form aus Grundbuchstabe und kombinierendem Trema (`a` + U+0308). Der gesamte erzeugte Text ist NFC-normalisiert. Ein `ß` kommt in keinem vom Algorithmus erzeugten Wortbestandteil vor.
+Für die Umlaute in den festen Wortbestandteilen (`täglich`, `wöchentlich`, `für`) gilt die **vorkomponierte NFC-Form**: `ä` U+00E4, `ö` U+00F6, `ü` U+00FC — **nicht** die zerlegte Form aus Grundbuchstabe und kombinierendem Trema (`a` + U+0308). Alle vom Algorithmus erzeugten Wortbestandteile sind NFC-normalisiert; aus dem Input übernommene Teile (siehe unten) werden nicht normalisiert, der Gesamttext ist also genau dann NFC, wenn es der Input ist. Ein `ß` kommt in keinem vom Algorithmus erzeugten Wortbestandteil vor.
 
-Nicht Teil dieses Repertoires sind Zeichen, die **unverändert aus dem Input übernommen** werden: die Dosiereinheit (`doseQuantity.unit`), der Einnahmeanlass (`asNeededFor`), der Hinweis (`patientInstruction`) und der Freitext (`Dosage.text`). Sie werden weder ersetzt noch normalisiert.
+Nicht Teil dieses Repertoires sind Zeichen, die **unverändert aus dem Input übernommen** werden: die Dosiereinheit (`doseQuantity.unit`), der Einnahmeanlass (`asNeededFor`), der Hinweis (`patientInstruction`) und der Freitext (`Dosage.text`). Ihre Zeichen werden weder ersetzt noch normalisiert; einzig Leerraum in den übernommenen Teilen strukturierter Texte unterliegt der nachfolgenden Normalisierung.
 
-Strukturierte Schemata erzeugen keine Zeilenumbrüche; ihr Text steht in einer Zeile. Die Freitext-Dosierung durchläuft die nachfolgende Normalisierung nicht und kann daher im Feld enthaltene Zeilenumbrüche beibehalten; lediglich der unter [Freitext-Dosierung](#freitext-dosierung) beschriebene `trim` wird angewendet. Diese Ausnahme ist notwendig, weil die Invariante `FreeTextMatchesRenderedText` exakte Gleichheit zwischen `renderedDosageInstruction` und `Dosage.text` verlangt.
+Strukturierte Schemata erzeugen keine Zeilenumbrüche; ihr Text steht in einer Zeile. Die Freitext-Dosierung durchläuft die nachfolgende Normalisierung nicht und wird unverändert übernommen, einschließlich enthaltener Zeilenumbrüche und führenden oder abschließenden Leerraums. Diese Ausnahme ist notwendig, weil die Invariante `FreeTextMatchesRenderedText` exakte Gleichheit zwischen `renderedDosageInstruction` und `Dosage.text` verlangt.
 
 **Normalisierung:** Nach dem Zusammensetzen wird der Text normalisiert – dies gilt für **alle Schemata außer der Freitext-Dosierung**:
 
-* In strukturiert erzeugten Texten wird **jede** Folge von Leerraum – Leerzeichen, Tabs und Zeilenumbrüche, unabhängig von ihrer Herkunft – zu **einem** Leerzeichen reduziert. Damit steht ein strukturiert erzeugter Text auch dann in einer Zeile, wenn ein übernommenes Freitextfeld (`patientInstruction`, Einnahmeanlass, Dosiereinheit) selbst einen Umbruch enthält. Freitext-Dosierungen werden nicht normalisiert.
+* In strukturiert erzeugten Texten wird **jede** Folge von Leerraum – jedes Unicode-Leerraumzeichen, also auch Tabs, Zeilenumbrüche und geschützte Leerzeichen wie U+00A0, unabhängig von ihrer Herkunft – zu **einem** Leerzeichen (U+0020) reduziert. Damit steht ein strukturiert erzeugter Text auch dann in einer Zeile, wenn ein übernommenes Freitextfeld (`patientInstruction`, Einnahmeanlass, Dosiereinheit) selbst einen Umbruch enthält. Freitext-Dosierungen werden nicht normalisiert.
 * Leerraum **unmittelbar vor** den Satzzeichen `;` `:` `.` `,` wird entfernt.
 * Führende und abschließende Leerzeichen werden entfernt (trim).
 
@@ -288,7 +292,7 @@ Der Gedankenstrich (`—`) und Klammern bleiben dabei unangetastet.
 
 ## Schema-Erkennung
 
-Bevor die Bausteine zusammengesetzt werden, wird genau **ein** Darstellungsschema bestimmt. Es gilt für die gesamte Ressource: Enthält sie mehrere `Dosage`-Elemente, muss **jedes** zu demselben Schema führen, sonst bricht der Algorithmus ab. Grundlage der Erkennung ist zwar das erste Element, ein abweichendes späteres Element würde bei der Textbildung aber übergangen — und mit ihm eine vollständige Gabe: Aus „morgens 1 Stück" und „montags 2 Stück" entstünde kommentarlos `1-0-0-0 Stück`. Die Invarianten `TimingOnlyOneType` und `TimingOnlyWhenOrTimeOfDay` schließen das für profilkonformen Input aus; der Algorithmus verlässt sich darauf nicht.
+Bevor die Bausteine zusammengesetzt werden, wird genau **ein** Darstellungsschema bestimmt. Es gilt für die gesamte Ressource: Enthält sie mehrere `Dosage`-Elemente, muss **jedes** zu demselben Schema führen, sonst bricht der Algorithmus ab. Grundlage der Erkennung ist zwar das erste Element, ein abweichendes späteres Element würde bei der Textbildung aber übergangen — und mit ihm eine vollständige Gabe: Aus „morgens 1 Stück" und „montags 2 Stück" entstünde kommentarlos `täglich: 1-0-0-0 Stück`. Die Invarianten `TimingOnlyOneType` und `TimingOnlyWhenOrTimeOfDay` schließen das für profilkonformen Input aus; der Algorithmus verlässt sich darauf nicht.
 
  Grundlage der Erkennung ist das **erste `Dosage`-Element** der Ressource; der profilkonforme Input stellt sicher, dass alle weiteren Elemente strukturell dazu passen und nur zusätzliche Segmente beisteuern.
 
@@ -331,6 +335,8 @@ Die Bedingung `hatZulaessigeLegacyFelder` gilt für alle vier betroffenen Schema
 
 Wochentagsschemata wiederholen sich implizit wöchentlich, tägliche Schemata implizit täglich — daher die unterschiedliche Einheit. Jede **andere** Periode beschreibt ein echtes Intervall: Bei `dayOfWeek` ist sie unzulässig, bei `when` oder `timeOfDay` führt sie über `istNichtTagesmuster` zu Regel 7. Eine variable Frequenz oder Periode ist bei Wochentagen ebenfalls ausgeschlossen, weil die Wochentage die Zahl der Anwendungen bereits festlegen.
 
+> FHIR R4 merkt zu `timeOfDay` und `dayOfWeek` an, dass `frequency` und `period` nicht zusammen mit ihnen verwendet werden sollten („The elements when, frequency and period cannot be used as well as timeOfDay"). Das ist kein formaler Constraint — formalisiert ist nur `tim-10` —, und der Medication IG DE weicht bewusst davon ab: Die Legacy-Angaben halten Bestandsdaten gültig, die Intervall-Kombination bildet wöchentliche und monatliche Rhythmen mit konkreten Zeitpunkten ab.
+
 Im Schema **Kombination von Zeitintervallen** (Regel 7) ist ausschließlich `frequency` eine Legacy-Angabe; `period` und `periodUnit` legen dort den Rhythmus fest.
 
 ### Prioritätsreihenfolge
@@ -363,7 +369,7 @@ Ein generierter Dosierungstext folgt grundsätzlich dem Aufbau:
 
 `{…}` kennzeichnet einen Platzhalter, `[...]` einen optionalen Bestandteil, der nur erscheint, wenn die zugehörige Angabe vorliegt. Klammern können geschachtelt werden; eine äußere optionale Klammer entfällt vollständig, wenn alle inneren Bestandteile fehlen.
 
-> Dieses Muster dient nur der groben Orientierung; **verbindlich sind die schemaspezifischen Muster** in den folgenden Abschnitten. Zwei Punkte sind dabei zu beachten: Der **Doppelpunkt ist nicht obligatorisch** — er trennt Zeitrahmen und Intervall von der Dosis und entfällt vollständig, wenn beides fehlt (das 4‑Schema ohne Zeitrahmen lautet schlicht `1-0-2-0 Stück`). Und **Wochentags- und Intervallschemata schließen sich gegenseitig aus**; ein `{Wochentag}` steht deshalb nie rechts eines Intervall-Doppelpunkts.
+> Dieses Muster dient nur der groben Orientierung; **verbindlich sind die schemaspezifischen Muster** in den folgenden Abschnitten. Zwei Punkte sind dabei zu beachten: Der **Doppelpunkt ist nicht obligatorisch** — er trennt Zeitrahmen und Intervall von der Dosis und entfällt vollständig, wenn beides fehlt (das Wochentags-Schema ohne Zeitrahmen lautet schlicht `montags — je 1 Stück`). Und **Wochentags- und Intervallschemata schließen sich gegenseitig aus**; ein `{Wochentag}` steht deshalb nie rechts eines Intervall-Doppelpunkts.
 
 In den Schemata von Teil B bezeichnet `{Dosis}` den formatierten Dosiswert einschließlich optionaler Einheit, jedoch **ohne** das Wort `je`; deshalb steht in den ausgeschriebenen Mustern ausdrücklich `je {Dosis}`. Der in Teil A beschriebene vollständige Dosis-Baustein entspricht somit `je {Dosis}`.
 
@@ -372,16 +378,18 @@ Je nach Schema werden einzelne Bestandteile weggelassen oder unterschiedlich kom
 ### Schema mit Tageszeiten-Bezug (4-Schema)
 
 ```
-[{Zeitrahmen}: ]<MORN>-<NOON>-<EVE>-<NIGHT> {Einheit}[. Hinweis: {Instruktionen}]
+[{Zeitrahmen} ]täglich: <MORN>-<NOON>-<EVE>-<NIGHT> {Einheit}[. Hinweis: {Instruktionen}]
 ```
 
 Nicht belegte Positionen erhalten den Wert `0`.
 
-Die Werte werden über alle `Dosage`-Elemente eingesammelt. Für jedes Element wird dessen Dosis allen `when`-Codes dieses Elements zugeordnet. Die Dosis-Einheit der Ausgabe stammt aus dem ersten Element mit auswertbarer Dosis. Wird derselbe Tagesabschnitt mehrfach mit **unterschiedlicher** Dosis belegt, bricht der Algorithmus ab; dieselbe Dosis mehrfach ergibt denselben Text und ist wie in den übrigen Schemata zulässig. Eine Position, die explizit mit der Dosis `0` belegt ist, gilt als belegt und ist von einer nicht belegten Position zu unterscheiden; im kompakten Muster sehen beide gleich aus (`0`), in der ausgeschriebenen Form bleibt nur die belegte erhalten. Ein Code außerhalb der [Tagesabschnitts-Tabelle](#tagesabschnitt-when-codes) führt ebenfalls zum Abbruch. `frequency`, `frequencyMax`, `period`, `periodMax` und `periodUnit` beeinflussen die Ausgabe dieses Schemas nicht.
+Die Werte werden über alle `Dosage`-Elemente eingesammelt. Für jedes Element wird dessen Dosis allen `when`-Codes dieses Elements zugeordnet. Die Dosis-Einheit der Ausgabe stammt aus dem ersten Element mit auswertbarer Dosis. Wird derselbe Tagesabschnitt mehrfach mit **unterschiedlicher** Dosis belegt, bricht der Algorithmus ab; dieselbe Dosis mehrfach ergibt denselben Text und ist wie in den übrigen Schemata zulässig. Eine Position, die explizit mit der Dosis `0` belegt ist, gilt als belegt und ist von einer nicht belegten Position zu unterscheiden; im kompakten Muster sehen beide gleich aus (`0`), in der ausgeschriebenen Form bleibt nur die belegte erhalten. Ein Code außerhalb der [Tagesabschnitts-Tabelle](#tagesabschnitt-when-codes) führt ebenfalls zum Abbruch.
 
-*Beispiel:* `für 5 Tage: 1-1-1-1 Kapseln`
+Wie beim [Uhrzeiten-Schema](#schema-mit-uhrzeiten-bezug) lautet der Marker in diesem Schema immer `täglich`: Das Muster allein lässt offen, dass es an jedem Tag gilt. `frequency`, `frequencyMax`, `period`, `periodMax` und `periodUnit` beeinflussen die Ausgabe dieses Schemas nicht.
 
-**Variabilität:** Enthält eine der Positionen einen variablen Wert (Bereich), wird das kompakte Schema in die ausgeschriebene Segmentform (nur belegte Positionen) überführt, z. B. `morgens — je 1 bis 2 Stück, abends — je 2 Stück`. Eine explizit mit `0` belegte Position erscheint dabei als `morgens — je 0 Stück`. Feste 4‑Schemata bleiben kompakt (`1-0-2-0 Stück`).
+*Beispiele:* `täglich: 1-0-2-0 Stück` · mit Zeitrahmen: `für 5 Tage täglich: 1-1-1-1 Kapseln`
+
+**Variabilität:** Enthält eine der Positionen einen variablen Wert (Bereich), wird das kompakte Schema in die ausgeschriebene Segmentform (nur belegte Positionen) überführt, z. B. `täglich: morgens — je 1 bis 2 Stück, abends — je 2 Stück`. Eine explizit mit `0` belegte Position erscheint dabei als Segment `morgens — je 0 Stück`. Feste 4‑Schemata bleiben kompakt (`täglich: 1-0-2-0 Stück`).
 
 ### Schema mit Uhrzeiten-Bezug
 
@@ -457,18 +465,18 @@ Bei einer **reinen Bedarfsdosierung** muss die Ressource genau ein `Dosage`-Elem
 [{Zeitrahmen} ]bei {Einnahmeanlass}: [im Abstand von mindestens {Mindestabstand} ]je {Dosis}[ — nicht mehr als {Maximalmenge}][. Hinweis: {Instruktionen}]
 ```
 
-* Sofern vorhanden, steht der **Zeitrahmen** am Anfang, gefolgt vom **Einnahmeanlass** und einem **Doppelpunkt**. Der Doppelpunkt steht damit direkt hinter dem Einnahmeanlass.
+* Sofern vorhanden, steht der **Zeitrahmen** am Anfang, gefolgt vom **Einnahmeanlass** und einem **Doppelpunkt**. Der Doppelpunkt steht damit direkt hinter dem Einnahmeanlass. Bei der reinen Bedarfsdosierung kann kein Zeitrahmen vorliegen, weil er in `timing.repeat` steht; er tritt nur bei strukturiertem Bedarf auf (`ab dem 05.06.2026 bei Bedarf: …`).
 * Ist kein Einnahmeanlass angegeben, wird generisch `bei Bedarf` gesetzt.
 * Auch hier wird **nicht** großgeschrieben; `bei Kopfschmerzen: …` und `bei Bedarf: …` bleiben Fragmente wie jeder andere erzeugte Text.
 * Ein optionaler **Mindestabstand** (`modifierExtension[MinimumIntervalBetweenAdministrations]`) steht rechts des Doppelpunkts vor der Dosis. Er ist nur bei reiner Bedarfsdosierung zulässig; bei strukturiertem Bedarf folgt dort stattdessen das jeweilige Schema (Intervall, 4‑Schema …).
-  Die **Maximalmenge** wird genau einmal am Ende der Dosierungsanweisung angefügt. Enthält die Anweisung mehrere Uhrzeit-, Tagesabschnitts- oder Wochentagssegmente, steht die Maximalmenge nach dem letzten Segment. Sie gilt für die Gesamtmenge im angegebenen Zeitraum. Ein anschließender `Hinweis: ` folgt erst danach.
+* Die **Maximalmenge** ist ebenfalls nur bei reiner Bedarfsdosierung zulässig (siehe [Maximalmenge](#maximalmenge-maxdoseperperiod)) und wird mit Gedankenstrich hinter der Dosis angefügt. Ein anschließender `Hinweis: ` folgt erst danach.
 
 *Beispiele:*
 
 * `bei Kopfschmerzen: im Abstand von mindestens 4 Stunden je 1 Stück — nicht mehr als 6 Stück in 24 Stunden`
-* `bei Bedarf: täglich 08:00 Uhr — je 1 Stück, 20:00 Uhr — je 2 Stück — nicht mehr als 6 Stück pro Tag`
-* `bei Kopfschmerzen: alle 8 Stunden je 1 Stück — nicht mehr als 4 Stück in 24 Stunden`
-* `bei Bedarf: 1-0-2-0 Stück`
+* `bei Bedarf: täglich 08:00 Uhr — je 1 Stück, 20:00 Uhr — je 2 Stück`
+* `bei Kopfschmerzen: alle 8 Stunden je 1 Stück`
+* `bei Bedarf: täglich 1-0-2-0 Stück`
 
 ### Freitext-Dosierung
 
@@ -478,13 +486,13 @@ Bei einer **reinen Bedarfsdosierung** muss die Ressource genau ein `Dosage`-Elem
 
 Enthält die `Dosage` ausschließlich freien Text (`text` vorhanden, `timing` **und** `doseAndRate` leer), wird dieser übernommen. Alle drei Bedingungen gehören zur Erkennungsregel: Stünde neben dem Text eine strukturierte Dosis, müsste der Algorithmus raten, welche der beiden Angaben gilt — deshalb greift dann nicht die Freitext-Regel, sondern die reguläre Schema-Erkennung.
 
-Bei reinem Freitext darf die Ressource **genau ein** `Dosage`-Element enthalten (Invariante `FreeTextSingleDosageOnly`), und `Dosage.text` ist `0..1`; bei profilkonformem Input gibt es also genau **ein** Textfeld. Der Algorithmus entfernt an dessen Anfang und Ende Leerraum. Der verbleibende Inhalt wird ansonsten unverändert ausgegeben.
+Bei reinem Freitext darf die Ressource **genau ein** `Dosage`-Element enthalten (Invariante `FreeTextSingleDosageOnly`), und `Dosage.text` ist `0..1`; bei profilkonformem Input gibt es also genau **ein** Textfeld. Der Inhalt wird unverändert ausgegeben, auch führender und abschließender Leerraum: `FreeTextMatchesRenderedText` verlangt exakte Gleichheit mit `Dosage.text`; ein Trim würde sie für solche Texte unmöglich machen.
 
 *Beispiel:* `Nach Bedarf bei Schmerzen`
 
 Zwei Hinweise zum Verhalten bei nicht profilkonformem Input — hier bricht der Algorithmus bewusst **nicht** ab, weil der Text jeweils bildbar ist; ob die Konstellation zulässig ist, entscheidet die Validierung (`FreeTextSingleDosageOnly`, `DosageStructuredOrFreeText`):
 
-* Liegen **mehrere** reine Freitext-Elemente vor, wird jeder Text einzeln getrimmt; leere Werte entfallen, die übrigen werden in Dokumentreihenfolge mit einem Leerzeichen verbunden.
+* Liegen **mehrere** reine Freitext-Elemente vor, werden sie unverändert in Dokumentreihenfolge mit einem Leerzeichen verbunden; leere Werte entfallen.
 * `Dosage.text` wird in **allen strukturierten Schemata vollständig ignoriert** — das Feld wird dort ausschließlich für die Schema-Erkennung gelesen und erscheint nie im erzeugten Text.
 
 ---
@@ -521,7 +529,7 @@ Beide Extensions werden über ihre **exakte kanonische `url`** identifiziert.
 
 > Zur `asNeededFor`-Extension: Die kanonische URL `http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor` stammt aus FHIR R5, wird hier aber gemäß dem Cross-Version-Extension-Pattern bewusst für ein R4-Profil (FHIR 4.0.1) zurückportiert. Das ist ein im FHIR-Ökosystem etabliertes Vorgehen, um R5-Konzepte in R4-Implementierungen vorwegzunehmen.
 
-> Alle vom Algorithmus nicht ausgewerteten `Timing`- und `Dosage`-Felder (z. B. Count, CountMax, Method, Site, Rate\*, MaxDosePerAdministration, MaxDosePerLifetime, Offset, BoundsRange, Event) sind in der vollständigen Liste der zukünftig unterstützten Dosierkonfigurationen auf [Beispiele von erzeugten Dosiertexten](https://ig.fhir.de/igs/medication/dosierung-beispiele.html) aufgeführt.
+> Alle vom Algorithmus nicht ausgewerteten `Timing`- und `Dosage`-Felder (z. B. Count, CountMax, Method, Site, Rate\*, MaxDosePerAdministration, MaxDosePerLifetime, Offset, BoundsRange, Event) sind in der vollständigen Liste der aktuell nicht unterstützten Dosierkonfigurationen auf [Beispiele von erzeugten Dosiertexten](https://ig.fhir.de/igs/medication/dosierung-beispiele.html) aufgeführt.
 
 ### Aggregation mehrerer Dosage-Elemente
 
@@ -546,30 +554,32 @@ Für eine Übersicht der im Medication IG DE bereitgestellten Beispiele siehe [B
 Die formale Definition zulässiger Felder und Kombinationen liegt in den Timing- und Dosierungs-Invarianten des Medication IG DE (siehe [Constraints](https://ig.fhir.de/igs/medication/dosierung-constraints.html)). Der Algorithmus führt **keine vollständige Validierung** und keine Auflistung unzulässiger Felder durch. Sein konkretes Fehlerverhalten lautet:
 
 * nicht unterstützter `resourceType`: Abbruch mit `ValueError("Unsupported resource type: {resourceType}")`
+* falscher JSON-Datentyp eines gelesenen Feldes: Abbruch mit `ValueError("<Feld> muss numerisch sein.")` (`decimal`), `ValueError("<Feld> muss eine ganze Zahl sein.")` (`positiveInt`), `ValueError("<Feld> muss ein String sein.")` (`string`, `code`), `ValueError("<Feld> muss eine Liste sein.")`, `ValueError("<Feld> muss ein Objekt sein.")` beziehungsweise `ValueError("asNeededBoolean muss ein boolescher Wert sein.")`. `<Feld>` ist der Pfad relativ zum `Dosage`-Element, etwa `timing.repeat.period`; Listenelemente tragen `[]` (`timing.repeat.when[]`, `doseAndRate[]`, `extension[].valueCodeableConcept`), das Element selbst heißt `Dosage`, die Liste darüber `dosageInstruction` beziehungsweise `dosage`
 * nicht klassifizierbare Merkmalskombination: Abbruch mit `ValueError("Die Dosierung entspricht keinem unterstützten Dosierungsschema.")`. Es wird **kein** Ersatztext zurückgegeben — ein solcher würde als generierte Dosieranweisung publiziert und dort eine Aussage vortäuschen, die der Algorithmus nicht treffen kann.
 * `timeOfDay` und `when` im selben `Dosage`-Element (Verstoß gegen die FHIR-Basisinvariante `tim-10`): Abbruch mit `ValueError("timeOfDay und when dürfen nicht gemeinsam angegeben werden (tim-10).")`
 * mehrere `Dosage`-Elemente, sobald eines davon eine reine Bedarfsdosierung (`asNeededBoolean = true` ohne `timing`) ist: Abbruch mit `ValueError("Reine Bedarfsmedikation erlaubt genau ein Dosage-Element.")`
 * fehlendes oder leeres `doseAndRate`: Abbruch mit `ValueError("doseAndRate ist für die Textgenerierung erforderlich.")`
 * `doseAndRate[0]` ohne `doseQuantity` oder `doseRange`: Abbruch mit `ValueError("Dosisangabe in doseAndRate[0] fehlt.")`
 * `doseQuantity` ohne `.value` oder `.unit`: Abbruch mit `ValueError("doseQuantity.value ist für die Textgenerierung erforderlich.")` beziehungsweise `ValueError("doseQuantity.unit ist für die Textgenerierung erforderlich.")`
-* nicht numerischer Dosiswert in `doseQuantity.value`, `doseRange.low.value` oder `doseRange.high.value`: Abbruch mit `ValueError("<Feld> muss numerisch sein.")`. Zahlen und numerische Strings werden akzeptiert, Boolesche Werte nicht
+* nicht numerischer Dosiswert in `doseQuantity.value`, `doseRange.low.value` oder `doseRange.high.value`: Abbruch mit `ValueError("<Feld> muss numerisch sein.")`. Akzeptiert wird ausschließlich eine JSON-Zahl, wie sie FHIR für `decimal` vorschreibt; Strings (auch numerische wie `"2"`) und Boolesche Werte werden abgewiesen
 * `doseRange` ohne erforderliche obere Grenze: Abbruch mit `ValueError("doseRange.high.value ist für die Textgenerierung erforderlich.")`; eine fehlende Einheit führt entsprechend zu `ValueError("doseRange.high.unit ist für die Textgenerierung erforderlich.")`
 * vorhandenes `doseRange.low` ohne `.value`: Abbruch mit `ValueError("doseRange.low.value ist für die Textgenerierung erforderlich.")`
-* `maxDosePerPeriod` zusammen mit einem `timing`: Abbruch mit `ValueError("Eine Maximalmenge ist nur bei reiner Bedarfsmedikation zulaessig, nicht zusammen mit einem strukturierten Rhythmus.")`
+* `maxDosePerPeriod` zusammen mit einem `timing`: Abbruch mit `ValueError("Eine Maximalmenge ist nur bei reiner Bedarfsmedikation zulässig, nicht zusammen mit einem strukturierten Rhythmus.")`
+* Mindestabstand (`MinimumIntervalBetweenAdministrations`) zusammen mit einem strukturierten Rhythmus: Abbruch mit `ValueError("Ein Mindestabstand ist nur bei reiner Bedarfsmedikation zulässig, nicht zusammen mit einem strukturierten Rhythmus.")`
 * mehrere `Dosage`-Elemente mit unterschiedlichem Schema: Abbruch mit `ValueError("Alle Dosage-Elemente müssen demselben Schema folgen; Element 1 ergibt '{schema1}', Element {n} '{schemaN}'.")`
 * vorhandenes `doseRange.low.unit`, das von `doseRange.high.unit` abweicht: Abbruch mit `ValueError("doseRange.low.unit und doseRange.high.unit müssen übereinstimmen.")`
-* vorhandenes `boundsDuration` ohne `.value` oder `.code`: Abbruch mit einer entsprechenden Pflichtfeldmeldung; ein nicht numerischer Wert führt zu `ValueError("boundsDuration.value muss numerisch sein.")`
+* vorhandenes `boundsDuration` ohne `.value` oder `.code`: Abbruch mit `ValueError("boundsDuration.value ist für die Textgenerierung erforderlich.")` beziehungsweise `ValueError("boundsDuration.code ist für die Textgenerierung erforderlich.")`; ein nicht numerischer Wert führt zu `ValueError("boundsDuration.value muss numerisch sein.")`
 * gleichzeitig vorhandenes `boundsPeriod` und `boundsDuration`: Abbruch mit `ValueError("boundsPeriod und boundsDuration dürfen nicht gleichzeitig vorhanden sein.")`
 * `boundsPeriod` ohne `start` und `end`: Abbruch mit `ValueError("boundsPeriod muss start und/oder end enthalten.")`
-* nicht parsebares oder unvollständiges `boundsPeriod.start` beziehungsweise `.end` sowie eine Uhrzeit ohne Zeitzone: Abbruch mit einer Meldung, dass das Feld ein parsebares FHIR-`dateTime` mit vollständigem Datum sein und eine Uhrzeit eine Zeitzone enthalten muss
+* nicht parsebares oder unvollständiges `boundsPeriod.start` beziehungsweise `.end` sowie eine Uhrzeit ohne Zeitzone: Abbruch mit `ValueError("boundsPeriod.start muss ein parsebares FHIR-dateTime mit vollständigem Datum im Format JJJJ-MM-TT sein; eine Uhrzeit erfordert eine Zeitzone.")` (für `.end` entsprechend)
 * nicht parsebares oder außerhalb des zulässigen Bereichs liegendes `timeOfDay`: Abbruch mit `ValueError("timeOfDay muss im Format HH:MM oder HH:MM:SS[.Bruchteile] angegeben sein.")`
 * `asNeededFor` ohne nicht leeres `valueCodeableConcept.text`: Abbruch mit `ValueError("asNeededFor.valueCodeableConcept.text ist für die Textgenerierung erforderlich.")`
-* Extension `MinimumIntervalBetweenAdministrations` ohne `valueDuration`: Abbruch mit `ValueError("MinimumIntervalBetweenAdministrations.valueDuration ist für die Textgenerierung erforderlich.")`; für fehlende Unterfelder und nicht numerische Werte gelten die entsprechenden Meldungen mit dem Pfad `MinimumIntervalBetweenAdministrations.valueDuration`
-* `maxDosePerPeriod` ohne `numerator.value`, `numerator.unit`, `denominator.value` oder `denominator.code`: Abbruch mit einer entsprechenden Pflichtfeldmeldung
+* Extension `MinimumIntervalBetweenAdministrations` ohne `valueDuration`: Abbruch mit `ValueError("MinimumIntervalBetweenAdministrations.valueDuration ist für die Textgenerierung erforderlich.")`; für fehlende Unterfelder gilt `ValueError("MinimumIntervalBetweenAdministrations.valueDuration.value ist für die Textgenerierung erforderlich.")` beziehungsweise `….code …`, für nicht numerische Werte `ValueError("MinimumIntervalBetweenAdministrations.valueDuration.value muss numerisch sein.")`
+* `maxDosePerPeriod` ohne `numerator.value`, `numerator.unit`, `denominator.value` oder `denominator.code`: Abbruch mit `ValueError("maxDosePerPeriod.<Unterfeld> ist für die Textgenerierung erforderlich.")`, etwa `maxDosePerPeriod.numerator.value ist für die Textgenerierung erforderlich.`
 * nicht numerisches `maxDosePerPeriod.numerator.value`: Abbruch mit `ValueError("maxDosePerPeriod.numerator.value muss numerisch sein.")`
 * anderer Nenner als `1 d` oder `24 h`: Abbruch mit `ValueError("maxDosePerPeriod.denominator muss 1 d oder 24 h sein.")`
-* Intervall-Kombination ohne `period` oder `periodUnit`: Abbruch mit `ValueError("Intervall-Kombinationen erfordern period und periodUnit.")`
 * `when`-Code außerhalb der [Tagesabschnitts-Tabelle](#tagesabschnitt-when-codes): Abbruch mit `ValueError("Nicht unterstützter Tagesabschnitt (when): '{code}'.")`
+* `dayOfWeek`-Code außerhalb der [Wochentags-Tabelle](#wochentage-dayofweek): Abbruch mit `ValueError("Nicht unterstützter Wochentag (dayOfWeek): '{code}'.")`
 * doppelte Belegung eines Tagesabschnitts mit unterschiedlicher Dosis im reinen 4‑Schema: Abbruch mit `ValueError("Doppelte Belegung des Tagesabschnitts '{code}' mit unterschiedlicher Dosis.")`
 * doppelte Belegung desselben Wochentags mit unterschiedlicher Dosis im Wochentags-Schema: Abbruch mit `ValueError("Doppelte Belegung des Wochentags '{code}' mit unterschiedlicher Dosis.")`
 * doppelte Belegung derselben Kombination aus Wochentag und Tagesabschnitt mit unterschiedlicher Dosis: Abbruch mit `ValueError("Doppelte Belegung der Kombination aus Wochentag '{code}' und Zeit-/Tagesabschnitt '{zeit}' mit unterschiedlicher Dosis.")`
