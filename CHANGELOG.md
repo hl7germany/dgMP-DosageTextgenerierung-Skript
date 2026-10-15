@@ -68,6 +68,7 @@ Daraus folgt für jeden Eintrag:
 - `boundsPeriod` akzeptiert wie FHIR beliebig viele Sekundenbruchteile und die Schaltsekunde `60`; `timeOfDay` ebenfalls `60`. Bisher brach die Referenzimplementierung unter Python 3.10 bei einer oder sieben Bruchteilstellen ab (`datetime.fromisoformat` versteht dort nur drei oder sechs), obwohl Spezifikation und FHIR den Wert erlauben. Sekunden werden ohnehin nicht dargestellt.
 - Die Fehlerliste nennt die Meldungen zu `boundsDuration`, `boundsPeriod`, `maxDosePerPeriod` und zum Mindestabstand wörtlich und legt die Pfadkonvention fest (`[]` für Listenelemente, `Dosage` und `dosageInstruction`/`dosage` oberhalb des Elements).
 - Ein leeres `doseRange.low` (`{}`) gilt als vorhanden und bricht mit `doseRange.low.value ist für die Textgenerierung erforderlich.` ab; bisher wurde es wie ein fehlendes `low` behandelt (`je bis zu 2 Stück`).
+- Die Fehlerliste nannte für nicht numerische Werte von `boundsDuration.value` und beim Mindestabstand Meldungen, die seit der Typprüfung (Schritt 3) nicht mehr entstehen; dort greift bereits `timing.repeat.boundsDuration.value muss numerisch sein.` beziehungsweise `modifierExtension[].valueDuration.value muss numerisch sein.`.
 
 ### Referenzimplementierung und Repository
 
@@ -76,15 +77,22 @@ Daraus folgt für jeden Eintrag:
 - Testfälle für `period = 1` mit `periodMax` in `d`, `wk` und `mo`.
 - Testfälle für strukturierten Bedarf mit Uhrzeiten und mit Intervall sowie für die Fehlermeldungen zum Mindestabstand.
 - Testfälle für Dosis `0`, negative Dosis, `boundsDuration = 0`, fehlendes und abweichendes `doseRange.low.unit`, doppelte `when`-Belegung mit gleicher Dosis sowie explizite `0` in der ausgeschriebenen Form und in der Duplikatprüfung.
+- `tests/test_spec_examples.py`: Jedes Textbeispiel der Spezifikation wird als FHIR-Ressource nachgebaut und muss zeichengenau erzeugt werden; jeder Eintrag der Fehlerliste hat einen Fall mit der wörtlichen Meldung. Ein Meta-Test liest die Meldungen aus der Spezifikation und scheitert, wenn eine davon von keinem Fall erzeugt wird oder ein Fall eine Meldung erzeugt, die dort fehlt. So können Spezifikation und Referenzimplementierung nicht mehr unbemerkt auseinanderlaufen.
 
 #### Fixed
 
 - Die Fehlermeldungen zum Mindestabstand nennen wie in der Spezifikation festgelegt `MinimumIntervalBetweenAdministrations.valueDuration` statt des alten Namens `MindestabstandZwischenGaben.valueDuration`.
 - Kommentare, die noch die Großschreibung bei Bedarf und den entfallenen Baustein `, mit mindestens … Abstand` beschrieben, sind korrigiert.
 
+#### Changed
+
+- `tests/test_regression_ordering.py`: `if __name__ == "__main__"` stand vor drei Testklassen; beim Direktaufruf der Datei liefen sie nicht. Der Block steht jetzt am Dateiende.
+- Ein Test prüfte die ausgeschriebene 4‑Schema-Form nur mit `assertIn`; er vergleicht jetzt die vollständige Ausgabe. Ein Testname, der noch „0 nur als Untergrenze zulässig" behauptete, ist umbenannt.
+
 #### Removed
 
 - Unerreichbare Zweige: die Prüfung auf fehlendes `period`/`periodUnit` in der Intervall-Kombination, der Fallback in der Wochentags-Kombination für „weder `timeOfDay` noch `when`" sowie die Behandlung einer fehlenden Dosis-Einheit in vier Ausgabestellen — die Einheit ist Pflicht, `_extract_dose_quantity` bricht ohne sie ab.
+- Sechs doppelte Tests in `tests/test_regression_ordering.py` (Ressourcentyp, `tim-10`, Hinweis, `MedicationStatement`, Duplikat im 4‑Schema, Maximalmenge in 24 Stunden); dieselben Fälle prüfen `tests/test_medication_dosage_to_text.py` und `tests/test_spec_examples.py` genauer.
 
 ## [2.0.0-ballot] - 2026-08-30
 

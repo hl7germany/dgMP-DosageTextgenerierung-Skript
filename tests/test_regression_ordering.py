@@ -158,19 +158,6 @@ class RegressionOrderingTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.generator.generate_dosage_text(self._resource([dosage_a, dosage_b, dosage_c]))
 
-    def test_4_schema_duplicate_when_raises_value_error(self):
-        dosage_a = {
-            "timing": {"repeat": {"frequency": 1, "period": 1, "periodUnit": "d", "when": ["MORN"]}},
-            "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stueck"}}],
-        }
-        dosage_b = {
-            "timing": {"repeat": {"frequency": 1, "period": 1, "periodUnit": "d", "when": ["MORN"]}},
-            "doseAndRate": [{"doseQuantity": {"value": 2, "unit": "Stueck"}}],
-        }
-
-        with self.assertRaises(ValueError):
-            self.generator.generate_dosage_text(self._resource([dosage_a, dosage_b]))
-
     def test_4_schema_when_without_dose_raises_value_error(self):
         dosage_without_dose = {
             "timing": {"repeat": {"frequency": 1, "period": 1, "periodUnit": "d", "when": ["MORN"]}},
@@ -425,10 +412,8 @@ class SchemaOutputTest(unittest.TestCase):
             "doseAndRate": [{"doseRange": {"low": {"value": 1, "unit": "Stück"},
                                            "high": {"value": 2, "unit": "Stück"}}}],
         }
-        result = self.generator.generate_dosage_text(self._resource([dosage]))
-        self.assertIn("morgens", result)
-        self.assertIn("je 1 bis 2 Stück", result)
-        self.assertNotIn("-0-0-0", result)
+        self.assertEqual("täglich: morgens — je 1 bis 2 Stück",
+                         self.generator.generate_dosage_text(self._resource([dosage])))
 
     # ── TimeOfDay ─────────────────────────────────────────────────────────────
 
@@ -571,17 +556,6 @@ class SchemaOutputTest(unittest.TestCase):
         }
         self.assertIn("für 7 Tage", self.generator.generate_dosage_text(self._resource([dosage])))
 
-    # ── patientInstruction ────────────────────────────────────────────────────
-
-    def test_patient_instruction_appended(self):
-        dosage = {
-            "timing": {"repeat": {"frequency": 1, "period": 1, "periodUnit": "d"}},
-            "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
-            "patientInstruction": "Mit ausreichend Wasser einnehmen",
-        }
-        self.assertEqual("täglich: je 1 Stück. Hinweis: Mit ausreichend Wasser einnehmen",
-                         self.generator.generate_dosage_text(self._resource([dosage])))
-
     # ── Deutsches Dezimalkomma ────────────────────────────────────────────────
 
     def test_decimal_value_german_format(self):
@@ -593,37 +567,10 @@ class SchemaOutputTest(unittest.TestCase):
         self.assertIn("1,5", result)
         self.assertNotIn("1.5", result)
 
-    # ── MedicationStatement ───────────────────────────────────────────────────
-
-    def test_medication_statement_resource_type(self):
-        dosage = {
-            "timing": {"repeat": {"frequency": 1, "period": 1, "periodUnit": "d"}},
-            "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
-        }
-        result = self.generator.generate_dosage_text({
-            "resourceType": "MedicationStatement",
-            "dosage": [dosage],
-        })
-        self.assertEqual("täglich: je 1 Stück", result)
-
     # ── Fehlerbehandlung ──────────────────────────────────────────────────────
-
-    def test_unsupported_resource_type_raises_value_error(self):
-        with self.assertRaises(ValueError):
-            self.generator.generate_dosage_text({"resourceType": "Patient"})
 
     def test_empty_dosage_list_returns_empty_string(self):
         self.assertEqual("", self.generator.generate_dosage_text(self._resource([])))
-
-    def test_time_of_day_and_when_together_raises_value_error(self):
-        # tim-10: timeOfDay und when dürfen nicht gemeinsam gesetzt sein
-        dosage = {
-            "timing": {"repeat": {"period": 1, "periodUnit": "d",
-                                  "timeOfDay": ["08:00"], "when": ["MORN"]}},
-            "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
-        }
-        with self.assertRaises(ValueError):
-            self.generator.generate_dosage_text(self._resource([dosage]))
 
     def test_bounds_period_and_duration_together_raises_value_error(self):
         dosage = {
@@ -645,9 +592,6 @@ class SchemaOutputTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.generator.generate_dosage_text(self._resource([dosage]))
 
-
-if __name__ == "__main__":
-    unittest.main()
 
 
 class DailyLegacyFieldsTest(unittest.TestCase):
@@ -775,8 +719,6 @@ class MaxDosePureAsNeededTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self._text(self._dosage({"frequency": 1, "period": 8, "periodUnit": "h"}))
 
-    def test_max_dose_without_timing_is_rendered(self):
-        self.assertEqual(
-            self._text(self._dosage()),
-            "bei Bedarf: je 1 Stück — nicht mehr als 4 Stück in 24 Stunden",
-        )
+
+if __name__ == "__main__":
+    unittest.main()
