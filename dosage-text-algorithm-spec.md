@@ -268,7 +268,7 @@ Die folgenden Zeichen sind für den erzeugten Text **verbindlich festgelegt**. M
 | `x` | U+0078 | LATIN SMALL LETTER X | Frequenzmarker in `3 x täglich` | `×` U+00D7, `✕` U+2715 |
 | ` ` | U+0020 | SPACE | einziges Trennzeichen zwischen Wörtern | `&nbsp;` U+00A0, U+2009, U+202F |
 
-Für die Umlaute in den festen Wortbestandteilen (`täglich`, `wöchentlich`, `für`) gilt die **vorkomponierte NFC-Form**: `ä` U+00E4, `ö` U+00F6, `ü` U+00FC — **nicht** die zerlegte Form aus Grundbuchstabe und kombinierendem Trema (`a` + U+0308). Der gesamte erzeugte Text ist NFC-normalisiert. Ein `ß` kommt in keinem vom Algorithmus erzeugten Wortbestandteil vor.
+Für die Umlaute in den festen Wortbestandteilen (`täglich`, `wöchentlich`, `für`) gilt die **vorkomponierte NFC-Form**: `ä` U+00E4, `ö` U+00F6, `ü` U+00FC — **nicht** die zerlegte Form aus Grundbuchstabe und kombinierendem Trema (`a` + U+0308). Alle vom Algorithmus erzeugten Wortbestandteile sind NFC-normalisiert; aus dem Input übernommene Teile (siehe unten) werden nicht normalisiert, der Gesamttext ist also genau dann NFC, wenn es der Input ist. Ein `ß` kommt in keinem vom Algorithmus erzeugten Wortbestandteil vor.
 
 Nicht Teil dieses Repertoires sind Zeichen, die **unverändert aus dem Input übernommen** werden: die Dosiereinheit (`doseQuantity.unit`), der Einnahmeanlass (`asNeededFor`), der Hinweis (`patientInstruction`) und der Freitext (`Dosage.text`). Sie werden weder ersetzt noch normalisiert.
 
@@ -559,7 +559,8 @@ Die formale Definition zulässiger Felder und Kombinationen liegt in den Timing-
 * `doseRange` ohne erforderliche obere Grenze: Abbruch mit `ValueError("doseRange.high.value ist für die Textgenerierung erforderlich.")`; eine fehlende Einheit führt entsprechend zu `ValueError("doseRange.high.unit ist für die Textgenerierung erforderlich.")`
 * `doseRange.high.value <= 0`: Abbruch mit `ValueError("doseRange.high.value muss größer als 0 sein.")`
 * vorhandenes `doseRange.low` ohne `.value` oder `.unit`: Abbruch mit der entsprechenden Fehlermeldung für `doseRange.low.value` beziehungsweise `doseRange.low.unit`
-* `maxDosePerPeriod` zusammen mit einem `timing`: Abbruch mit `ValueError("Eine Maximalmenge ist nur bei reiner Bedarfsmedikation zulaessig, nicht zusammen mit einem strukturierten Rhythmus.")`
+* `maxDosePerPeriod` zusammen mit einem `timing`: Abbruch mit `ValueError("Eine Maximalmenge ist nur bei reiner Bedarfsmedikation zulässig, nicht zusammen mit einem strukturierten Rhythmus.")`
+* Mindestabstand (`MinimumIntervalBetweenAdministrations`) zusammen mit einem strukturierten Rhythmus: Abbruch mit `ValueError("Ein Mindestabstand ist nur bei reiner Bedarfsmedikation zulässig, nicht zusammen mit einem strukturierten Rhythmus.")`
 * mehrere `Dosage`-Elemente mit unterschiedlichem Schema: Abbruch mit `ValueError("Alle Dosage-Elemente müssen demselben Schema folgen; Element 1 ergibt '{schema1}', Element {n} '{schemaN}'.")`
 * vorhandenes `doseRange.low.value < 0`: Abbruch mit `ValueError("doseRange.low.value darf nicht negativ sein.")`. Der Wert `0` ist hier — anders als bei `doseQuantity` und `doseRange.high` — zulässig, weil er die Untergrenze einer variablen Dosis wie „0 bis 2 Stück“ bildet
 * unterschiedliche Einheiten in `doseRange.low` und `doseRange.high`: Abbruch mit `ValueError("doseRange.low.unit und doseRange.high.unit müssen übereinstimmen.")`

@@ -760,7 +760,7 @@ class MedicationDosageTextGenerator:
                 if middle:
                     raise ValueError(
                         "Ein Mindestabstand ist nur bei reiner Bedarfsmedikation "
-                        "zulaessig, nicht zusammen mit einem strukturierten Rhythmus."
+                        "zulässig, nicht zusammen mit einem strukturierten Rhythmus."
                     )
                 right_parts.append(f"im Abstand von mindestens {minimum_interval}")
             if middle:
@@ -1528,7 +1528,7 @@ class MedicationDosageTextGenerator:
                 if dosage.get('timing'):
                     raise ValueError(
                         "Eine Maximalmenge ist nur bei reiner Bedarfsmedikation "
-                        "zulaessig, nicht zusammen mit einem strukturierten Rhythmus."
+                        "zulässig, nicht zusammen mit einem strukturierten Rhythmus."
                     )
                 text = f"{text} — {max_dose_text}"
 

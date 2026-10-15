@@ -30,6 +30,8 @@ Daraus folgt für jeden Eintrag:
 - Widersprüche in der Spezifikation beseitigt. Das festgelegte Verhalten ändert sich nicht; die Referenzimplementierung setzte es bereits so um.
   - Schritt 8 des Gesamtalgorithmus verlangte bei Bedarf noch einen Großbuchstaben am Textanfang. Seit 2.0.0-ballot ist jeder erzeugte Text ein kleingeschriebenes Fragment.
   - Zwei Beispiele im Schema für Bedarfsmedikation kombinierten eine Maximalmenge mit Uhrzeiten beziehungsweise einem Intervall; das führt seit 2.0.0-ballot zum Abbruch. Sie zeigen jetzt den strukturierten Bedarf ohne Maximalmenge. Die Regel, nach der die Maximalmenge hinter dem letzten von mehreren Segmenten steht, entfällt: Mehrere Segmente setzen einen Rhythmus voraus, die Maximalmenge schließt ihn aus.
+  - Der Abbruch „Mindestabstand zusammen mit einem strukturierten Rhythmus" fehlte in der Fehlerliste; er ist ergänzt. Die Meldungen zu Mindestabstand und Maximalmenge schreiben `zulässig` statt `zulaessig` — das Zeichenrepertoire verlangt die NFC-Umlaute auch in Meldungen.
+  - Das Zeichenrepertoire behauptete, der gesamte Text sei NFC-normalisiert, zugleich bleiben übernommene Input-Teile ausdrücklich unverändert. Jetzt: Die erzeugten Wortbestandteile sind NFC; der Gesamttext ist es genau dann, wenn es der Input ist.
 
 ### Referenzimplementierung und Repository
 
