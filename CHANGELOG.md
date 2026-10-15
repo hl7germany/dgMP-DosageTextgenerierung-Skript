@@ -24,6 +24,13 @@ Daraus folgt für jeden Eintrag:
 
 - Das 4‑Schema erhält wie das Uhrzeiten-Schema den Marker `täglich`: Aus `1-0-2-0 Stück` wird `täglich: 1-0-2-0 Stück`, mit Zeitrahmen `für 5 Tage täglich: 1-1-1-1 Kapseln`, bei Bedarf `bei Bedarf: täglich 1-0-2-0 Stück`. Die ausgeschriebene Segmentform bei variabler Dosis erhält denselben Marker (`täglich: morgens — je 1 bis 2 Stück`). Das Muster allein ließ offen, dass es an jedem Tag gilt; in der HD-Studie war die Form mit `täglich` nachweislich besser verständlich. Wochentags-Kombinationen (`montags 1-0-1-0 Stück`) bleiben unverändert.
 - Freitext wird unverändert übernommen, auch führender und abschließender Leerraum; der bisherige Trim entfällt. `FreeTextMatchesRenderedText` verlangt exakte Gleichheit mit `Dosage.text` — ein getrimmter Text konnte diese Invariante für Texte mit Rand-Leerraum nie erfüllen.
+- Der Algorithmus prüft keine Wertebereiche mehr. Vorbedingung der Textgenerierung ist eine gegen das Profil validierte Ressource; der Algorithmus bricht nur noch ab, wenn der Text nicht bildbar wäre oder eine Angabe unterschlagen beziehungsweise mehrdeutig wiedergeben würde. Der Abschnitt „Fehler und Validierung" benennt diese Gründe; als dritter kommt ein falscher JSON-Datentyp hinzu, weil eine validierte Ressource ihn nicht enthält und der Algorithmus ihn nicht umdeuten darf. Konkret entfallen:
+  - `doseQuantity.value`, `doseRange.high.value` und `doseRange.low.value` müssen nicht mehr größer als `0` beziehungsweise nicht negativ sein. `je 0 Stück` ist ein eindeutiger Text; `DosageDoseValuePositive` ist Sache des Profils. 1.0.x hatte Dosis `0` ebenfalls gerendert.
+  - `boundsDuration.value` und der Mindestabstand müssen nicht mehr größer als `0` sein (`TimingValuesPositive`, `DosageLimitsPositive`). Nicht numerische Werte führen weiterhin zum Abbruch, jetzt mit `… muss numerisch sein.`
+  - `period` und `periodMax` waren schon bisher nicht auf ihren Wertebereich geprüft; durch die Korrektur der Kurzformen werden negative Werte jetzt sichtbar (`alle 1 bis -2 Tage` statt `täglich`). Ein Nenner der Maximalmenge außerhalb von `1 d`/`24 h` — auch `-24 h` — bricht weiterhin ab, weil es dafür keine Wortform gibt; das ist kein Wertebereich, sondern „nicht bildbar".
+  - `doseRange.low.unit` ist nicht mehr verpflichtend: Die Einheit erscheint nur einmal im Text und stammt aus `high.unit`. Ist `low.unit` vorhanden und weicht ab, bricht der Algorithmus weiterhin ab.
+  - Im 4‑Schema führt eine doppelte Belegung desselben Tagesabschnitts nur noch bei **unterschiedlicher** Dosis zum Abbruch (`Doppelte Belegung des Tagesabschnitts '{code}' mit unterschiedlicher Dosis.`), wie in allen anderen Schemata. Dieselbe Dosis zweimal ergibt denselben Text.
+- Eine explizit mit `0` belegte Position des 4‑Schemas gilt als belegt. In der ausgeschriebenen Segmentform bleibt sie erhalten (`täglich: morgens — je 0 Stück, abends — je 1 bis 2 Stück`); bisher wäre sie mit einer nicht belegten Position verwechselt worden und entfallen. Auch die Duplikatprüfung der Wochentags-Kombination unterscheidet jetzt zwischen `0` und „nicht belegt".
 
 #### Fixed
 
@@ -59,6 +66,7 @@ Daraus folgt für jeden Eintrag:
 
 - Testfälle für `period = 1` mit `periodMax` in `d`, `wk` und `mo`.
 - Testfälle für strukturierten Bedarf mit Uhrzeiten und mit Intervall sowie für die Fehlermeldungen zum Mindestabstand.
+- Testfälle für Dosis `0`, negative Dosis, `boundsDuration = 0`, fehlendes und abweichendes `doseRange.low.unit`, doppelte `when`-Belegung mit gleicher Dosis sowie explizite `0` in der ausgeschriebenen Form und in der Duplikatprüfung.
 
 #### Fixed
 

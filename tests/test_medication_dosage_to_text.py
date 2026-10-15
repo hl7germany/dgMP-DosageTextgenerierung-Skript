@@ -431,8 +431,9 @@ class MedicationDosageTextTest(unittest.TestCase):
             "täglich: morgens — je 0 bis 2 Stück",
         )
 
-    def test_zero_is_rejected_as_single_dose_and_as_upper_bound(self):
-        dose_quantity = self.dosage(0, {"when": ["MORN"]})
+    def test_zero_dose_is_rendered_not_rejected(self):
+        """Der Wertebereich ist Sache des Profils (DosageDoseValuePositive).
+        "je 0 Stück" ist ein eindeutiger Text."""
         dose_range_high = {
             "timing": {"repeat": {"when": ["MORN"]}},
             "doseAndRate": [{
@@ -444,15 +445,101 @@ class MedicationDosageTextTest(unittest.TestCase):
         }
 
         cases = (
-            (dose_quantity, "doseQuantity.value muss größer als 0 sein"),
-            (dose_range_high, "doseRange.high.value muss größer als 0 sein"),
+            (self.dosage(0, {"when": ["MORN"]}), "täglich: 0-0-0-0 Stück"),
+            (self.dosage(0, {"frequency": 1, "period": 8, "periodUnit": "h"}),
+             "alle 8 Stunden: je 0 Stück"),
+            (dose_range_high, "täglich: morgens — je 0 bis 0 Stück"),
         )
-        for dosage, error in cases:
-            with self.subTest(error=error):
-                with self.assertRaisesRegex(ValueError, error):
+        for dosage, expected in cases:
+            with self.subTest(expected=expected):
+                self.assertEqual(
                     self.generator.generate_dosage_text(
                         self.medication_request(dosage)
-                    )
+                    ),
+                    expected,
+                )
+
+    def test_explicit_zero_dose_is_kept_in_written_four_schema(self):
+        """Eine explizit mit 0 belegte Position ist belegt und darf in der
+        ausgeschriebenen Form nicht mit einer unbelegten verwechselt werden."""
+        resource = self.medication_request(
+            self.dosage(0, {"when": ["MORN"]}),
+            {
+                "timing": {"repeat": {"when": ["EVE"]}},
+                "doseAndRate": [{
+                    "doseRange": {
+                        "low": {"value": 1, "unit": "Stück"},
+                        "high": {"value": 2, "unit": "Stück"},
+                    },
+                }],
+            },
+        )
+
+        self.assertEqual(
+            self.generator.generate_dosage_text(resource),
+            "täglich: morgens — je 0 Stück, abends — je 1 bis 2 Stück",
+        )
+
+    def test_explicit_zero_dose_still_detects_conflicting_duplicates(self):
+        """0 darf nicht als "unbelegt" gelten: eine zweite, abweichende Dosis auf
+        derselben Position ist ein Konflikt - im 4-Schema wie in der
+        Wochentags-Kombination."""
+        cases = (
+            ({"when": ["MORN"]}, "Doppelte Belegung des Tagesabschnitts 'MORN'"),
+            ({"dayOfWeek": ["mon"], "when": ["MORN"]},
+             "Doppelte Belegung der Kombination aus Wochentag 'mon'"),
+        )
+        for repeat, error in cases:
+            with self.subTest(error=error):
+                resource = self.medication_request(
+                    self.dosage(0, repeat),
+                    self.dosage(1, repeat),
+                )
+                with self.assertRaisesRegex(ValueError, error):
+                    self.generator.generate_dosage_text(resource)
+
+    def test_zero_bounds_duration_is_rendered_not_rejected(self):
+        """TimingValuesPositive ist Sache des Profils."""
+        resource = self.medication_request(
+            self.dosage(1, {
+                "when": ["MORN"],
+                "boundsDuration": {"value": 0, "code": "d"},
+            })
+        )
+
+        self.assertEqual(
+            self.generator.generate_dosage_text(resource),
+            "für 0 Tage täglich: 1-0-0-0 Stück",
+        )
+
+    def test_dose_range_low_unit_is_optional_but_must_match_when_present(self):
+        """low.unit erscheint nie im Text (die Ausgabe nimmt high.unit). Fehlt
+        sie, ist der Text trotzdem eindeutig; weicht sie ab, würde er sie
+        unterschlagen."""
+        def dose_range(low):
+            return {
+                "timing": {"repeat": {"when": ["MORN"]}},
+                "doseAndRate": [{
+                    "doseRange": {
+                        "low": low,
+                        "high": {"value": 2, "unit": "Stück"},
+                    },
+                }],
+            }
+
+        self.assertEqual(
+            self.generator.generate_dosage_text(
+                self.medication_request(dose_range({"value": 1}))
+            ),
+            "täglich: morgens — je 1 bis 2 Stück",
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            "doseRange.low.unit und doseRange.high.unit müssen übereinstimmen",
+        ):
+            self.generator.generate_dosage_text(
+                self.medication_request(dose_range({"value": 1, "unit": "mg"}))
+            )
 
     def test_generated_text_is_always_a_lowercase_fragment(self):
         """Auch Bedarfsmedikation wird nicht grossgeschrieben - es gibt keine Ausnahme."""
@@ -503,37 +590,17 @@ class MedicationDosageTextTest(unittest.TestCase):
                         self.medication_request(self.dosage(value, {"when": ["MORN"]}))
                     )
 
-    def test_negative_values_are_rejected_in_all_dose_value_locations(self):
-        dose_quantity = self.dosage(-1, {"when": ["MORN"]})
-        dose_range_low = {
-            "timing": {"repeat": {"when": ["MORN"]}},
-            "doseAndRate": [{
-                "doseRange": {
-                    "low": {"value": -1, "unit": "Stück"},
-                    "high": {"value": 2, "unit": "Stück"},
-                },
-            }],
-        }
-        dose_range_high = {
-            "timing": {"repeat": {"when": ["MORN"]}},
-            "doseAndRate": [{
-                "doseRange": {
-                    "high": {"value": -1, "unit": "Stück"},
-                },
-            }],
-        }
-
-        cases = (
-            (dose_quantity, "doseQuantity.value muss größer als 0 sein"),
-            (dose_range_low, "doseRange.low.value darf nicht negativ sein"),
-            (dose_range_high, "doseRange.high.value muss größer als 0 sein"),
+    def test_negative_dose_is_rendered_not_rejected(self):
+        """Auch negative Werte sind Sache des Profils; der Text gibt die
+        Ressource wieder, statt sie zu beurteilen."""
+        self.assertEqual(
+            self.generator.generate_dosage_text(
+                self.medication_request(
+                    self.dosage(-1, {"frequency": 1, "period": 8, "periodUnit": "h"})
+                )
+            ),
+            "alle 8 Stunden: je -1 Stück",
         )
-        for dosage, error in cases:
-            with self.subTest(error=error):
-                with self.assertRaisesRegex(ValueError, error):
-                    self.generator.generate_dosage_text(
-                        self.medication_request(dosage)
-                    )
 
     def test_patient_instruction_is_appended_once(self):
         dosage = self.dosage(
@@ -759,15 +826,24 @@ class MedicationDosageTextTest(unittest.TestCase):
         ):
             self.generator.generate_dosage_text(resource)
 
-    def test_duplicate_when_segment_raises_error(self):
+    def test_duplicate_when_segment_raises_error_only_for_different_dose(self):
+        # Gleiche Dosis zweimal ergibt denselben Text - wie in allen anderen
+        # Schemata; nur eine abweichende Dosis ist nicht darstellbar.
+        self.assertEqual(
+            self.generator.generate_dosage_text(self.medication_request(
+                self.dosage(1, {"when": ["MORN"]}),
+                self.dosage(1, {"when": ["MORN"]}),
+            )),
+            "täglich: 1-0-0-0 Stück",
+        )
+
         resource = self.medication_request(
             self.dosage(1, {"when": ["MORN"]}),
             self.dosage(2, {"when": ["MORN"]}),
         )
-
         with self.assertRaisesRegex(
             ValueError,
-            "Doppelte Belegung des Tagesabschnitts 'MORN'",
+            "Doppelte Belegung des Tagesabschnitts 'MORN' mit unterschiedlicher Dosis",
         ):
             self.generator.generate_dosage_text(resource)
 
