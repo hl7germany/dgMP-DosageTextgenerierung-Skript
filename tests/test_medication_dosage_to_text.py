@@ -1228,8 +1228,9 @@ class SilentOmissionTest(unittest.TestCase):
             "täglich: 08:00 Uhr — je 1 Tbl. Hinweis: X")
 
     def test_same_dose_twice_is_rendered_once(self):
-        """Dieselbe Dosis mehrfach ergibt denselben Text, auch im Wochentags-
-        Schema und in der Wochentags-Kombination."""
+        """Ist derselbe Wochentag (bzw. dieselbe Kombination aus Wochentag und
+        Tagesabschnitt) in zwei Elementen mit derselben Dosis belegt, erscheint
+        er einmal im Text; nur eine abweichende Dosis fuehrt zum Abbruch."""
         self.assertEqual(
             self.text(self.dosage(1, {"dayOfWeek": ["mon"]}), self.dosage(1, {"dayOfWeek": ["mon", "wed"]})),
             "montags — je 1 Stück; mittwochs — je 1 Stück")
