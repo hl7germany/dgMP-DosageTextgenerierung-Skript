@@ -327,6 +327,10 @@ class MedicationDosageTextGenerator:
                             self._require_string(concept["text"], f"{name}[].valueCodeableConcept.text")
                     if url == self.URL_MINDESTABSTAND and "valueDuration" in extension:
                         self._check_quantity_types(extension["valueDuration"], f"{name}[].valueDuration")
+                    # Eine modifierExtension veraendert die Bedeutung des Elements
+                    # (FHIR); eine unbekannte darf nicht stillschweigend entfallen.
+                    if name == "modifierExtension" and url != self.URL_MINDESTABSTAND:
+                        raise ValueError(f"Nicht unterstützte modifierExtension: '{url}'.")
         if "doseAndRate" in dosage:
             # Gelesen wird nur doseAndRate[0]; weitere Einträge werden ignoriert.
             items = self._require_list(dosage["doseAndRate"], "doseAndRate")
@@ -379,9 +383,9 @@ class MedicationDosageTextGenerator:
         for name in ("unit", "code"):
             if name in quantity:
                 self._require_string(quantity[name], f"{path}.{name}")
-        # Ein comparator ("<", ">=", ...) veraendert die Bedeutung des Wertes;
-        # der Text kennt dafuer keine Form und wuerde ihn unterschlagen
-        # ("je 2 Stück" fuer "< 2").
+        # Fuer einen comparator ("<", ">=", ...) ist keine Darstellung
+        # definiert; Bereiche und Obergrenzen traegt die Ressource als
+        # doseRange bzw. maxDosePerPeriod.
         if "comparator" in quantity:
             raise ValueError(f"{path}.comparator wird nicht unterstützt.")
         return quantity
@@ -842,9 +846,10 @@ class MedicationDosageTextGenerator:
                 raise ValueError("doseQuantity.value ist für die Textgenerierung erforderlich.")
             if not unit or not unit.strip():
                 raise ValueError("doseQuantity.unit ist für die Textgenerierung erforderlich.")
-            # Nur die Lesbarkeit wird geprüft, nicht der Wertebereich: "je 0 Stück"
-            # ist ein eindeutiger Text. Ob 0 zulässig ist, entscheidet das Profil
-            # (DosageDoseValuePositive), nicht der Algorithmus.
+            # "je 0 Stück" ist ein eindeutiger Text; eine negative Dosis ist
+            # keine Anweisung und wird nicht dargestellt.
+            if dose_value < 0:
+                raise ValueError("doseQuantity.value darf nicht negativ sein.")
             return (dose_value, unit)
 
         if 'doseRange' in first_dose:
@@ -856,10 +861,14 @@ class MedicationDosageTextGenerator:
                 raise ValueError("doseRange.high.value ist für die Textgenerierung erforderlich.")
             if not high.get('unit') or not high['unit'].strip():
                 raise ValueError("doseRange.high.unit ist für die Textgenerierung erforderlich.")
+            if high['value'] < 0:
+                raise ValueError("doseRange.high.value darf nicht negativ sein.")
 
             if low is not None:
                 if low.get('value') is None:
                     raise ValueError("doseRange.low.value ist für die Textgenerierung erforderlich.")
+                if low['value'] < 0:
+                    raise ValueError("doseRange.low.value darf nicht negativ sein.")
                 # Die Einheit erscheint nur einmal im Text und stammt aus high.
                 # low.unit wird deshalb nicht verlangt; ist sie vorhanden und
                 # weicht ab, würde der Text sie unterschlagen - dann Abbruch.
@@ -1721,7 +1730,7 @@ class MedicationDosageTextGenerator:
 
         instruction_text = self._extract_patient_instruction_text(dosage)
         if instruction_text:
-            separator = " " if text.endswith(".") else ". "
+            separator = " " if text.rstrip().endswith(".") else ". "
             text = f"{text}{separator}Hinweis: {instruction_text}"
 
         return text
