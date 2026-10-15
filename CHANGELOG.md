@@ -20,6 +20,10 @@ Daraus folgt für jeden Eintrag:
 
 ### Algorithmus
 
+#### Changed
+
+- Das 4‑Schema erhält wie das Uhrzeiten-Schema den Marker `täglich`: Aus `1-0-2-0 Stück` wird `täglich: 1-0-2-0 Stück`, mit Zeitrahmen `für 5 Tage täglich: 1-1-1-1 Kapseln`, bei Bedarf `bei Bedarf: täglich 1-0-2-0 Stück`. Die ausgeschriebene Segmentform bei variabler Dosis erhält denselben Marker (`täglich: morgens — je 1 bis 2 Stück`). Das Muster allein ließ offen, dass es an jedem Tag gilt; in der HD-Studie war die Form mit `täglich` nachweislich besser verständlich. Wochentags-Kombinationen (`montags 1-0-1-0 Stück`) bleiben unverändert.
+
 #### Fixed
 
 - Die Kurzformen `täglich`, `wöchentlich` und `monatlich` gelten nur noch für eine feste Periode von `1` ohne `periodMax`. Bisher fiel bei `period = 1` mit `periodMax` die Obergrenze weg: Aus `frequency = 1`, `period = 1`, `periodMax = 3`, `periodUnit = d` wurde `täglich` statt `alle 1 bis 3 Tage`. Bei einer Frequenz größer als `1` entsprechend `2 x alle 1 bis 3 Tage` statt `2 x täglich`.

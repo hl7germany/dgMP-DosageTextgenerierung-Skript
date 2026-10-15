@@ -259,7 +259,7 @@ class MedicationDosageTextTest(unittest.TestCase):
 
         self.assertEqual(
             self.generator.generate_dosage_text(resource),
-            "1-0-2-0 Stück",
+            "täglich: 1-0-2-0 Stück",
         )
 
     def test_daily_four_schema_accepts_optional_frequency_period_and_unit(self):
@@ -277,7 +277,7 @@ class MedicationDosageTextTest(unittest.TestCase):
 
         self.assertEqual(
             self.generator.generate_dosage_text(resource),
-            "1-0-1-0 Stück",
+            "täglich: 1-0-1-0 Stück",
         )
 
     def test_day_of_week_schema_uses_canonical_order(self):
@@ -361,7 +361,7 @@ class MedicationDosageTextTest(unittest.TestCase):
 
         self.assertEqual(
             self.generator.generate_dosage_text(resource),
-            "für 10 Tage: 1-0-1-0 Stück",
+            "für 10 Tage täglich: 1-0-1-0 Stück",
         )
 
     def test_bounds_period_formats_start_and_end(self):
@@ -380,7 +380,7 @@ class MedicationDosageTextTest(unittest.TestCase):
 
         self.assertEqual(
             self.generator.generate_dosage_text(resource),
-            "vom 05.06.2026 bis zum 05.07.2026: 1-0-0-0 Stück",
+            "vom 05.06.2026 bis zum 05.07.2026 täglich: 1-0-0-0 Stück",
         )
 
     def test_dose_range_is_rendered_with_bis(self):
@@ -422,7 +422,7 @@ class MedicationDosageTextTest(unittest.TestCase):
             self.generator.generate_dosage_text(
                 self.medication_request(dose_range_low)
             ),
-            "morgens — je 0 bis 2 Stück",
+            "täglich: morgens — je 0 bis 2 Stück",
         )
 
     def test_zero_is_rejected_as_single_dose_and_as_upper_bound(self):
@@ -456,7 +456,7 @@ class MedicationDosageTextTest(unittest.TestCase):
             self.generator.generate_dosage_text(
                 self.medication_request(self.dosage(1, bounds))
             ),
-            "ab dem 05.06.2026: 1-0-0-0 Stück",
+            "ab dem 05.06.2026 täglich: 1-0-0-0 Stück",
         )
 
         as_needed = self.dosage(1, bounds)
@@ -465,7 +465,7 @@ class MedicationDosageTextTest(unittest.TestCase):
             self.generator.generate_dosage_text(
                 self.medication_request(as_needed)
             ),
-            "ab dem 05.06.2026 bei Bedarf: 1-0-0-0 Stück",
+            "ab dem 05.06.2026 bei Bedarf: täglich 1-0-0-0 Stück",
         )
 
     def test_non_numeric_dose_values_are_rejected(self):
@@ -537,7 +537,7 @@ class MedicationDosageTextTest(unittest.TestCase):
             self.generator.generate_dosage_text(
                 self.medication_request(dosage)
             ),
-            "1-0-0-0 Stück. Hinweis: Mit ausreichend Wasser einnehmen",
+            "täglich: 1-0-0-0 Stück. Hinweis: Mit ausreichend Wasser einnehmen",
         )
 
     def test_weekday_accepts_legacy_frequency_period_and_unit(self):
