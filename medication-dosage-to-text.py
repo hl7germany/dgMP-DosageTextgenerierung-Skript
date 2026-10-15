@@ -41,7 +41,7 @@ from datetime import datetime
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
-__version__ = "2.0.0-ballot"
+__version__ = "2.0.0-rc.1"
 __language__ = "de-DE"
 
 class MedicationDosageTextGenerator:

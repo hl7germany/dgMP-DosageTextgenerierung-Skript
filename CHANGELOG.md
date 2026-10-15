@@ -16,7 +16,9 @@ Daraus folgt für jeden Eintrag:
 
 Ändert sich nur die Referenzimplementierung, bleibt die Versionsnummer stehen.
 
-## [Unreleased]
+## [2.0.0-rc.1] - 2026-10-15
+
+Release Candidate für 2.0.0. Die Einträge beschreiben die Unterschiede zu 2.0.0-ballot; weitere Release Candidates beschreiben jeweils die Unterschiede zum vorigen.
 
 ### Algorithmus
 
