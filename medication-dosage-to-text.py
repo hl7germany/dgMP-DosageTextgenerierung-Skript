@@ -549,7 +549,7 @@ class MedicationDosageTextGenerator:
         if not has_variable:
             pattern = "-".join(self._format_decimal_value(dose_amounts[code])
                                for code in self.WHEN_CODES_ORDER)
-            return f"{pattern} {unit_text}" if unit_text else pattern
+            return f"{pattern} {unit_text}"
 
         segments = []
         for code in self.WHEN_CODES_ORDER:
@@ -558,8 +558,7 @@ class MedicationDosageTextGenerator:
             if not isinstance(value, str) and value == 0:
                 continue
             formatted = value if isinstance(value, str) else self._format_decimal_value(value)
-            dose = f"je {formatted} {unit_text}" if unit_text else f"je {formatted}"
-            segments.append(f"{self.WHEN_CODE_TRANSLATIONS[code]} — {dose}")
+            segments.append(f"{self.WHEN_CODE_TRANSLATIONS[code]} — je {formatted} {unit_text}")
         # Tagesabschnitts-Segmente werden mit Komma getrennt (siehe Trennzeichen).
         return ", ".join(segments)
 
@@ -774,11 +773,8 @@ class MedicationDosageTextGenerator:
         """
         dose_value, unit = self._extract_dose_quantity(dosage)
         formatted_dose = dose_value if isinstance(dose_value, str) else self._format_decimal_value(dose_value)
-
-        if unit:
-            return f"je {formatted_dose} {unit}"
-        else:
-            return f"je {formatted_dose}"
+        # Die Einheit ist Pflicht (_extract_dose_quantity bricht sonst ab).
+        return f"je {formatted_dose} {unit}"
 
     def _extract_bounds_text(self, dosage):
         """
@@ -1108,11 +1104,7 @@ class MedicationDosageTextGenerator:
 
             # Format dose value and create day entry
             formatted_dose = dose_value if isinstance(dose_value, str) else self._format_decimal_value(dose_value)
-            dose_text = f"je {formatted_dose}"
-            if unit_text:
-                dose_text += f" {unit_text}"
-
-            day_text_parts.append(f"{day_name} — {dose_text}")
+            day_text_parts.append(f"{day_name} — je {formatted_dose} {unit_text}")
 
         combined_days = "; ".join(day_text_parts)
         text = self._assemble(dosage_instructions[0], "", combined_days)
@@ -1277,14 +1269,12 @@ class MedicationDosageTextGenerator:
         has_time_of_day = 'timeOfDay' in repeat_element and repeat_element['timeOfDay']
         has_when_codes = 'when' in repeat_element and repeat_element['when']
 
-        # Delegate to appropriate sub-type generator
+        # Delegate to appropriate sub-type generator. Die Schema-Erkennung
+        # garantiert timeOfDay oder when; timeOfDay und when gemeinsam ist
+        # bereits in generate_dosage_text ausgeschlossen (tim-10).
         if has_time_of_day and not has_when_codes:
             return self._generate_dayofweek_timeofday_combination(dosage_instructions)
-        elif has_when_codes:  # Handle when codes (with or without timeOfDay)
-            return self._generate_dayofweek_when_combination(dosage_instructions)
-        else:
-            # Fallback to when-based logic if neither present
-            return self._generate_dayofweek_when_combination(dosage_instructions)
+        return self._generate_dayofweek_when_combination(dosage_instructions)
 
     def _generate_dayofweek_timeofday_combination(self, dosage_instructions):
         """
@@ -1430,13 +1420,11 @@ class MedicationDosageTextGenerator:
         timing = first_dosage.get('timing', {})
         repeat_element = timing.get('repeat', {})
 
+        # period und periodUnit sind hier vorhanden und numerisch: Die
+        # Schema-Erkennung verlangt beide Schlüssel, die Typprüfung den Wert.
         period = repeat_element.get('period')
         period_max = repeat_element.get('periodMax')
         period_unit = repeat_element.get('periodUnit')
-        if period is None or period_unit is None:
-            raise ValueError(
-                "Intervall-Kombinationen erfordern period und periodUnit."
-            )
         interval_text = self._format_period_only_rhythm(
             period, period_unit, period_max
         )

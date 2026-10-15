@@ -33,12 +33,17 @@ Daraus folgt für jeden Eintrag:
   - Nicht-String in `text` oder `patientInstruction` und ein Objekt statt Liste in `doseAndRate` führten zu einem Python-Laufzeitfehler statt zu `ValueError`.
 - Ein `dayOfWeek`-Code außerhalb der Wochentags-Tabelle führt zum Abbruch (`Nicht unterstützter Wochentag (dayOfWeek): '{code}'.`), wie bei `when`. Bisher erschien er roh im Text (`xyz — je 1 Stück`).
 - Zahlen werden mit der Genauigkeit der Ressource ausgegeben (`1.0` → `1,0`, `2.50` → `2,50`), wie FHIR es für `decimal` verlangt — Genauigkeit einschließlich nachfolgender Nullen trägt Bedeutung und ist auch für die Darstellung zu erhalten. Die bisherige Regel `1.0` → `1` entfällt. Exponentialschreibweise aus der Ressource wird als Dezimalzahl ausgegeben (`1e-2` → `0,01`). Bisher hing die Darstellung vom JSON-Parser und der Float-Darstellung der Implementierung ab; zwei konforme Implementierungen konnten für dieselbe Ressource verschiedene Texte liefern. Die Referenzimplementierung liest JSON jetzt mit `parse_float=Decimal`.
+- Der Fehlerlisten-Eintrag „Intervall-Kombination ohne `period` oder `periodUnit`" ist gestrichen. Der Fall ist unerreichbar: Die Schema-Erkennung verlangt beide Schlüssel, die Typprüfung einen numerischen Wert.
 
 ### Referenzimplementierung und Repository
 
 #### Added
 
 - Testfälle für `period = 1` mit `periodMax` in `d`, `wk` und `mo`.
+
+#### Removed
+
+- Unerreichbare Zweige: die Prüfung auf fehlendes `period`/`periodUnit` in der Intervall-Kombination, der Fallback in der Wochentags-Kombination für „weder `timeOfDay` noch `when`" sowie die Behandlung einer fehlenden Dosis-Einheit in vier Ausgabestellen — die Einheit ist Pflicht, `_extract_dose_quantity` bricht ohne sie ab.
 
 ## [2.0.0-ballot] - 2026-08-30
 

@@ -576,7 +576,6 @@ Die formale Definition zulässiger Felder und Kombinationen liegt in den Timing-
 * `maxDosePerPeriod` ohne `numerator.value`, `numerator.unit`, `denominator.value` oder `denominator.code`: Abbruch mit einer entsprechenden Pflichtfeldmeldung
 * nicht numerisches `maxDosePerPeriod.numerator.value`: Abbruch mit `ValueError("maxDosePerPeriod.numerator.value muss numerisch sein.")`
 * anderer Nenner als `1 d` oder `24 h`: Abbruch mit `ValueError("maxDosePerPeriod.denominator muss 1 d oder 24 h sein.")`
-* Intervall-Kombination ohne `period` oder `periodUnit`: Abbruch mit `ValueError("Intervall-Kombinationen erfordern period und periodUnit.")`
 * `when`-Code außerhalb der [Tagesabschnitts-Tabelle](#tagesabschnitt-when-codes): Abbruch mit `ValueError("Nicht unterstützter Tagesabschnitt (when): '{code}'.")`
 * `dayOfWeek`-Code außerhalb der [Wochentags-Tabelle](#wochentage-dayofweek): Abbruch mit `ValueError("Nicht unterstützter Wochentag (dayOfWeek): '{code}'.")`
 * doppelte Belegung eines Tagesabschnitts im reinen 4‑Schema: Abbruch mit `ValueError("Doppelte Belegung des Tagesabschnitts '{code}' im 4-Schema.")`
