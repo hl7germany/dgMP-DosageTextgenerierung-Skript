@@ -23,18 +23,22 @@ Die Verarbeitung erfolgt in dieser Reihenfolge:
    * `MedicationDispense.dosageInstruction`
    * `MedicationStatement.dosage`
 2. Bei einem anderen Ressourcentyp wird mit einem Fehler abgebrochen (`Unsupported resource type: {resourceType}`). Ist die gelesene Liste leer oder fehlt sie, ist das Ergebnis ein leerer String.
-3. Setzt eines der `Dosage`-Elemente `timeOfDay` **und** `when` gemeinsam, wird abgebrochen. Beides zugleich ist bereits durch die FHIR-Basisinvariante `tim-10` ausgeschlossen; ohne diese Prüfung würde je nach Schema eine der beiden Angaben stillschweigend verworfen.
-4. Enthält die Liste eine reine Bedarfsdosierung (`asNeededBoolean = true` ohne `timing`) und insgesamt nicht genau ein `Dosage`-Element, wird die Verarbeitung abgebrochen.
-5. Das Darstellungsschema wird ausschließlich anhand des **ersten** `Dosage`-Elements und in der unter [Schema-Erkennung](#schema-erkennung) angegebenen Priorität bestimmt. Trifft keine Regel zu, wird abgebrochen; es wird **kein** Ersatztext erzeugt.
-6. Der schemaspezifische Generator sammelt die benötigten Dosis-/Zeitsegmente. Je nach Schema werden alle `Dosage`-Elemente oder nur das erste verarbeitet; die genaue Aggregation ist unter [Aggregation mehrerer Dosage-Elemente](#aggregation-mehrerer-dosage-elemente) festgelegt.
-7. Der Generator setzt Zeitrahmen, Bedarfsangaben, Rhythmus und Kerntext zusammen. Danach werden – außer bei Freitext – Maximalmenge und `patientInstruction` ergänzt.
-8. Abschließend wird der Text – außer bei Freitext – normalisiert. Ist das erste `Dosage`-Element als Bedarf gekennzeichnet, wird zusätzlich exakt das erste Zeichen des Ergebnisses in einen Großbuchstaben umgewandelt.
+3. Jedes gelesene Feld muss den JSON-Datentyp seines FHIR-Typs haben: `decimal` eine Zahl, `positiveInt` eine ganze Zahl, `boolean` ein boolescher Wert, `string` und `code` ein String, Listenfelder (`dayOfWeek`, `when`, `timeOfDay`, `doseAndRate`, `extension`) eine Liste. Ein falscher Typ führt zum Abbruch. Geprüft wird nur der Typ, nicht der Wertebereich; der ist Sache der Profilvalidierung. Die Prüfung erfolgt vor der Schema-Erkennung, weil ein falscher Typ dort stillschweigend in die Irre führte (ein `period` von `"1"` ist nicht `1` und ergäbe `alle 1 Tage` statt `täglich`; ein `asNeededBoolean` von `"true"` ist nicht `true` und unterschlüge den Bedarf).
+4. Setzt eines der `Dosage`-Elemente `timeOfDay` **und** `when` gemeinsam, wird abgebrochen. Beides zugleich ist bereits durch die FHIR-Basisinvariante `tim-10` ausgeschlossen; ohne diese Prüfung würde je nach Schema eine der beiden Angaben stillschweigend verworfen.
+5. Enthält die Liste eine reine Bedarfsdosierung (`asNeededBoolean = true` ohne `timing`) und insgesamt nicht genau ein `Dosage`-Element, wird die Verarbeitung abgebrochen.
+6. Das Darstellungsschema wird ausschließlich anhand des **ersten** `Dosage`-Elements und in der unter [Schema-Erkennung](#schema-erkennung) angegebenen Priorität bestimmt. Trifft keine Regel zu, wird abgebrochen; es wird **kein** Ersatztext erzeugt.
+7. Der schemaspezifische Generator sammelt die benötigten Dosis-/Zeitsegmente. Je nach Schema werden alle `Dosage`-Elemente oder nur das erste verarbeitet; die genaue Aggregation ist unter [Aggregation mehrerer Dosage-Elemente](#aggregation-mehrerer-dosage-elemente) festgelegt.
+8. Der Generator setzt Zeitrahmen, Bedarfsangaben, Rhythmus und Kerntext zusammen. Danach werden – außer bei Freitext – Maximalmenge und `patientInstruction` ergänzt.
+9. Abschließend wird der Text – außer bei Freitext – normalisiert. Ist das erste `Dosage`-Element als Bedarf gekennzeichnet, wird zusätzlich exakt das erste Zeichen des Ergebnisses in einen Großbuchstaben umgewandelt.
 
 Das folgende Pseudocode-Gerüst zeigt den vollständigen Kontrollfluss:
 
 ```text
 dosierungen = extrahiereDosierungen(resource)
 wenn dosierungen leer: return ""
+
+wenn irgendein gelesenes Feld den falschen JSON-Datentyp hat:
+  Fehler
 
 wenn irgendeine dosierung timeOfDay und when gemeinsam setzt:
   Fehler
@@ -68,7 +72,7 @@ Es wird ausschließlich `doseAndRate[0]` ausgewertet. Ist dort `doseQuantity` vo
 
 Nur die untere Grenze (`low` ohne `high`) ist **nicht zulässig** und wird durch die Invariante `DoseRangeHighRequiredWhenLowPresent` ausgeschlossen.
 
-Ganzzahlige Werte werden ohne Nachkommastelle dargestellt; überflüssige Dezimalstelle und Komma entfallen (`1.0` → `1`). Dezimalwerte werden mit **deutschem Dezimalkomma** ausgegeben (z. B. `1,5`). Die maximale Anzahl von Nachkommastellen ist nicht eingeschränkt; Werte werden verlustfrei ohne Rundung übernommen. Die Verantwortung für sinnvolle Präzision (z. B. nicht mehr als 2 Nachkommastellen) liegt beim aufrufenden System.
+Dezimalwerte werden mit **deutschem Dezimalkomma** ausgegeben (z. B. `1,5`). Nachfolgende Nullen hinter dem Komma entfallen, bei Ganzzahlen auch das Komma (`1.0` → `1`, `2.50` → `2,5`). Damit ist der Text unabhängig davon, ob der JSON-Parser der jeweiligen Implementierung solche Nullen erhält (etwa `BigDecimal`) oder verwirft (etwa `float`). Exponentialschreibweise wird nie erzeugt (`0.00001` → `0,00001`). Die Anzahl der Nachkommastellen ist nicht eingeschränkt; Werte werden ohne Rundung übernommen. Dieselbe Darstellung gilt für alle Zahlen im Text (Frequenz, Periode, Dauer, Mindestabstand, Maximalmenge). Die Verantwortung für sinnvolle Präzision (z. B. nicht mehr als 2 Nachkommastellen) liegt beim aufrufenden System.
 
 
 Eine Dosis ist in **jedem** strukturierten Schema erforderlich. Fehlt `doseAndRate` ganz, bricht der Algorithmus ab — es wird weder ein Segment stillschweigend übersprungen noch eine Dosieranweisung ohne Dosis erzeugt. Profilkonformer Input enthält immer eine Dosis: `DosageStructuredRequiresBoth` erzwingt „`timing` impliziert `doseAndRate`", und für die reine Bedarfsdosierung verlangt `DosageStructuredOrFreeText` ebenfalls `doseAndRate`.
@@ -166,7 +170,7 @@ Wochentage werden, sofern vorhanden, in kanonischer Reihenfolge (Montag bis Sonn
 | `sat` | samstags |
 | `sun` | sonntags |
 
-Die Tabelle ist **abschließend** und deckt die required gebundene FHIR-Codeliste `DaysOfWeek` vollständig ab.
+Die Tabelle ist **abschließend** und deckt die required gebundene FHIR-Codeliste `DaysOfWeek` vollständig ab. Ein Code außerhalb der Tabelle führt zum Abbruch — er würde sonst roh im Text erscheinen.
 
 ### Konkrete Zeiten (`timeOfDay`)
 
@@ -546,6 +550,7 @@ Für eine Übersicht der im Medication IG DE bereitgestellten Beispiele siehe [B
 Die formale Definition zulässiger Felder und Kombinationen liegt in den Timing- und Dosierungs-Invarianten des Medication IG DE (siehe [Constraints](https://ig.fhir.de/igs/medication/dosierung-constraints.html)). Der Algorithmus führt **keine vollständige Validierung** und keine Auflistung unzulässiger Felder durch. Sein konkretes Fehlerverhalten lautet:
 
 * nicht unterstützter `resourceType`: Abbruch mit `ValueError("Unsupported resource type: {resourceType}")`
+* falscher JSON-Datentyp eines gelesenen Feldes: Abbruch mit `ValueError("<Feld> muss numerisch sein.")` (`decimal`), `ValueError("<Feld> muss eine ganze Zahl sein.")` (`positiveInt`), `ValueError("<Feld> muss ein String sein.")` (`string`, `code`), `ValueError("<Feld> muss eine Liste sein.")`, `ValueError("<Feld> muss ein Objekt sein.")` beziehungsweise `ValueError("asNeededBoolean muss ein boolescher Wert sein.")`. `<Feld>` ist der Pfad relativ zum `Dosage`-Element, etwa `timing.repeat.period`
 * nicht klassifizierbare Merkmalskombination: Abbruch mit `ValueError("Die Dosierung entspricht keinem unterstützten Dosierungsschema.")`. Es wird **kein** Ersatztext zurückgegeben — ein solcher würde als generierte Dosieranweisung publiziert und dort eine Aussage vortäuschen, die der Algorithmus nicht treffen kann.
 * `timeOfDay` und `when` im selben `Dosage`-Element (Verstoß gegen die FHIR-Basisinvariante `tim-10`): Abbruch mit `ValueError("timeOfDay und when dürfen nicht gemeinsam angegeben werden (tim-10).")`
 * mehrere `Dosage`-Elemente, sobald eines davon eine reine Bedarfsdosierung (`asNeededBoolean = true` ohne `timing`) ist: Abbruch mit `ValueError("Reine Bedarfsmedikation erlaubt genau ein Dosage-Element.")`
@@ -573,6 +578,7 @@ Die formale Definition zulässiger Felder und Kombinationen liegt in den Timing-
 * anderer Nenner als `1 d` oder `24 h`: Abbruch mit `ValueError("maxDosePerPeriod.denominator muss 1 d oder 24 h sein.")`
 * Intervall-Kombination ohne `period` oder `periodUnit`: Abbruch mit `ValueError("Intervall-Kombinationen erfordern period und periodUnit.")`
 * `when`-Code außerhalb der [Tagesabschnitts-Tabelle](#tagesabschnitt-when-codes): Abbruch mit `ValueError("Nicht unterstützter Tagesabschnitt (when): '{code}'.")`
+* `dayOfWeek`-Code außerhalb der [Wochentags-Tabelle](#wochentage-dayofweek): Abbruch mit `ValueError("Nicht unterstützter Wochentag (dayOfWeek): '{code}'.")`
 * doppelte Belegung eines Tagesabschnitts im reinen 4‑Schema: Abbruch mit `ValueError("Doppelte Belegung des Tagesabschnitts '{code}' im 4-Schema.")`
 * doppelte Belegung desselben Wochentags mit unterschiedlicher Dosis im Wochentags-Schema: Abbruch mit `ValueError("Doppelte Belegung des Wochentags '{code}' mit unterschiedlicher Dosis.")`
 * doppelte Belegung derselben Kombination aus Wochentag und Tagesabschnitt mit unterschiedlicher Dosis: Abbruch mit `ValueError("Doppelte Belegung der Kombination aus Wochentag '{code}' und Zeit-/Tagesabschnitt '{zeit}' mit unterschiedlicher Dosis.")`

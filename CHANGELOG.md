@@ -23,7 +23,16 @@ Daraus folgt für jeden Eintrag:
 #### Fixed
 
 - Die Kurzformen `täglich`, `wöchentlich` und `monatlich` gelten nur noch für eine feste Periode von `1` ohne `periodMax`. Bisher fiel bei `period = 1` mit `periodMax` die Obergrenze weg: Aus `frequency = 1`, `period = 1`, `periodMax = 3`, `periodUnit = d` wurde `täglich` statt `alle 1 bis 3 Tage`. Bei einer Frequenz größer als `1` entsprechend `2 x alle 1 bis 3 Tage` statt `2 x täglich`.
-- Numerische Strings als Dosiswert (`"value": "2"`) werden abgewiesen wie jeder andere falsche Typ. FHIR `decimal` ist im JSON eine Zahl; eine validierte Ressource enthält keinen String. Bisher wurden sie akzeptiert, aber nicht wie Zahlen formatiert: `"2"` kippte das 4‑Schema in die ausgeschriebene Form (`morgens — je 2 Stück` statt `2-0-0-0 Stück`), `"1.5"` ergab `je 1.5 Stück` ohne Dezimalkomma, `"1.0"` ergab `je 1.0 Stück`.
+- Jedes gelesene Feld muss den JSON-Datentyp seines FHIR-Typs haben (neuer Schritt 3 des Gesamtalgorithmus); ein falscher Typ führt zum Abbruch statt zu stillschweigend falschem Text. Bisher wurde nur bei einigen Feldern geprüft, und die Lücken verfälschten den Text:
+  - Numerische Strings als Dosiswert (`"value": "2"`) wurden akzeptiert, aber nicht wie Zahlen formatiert: `"2"` kippte das 4‑Schema in die ausgeschriebene Form (`morgens — je 2 Stück` statt `2-0-0-0 Stück`), `"1.5"` ergab `je 1.5 Stück` ohne Dezimalkomma. Die Spezifikation hatte numerische Strings ausdrücklich zugelassen; FHIR `decimal` ist im JSON eine Zahl.
+  - `period = "1"` (String) wurde nicht als Tagesmuster erkannt und ergab `alle 1 Tage` statt `täglich`; `period = true` ergab `alle 1 Stunde`.
+  - `frequency = "2"` und `frequency = 2.5` wurden ausgegeben, obwohl `positiveInt` eine ganze Zahl verlangt; `frequency = true` zählte als `1`.
+  - `asNeededBoolean = "true"` galt nicht als Bedarf: Mit Timing wurde der Text ohne `bei Bedarf` erzeugt — das Bedarfskennzeichen fehlte.
+  - `doseQuantity.unit = 5` erschien als `1-0-0-0 5`.
+  - `dayOfWeek = "mon"` (String statt Liste) ergab `m — …; o — …; n — …`.
+  - Nicht-String in `text` oder `patientInstruction` und ein Objekt statt Liste in `doseAndRate` führten zu einem Python-Laufzeitfehler statt zu `ValueError`.
+- Ein `dayOfWeek`-Code außerhalb der Wochentags-Tabelle führt zum Abbruch (`Nicht unterstützter Wochentag (dayOfWeek): '{code}'.`), wie bei `when`. Bisher erschien er roh im Text (`xyz — je 1 Stück`).
+- Zahldarstellung festgelegt: Nachfolgende Nullen hinter dem Komma entfallen (`2.50` → `2,5`), Exponentialschreibweise wird nie erzeugt (`0.00001` → `0,00001` statt `1e-05`). Bisher hing beides vom JSON-Parser und der Float-Darstellung der Implementierung ab; zwei konforme Implementierungen konnten für dieselbe Ressource verschiedene Texte liefern.
 
 ### Referenzimplementierung und Repository
 

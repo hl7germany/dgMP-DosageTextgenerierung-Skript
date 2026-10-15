@@ -775,5 +775,125 @@ class MedicationDosageTextTest(unittest.TestCase):
             })
 
 
+class FieldTypeTest(unittest.TestCase):
+    """Jedes gelesene Feld muss den JSON-Datentyp seines FHIR-Typs haben.
+
+    Ein falscher Typ darf nicht stillschweigend den Text verfaelschen: period "1"
+    erkannte kein Tagesmuster (alle 1 Tage statt taeglich), asNeededBoolean
+    "true" unterschlug den Bedarf, frequency true zaehlte als 1, ein
+    dayOfWeek-String zerfiel in Buchstaben.
+    """
+
+    DOSE = [{"doseQuantity": {"value": 1, "unit": "Stück"}}]
+
+    def setUp(self):
+        self.generator = MODULE.MedicationDosageTextGenerator()
+
+    def request(self, dosage):
+        return {"resourceType": "MedicationRequest", "dosageInstruction": [dosage]}
+
+    def interval(self, **repeat):
+        return {
+            "timing": {"repeat": {"frequency": 1, "period": 8, "periodUnit": "h", **repeat}},
+            "doseAndRate": self.DOSE,
+        }
+
+    def test_wrong_json_type_is_rejected_per_fhir_datatype(self):
+        when = {"timing": {"repeat": {"when": ["MORN"]}}, "doseAndRate": self.DOSE}
+        cases = (
+            # positiveInt: nur ganze Zahl, bool ist in Python ein int
+            (self.interval(frequency="2"), "timing.repeat.frequency muss eine ganze Zahl sein."),
+            (self.interval(frequency=2.5), "timing.repeat.frequency muss eine ganze Zahl sein."),
+            (self.interval(frequency=True), "timing.repeat.frequency muss eine ganze Zahl sein."),
+            (self.interval(frequencyMax="3"), "timing.repeat.frequencyMax muss eine ganze Zahl sein."),
+            # decimal: Zahl, kein String, kein bool
+            (self.interval(period="1", periodUnit="d"), "timing.repeat.period muss numerisch sein."),
+            (self.interval(period=True), "timing.repeat.period muss numerisch sein."),
+            (self.interval(periodMax="3"), "timing.repeat.periodMax muss numerisch sein."),
+            # code / string
+            (self.interval(periodUnit=5), "timing.repeat.periodUnit muss ein String sein."),
+            ({**when, "doseAndRate": [{"doseQuantity": {"value": 1, "unit": 5}}]},
+             "doseQuantity.unit muss ein String sein."),
+            ({**when, "patientInstruction": 5}, "patientInstruction muss ein String sein."),
+            ({"text": 5}, "text muss ein String sein."),
+            # Listenfelder
+            ({"timing": {"repeat": {"dayOfWeek": "mon"}}, "doseAndRate": self.DOSE},
+             "timing.repeat.dayOfWeek muss eine Liste sein."),
+            ({"timing": {"repeat": {"when": "MORN"}}, "doseAndRate": self.DOSE},
+             "timing.repeat.when muss eine Liste sein."),
+            ({"timing": {"repeat": {"timeOfDay": "08:00:00"}}, "doseAndRate": self.DOSE},
+             "timing.repeat.timeOfDay muss eine Liste sein."),
+            ({"timing": {"repeat": {"when": [5]}}, "doseAndRate": self.DOSE},
+             r"timing.repeat.when\[\] muss ein String sein."),
+            ({**when, "doseAndRate": {"doseQuantity": {"value": 1, "unit": "Stück"}}},
+             "doseAndRate muss eine Liste sein."),
+            ({"asNeededBoolean": True, "doseAndRate": self.DOSE, "extension": {"url": "x"}},
+             "extension muss eine Liste sein."),
+            # boolean
+            ({**when, "asNeededBoolean": "true"}, "asNeededBoolean muss ein boolescher Wert sein."),
+            ({"asNeededBoolean": 1, "doseAndRate": self.DOSE},
+             "asNeededBoolean muss ein boolescher Wert sein."),
+            # Objekte
+            ({**when, "timing": "täglich"}, "timing muss ein Objekt sein."),
+            ({**when, "doseAndRate": [{"doseQuantity": "1 Stück"}]}, "doseQuantity muss ein Objekt sein."),
+            # Maximalmenge
+            ({"asNeededBoolean": True, "doseAndRate": self.DOSE,
+              "maxDosePerPeriod": {"numerator": {"value": 2, "unit": "Stück"},
+                                   "denominator": {"value": "1", "code": "d"}}},
+             "maxDosePerPeriod.denominator.value muss numerisch sein."),
+        )
+        for dosage, error in cases:
+            with self.subTest(error=error):
+                with self.assertRaisesRegex(ValueError, error):
+                    self.generator.generate_dosage_text(self.request(dosage))
+
+    def test_dosage_list_must_be_a_list(self):
+        with self.assertRaisesRegex(ValueError, "dosageInstruction muss eine Liste sein."):
+            self.generator.generate_dosage_text(
+                {"resourceType": "MedicationRequest", "dosageInstruction": {"text": "x"}}
+            )
+
+    def test_unknown_day_of_week_code_is_rejected_like_when(self):
+        """Die Wochentags-Tabelle ist abschliessend; bisher erschien ein fremder
+        Code roh im Text ("xyz — je 1 Stück")."""
+        cases = (
+            {"dayOfWeek": ["xyz"]},
+            {"dayOfWeek": ["xyz"], "timeOfDay": ["08:00:00"]},
+            {"dayOfWeek": ["xyz"], "when": ["MORN"]},
+        )
+        for repeat in cases:
+            with self.subTest(repeat=repeat):
+                with self.assertRaisesRegex(
+                    ValueError, "Nicht unterstützter Wochentag \\(dayOfWeek\\): 'xyz'"
+                ):
+                    self.generator.generate_dosage_text(
+                        self.request({"timing": {"repeat": repeat}, "doseAndRate": self.DOSE})
+                    )
+
+    def test_numbers_drop_trailing_zeros_and_never_use_exponent_notation(self):
+        """Der Text haengt nicht davon ab, ob der JSON-Parser nachfolgende Nullen
+        erhaelt (BigDecimal) oder verwirft (float), und str(float) darf nie als
+        "1e-05" durchschlagen."""
+        def dose(value, unit="Stück"):
+            return self.request({
+                "timing": {"repeat": {"frequency": 1, "period": 8, "periodUnit": "h"}},
+                "doseAndRate": [{"doseQuantity": {"value": value, "unit": unit}}],
+            })
+
+        cases = (
+            (dose(2.50), "alle 8 Stunden: je 2,5 Stück"),
+            (dose(1.0), "alle 8 Stunden: je 1 Stück"),
+            (dose(100), "alle 8 Stunden: je 100 Stück"),
+            (dose(1.25), "alle 8 Stunden: je 1,25 Stück"),
+            (dose(0.00001, "mg"), "alle 8 Stunden: je 0,00001 mg"),
+            (self.request(self.interval(period=1.5, periodUnit="d",
+                                        boundsDuration={"value": 2.0, "code": "wk"})),
+             "für 2 Wochen alle 1,5 Tage: je 1 Stück"),
+        )
+        for resource, expected in cases:
+            with self.subTest(expected=expected):
+                self.assertEqual(self.generator.generate_dosage_text(resource), expected)
+
+
 if __name__ == "__main__":
     unittest.main()
