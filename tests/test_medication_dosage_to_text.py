@@ -558,7 +558,7 @@ class MedicationDosageTextTest(unittest.TestCase):
             self.generator.generate_dosage_text(
                 self.medication_request(as_needed)
             ),
-            "ab dem 05.06.2026 bei Bedarf: täglich 1-0-0-0 Stück",
+            "ab dem 05.06.2026 bei Bedarf, täglich: 1-0-0-0 Stück",
         )
 
     def test_non_numeric_dose_values_are_rejected(self):

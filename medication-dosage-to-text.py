@@ -914,8 +914,10 @@ class MedicationDosageTextGenerator:
           - der Doppelpunkt trennt Zeitrahmen/Intervall (links) von der Dosis (rechts).
 
         Bedarf:
-          [{Zeitrahmen} ]bei {Anlass}: [{Mindestabstand} ][{middle} ]{core}
-          - der Doppelpunkt steht direkt hinter dem Anlass.
+          [{Zeitrahmen} ]bei {Anlass}[, {middle}]: [{Mindestabstand} ]{core}
+          - wie ohne Bedarf steht der Rhythmus links des Doppelpunkts; ein Komma
+            trennt ihn vom Anlass. Der Anlass ist Freitext und kann auf eine Zahl
+            enden ("bei Blutzucker über 250, 2 x täglich: …").
           - ein Mindestabstand ist nur bei reiner Bedarfsmedikation zulaessig,
             also ohne strukturierten Rhythmus; sonst bricht der Algorithmus ab.
         """
@@ -926,6 +928,8 @@ class MedicationDosageTextGenerator:
             reason_text = self._extract_as_needed_for_text(dosage)
             anlass = f"bei {reason_text}" if reason_text else "bei Bedarf"
             left = " ".join(part for part in [bounds_text, anlass] if part)
+            if middle:
+                left = f"{left}, {middle}"
 
             minimum_interval = self._extract_minimum_interval_text(dosage)
             right_parts = []
@@ -942,8 +946,6 @@ class MedicationDosageTextGenerator:
                         "zulässig, nicht zusammen mit einem strukturierten Rhythmus."
                     )
                 right_parts.append(f"im Abstand von mindestens {minimum_interval}")
-            if middle:
-                right_parts.append(middle)
             if core:
                 right_parts.append(core)
             right = " ".join(right_parts)
