@@ -38,6 +38,7 @@ import re
 import sys
 import os
 from datetime import datetime
+from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 __version__ = "2.0.0-ballot"
@@ -141,6 +142,13 @@ class MedicationDosageTextGenerator:
         if not dosage_instructions:
             return ""
 
+        # Jedes gelesene Feld muss den JSON-Datentyp seines FHIR-Typs haben.
+        # Ein falscher Typ würde sonst stillschweigend den Text verfälschen:
+        # period "1" (String) erkennt kein Tagesmuster, asNeededBoolean "true"
+        # ist nicht True, frequency true zählt als 1.
+        for dosage in dosage_instructions:
+            self._check_field_types(dosage)
+
         # timeOfDay und when schließen sich bereits auf Ebene des FHIR-Basisdatentyps
         # Timing aus (tim-10). Ohne diese Prüfung würde je nach Schema stillschweigend
         # eine der beiden Angaben verworfen.
@@ -238,11 +246,140 @@ class MedicationDosageTextGenerator:
         resource_type = resource.get('resourceType', '')
 
         if resource_type in ['MedicationRequest', 'MedicationDispense']:
-            return resource.get('dosageInstruction', [])
+            field_name = 'dosageInstruction'
         elif resource_type == 'MedicationStatement':
-            return resource.get('dosage', [])
+            field_name = 'dosage'
         else:
             raise ValueError(f"Unsupported resource type: {resource_type}")
+        return self._require_list(resource.get(field_name, []), field_name)
+
+    # ============================================================================
+    # TYPE CHECKS - JSON-Datentyp jedes gelesenen Feldes gegen seinen FHIR-Typ
+    # ============================================================================
+
+    def _require_object(self, value, field_name):
+        if not isinstance(value, dict):
+            raise ValueError(f"{field_name} muss ein Objekt sein.")
+        return value
+
+    def _require_list(self, value, field_name):
+        if not isinstance(value, list):
+            raise ValueError(f"{field_name} muss eine Liste sein.")
+        return value
+
+    def _require_string(self, value, field_name):
+        if not isinstance(value, str):
+            raise ValueError(f"{field_name} muss ein String sein.")
+        return value
+
+    def _require_decimal(self, value, field_name):
+        """FHIR decimal ist im JSON eine Zahl. Ein String ("2") ist kein gültiges
+        decimal und wird wie jeder andere falsche Typ abgewiesen; ihn
+        stillschweigend zu konvertieren würde Werte annehmen, die eine validierte
+        Ressource nicht enthalten kann. bool ist in Python ein int-Subtyp und
+        wird deshalb ausdrücklich ausgeschlossen.
+
+        Decimal ist zugelassen, weil nur ein mit parse_float=Decimal geparstes
+        JSON die Genauigkeit erhält, die FHIR fuer decimal verlangt (2.50 ist
+        nicht 2.5); ein float hat sie beim Einlesen bereits verloren."""
+        if isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
+            raise ValueError(f"{field_name} muss numerisch sein.")
+        return value
+
+    def _require_integer(self, value, field_name):
+        """FHIR positiveInt/unsignedInt: im JSON eine ganze Zahl."""
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ValueError(f"{field_name} muss eine ganze Zahl sein.")
+        return value
+
+    def _check_field_types(self, dosage):
+        """
+        Prüft für ein Dosage-Element den JSON-Datentyp jedes Feldes, das der
+        Algorithmus liest, gegen den FHIR-Datentyp. Geprüft wird nur der Typ,
+        nicht der Wertebereich; der ist Sache der Profilvalidierung.
+
+        Die Prüfung läuft vor der Schema-Erkennung, weil ein falscher Typ dort
+        bereits in die Irre führt (period "1" ist nicht 1) und danach nicht mehr
+        auffällt.
+        """
+        self._require_object(dosage, "Dosage")
+
+        for name in ("text", "patientInstruction"):
+            if name in dosage:
+                self._require_string(dosage[name], name)
+        if "asNeededBoolean" in dosage and not isinstance(dosage["asNeededBoolean"], bool):
+            raise ValueError("asNeededBoolean muss ein boolescher Wert sein.")
+        for name in ("extension", "modifierExtension"):
+            if name in dosage:
+                for extension in self._require_list(dosage[name], name):
+                    self._require_object(extension, f"{name}[]")
+                    if "url" in extension:
+                        self._require_string(extension["url"], f"{name}[].url")
+                    if "valueCodeableConcept" in extension:
+                        concept = self._require_object(
+                            extension["valueCodeableConcept"], f"{name}[].valueCodeableConcept")
+                        if "text" in concept:
+                            self._require_string(concept["text"], f"{name}[].valueCodeableConcept.text")
+                    if "valueDuration" in extension:
+                        self._check_quantity_types(extension["valueDuration"], f"{name}[].valueDuration")
+        if "doseAndRate" in dosage:
+            for item in self._require_list(dosage["doseAndRate"], "doseAndRate"):
+                self._require_object(item, "doseAndRate[]")
+                if "doseQuantity" in item:
+                    self._check_quantity_types(item["doseQuantity"], "doseQuantity")
+                if "doseRange" in item:
+                    dose_range = self._require_object(item["doseRange"], "doseRange")
+                    for bound in ("low", "high"):
+                        if bound in dose_range:
+                            self._check_quantity_types(dose_range[bound], f"doseRange.{bound}")
+        if "maxDosePerPeriod" in dosage:
+            max_dose = self._require_object(dosage["maxDosePerPeriod"], "maxDosePerPeriod")
+            for part in ("numerator", "denominator"):
+                if part in max_dose:
+                    self._check_quantity_types(max_dose[part], f"maxDosePerPeriod.{part}")
+
+        if "timing" not in dosage:
+            return
+        timing = self._require_object(dosage["timing"], "timing")
+        if "repeat" not in timing:
+            return
+        repeat = self._require_object(timing["repeat"], "timing.repeat")
+        if "boundsDuration" in repeat:
+            self._check_quantity_types(repeat["boundsDuration"], "timing.repeat.boundsDuration")
+        if "boundsPeriod" in repeat:
+            bounds_period = self._require_object(repeat["boundsPeriod"], "timing.repeat.boundsPeriod")
+            for name in ("start", "end"):
+                if name in bounds_period:
+                    self._require_string(bounds_period[name], f"timing.repeat.boundsPeriod.{name}")
+        for name in ("frequency", "frequencyMax"):
+            if name in repeat:
+                self._require_integer(repeat[name], f"timing.repeat.{name}")
+        for name in ("period", "periodMax"):
+            if name in repeat:
+                self._require_decimal(repeat[name], f"timing.repeat.{name}")
+        if "periodUnit" in repeat:
+            self._require_string(repeat["periodUnit"], "timing.repeat.periodUnit")
+        for name in ("dayOfWeek", "when", "timeOfDay"):
+            if name in repeat:
+                for entry in self._require_list(repeat[name], f"timing.repeat.{name}"):
+                    self._require_string(entry, f"timing.repeat.{name}[]")
+
+    def _check_quantity_types(self, quantity, path):
+        """Quantity/Duration: value decimal, unit und code string."""
+        quantity = self._require_object(quantity, path)
+        if "value" in quantity:
+            self._require_decimal(quantity["value"], f"{path}.value")
+        for name in ("unit", "code", "system"):
+            if name in quantity:
+                self._require_string(quantity[name], f"{path}.{name}")
+        return quantity
+
+    def _require_day_code(self, day_code):
+        """Die Wochentags-Tabelle ist abschließend. Ein Code außerhalb würde
+        sonst roh im Text erscheinen ("xyz — je 1 Stück")."""
+        if day_code not in self.DAY_TRANSLATIONS:
+            raise ValueError(f"Nicht unterstützter Wochentag (dayOfWeek): '{day_code}'.")
+        return day_code
 
     # ============================================================================
     # SCHEMA DETECTION - Determine which dosage pattern applies
@@ -447,7 +584,7 @@ class MedicationDosageTextGenerator:
         if not has_variable:
             pattern = "-".join(self._format_decimal_value(dose_amounts[code])
                                for code in self.WHEN_CODES_ORDER)
-            return f"{pattern} {unit_text}" if unit_text else pattern
+            return f"{pattern} {unit_text}"
 
         segments = []
         for code in self.WHEN_CODES_ORDER:
@@ -456,8 +593,7 @@ class MedicationDosageTextGenerator:
             if not isinstance(value, str) and value == 0:
                 continue
             formatted = value if isinstance(value, str) else self._format_decimal_value(value)
-            dose = f"je {formatted} {unit_text}" if unit_text else f"je {formatted}"
-            segments.append(f"{self.WHEN_CODE_TRANSLATIONS[code]} — {dose}")
+            segments.append(f"{self.WHEN_CODE_TRANSLATIONS[code]} — je {formatted} {unit_text}")
         # Tagesabschnitts-Segmente werden mit Komma getrennt (siehe Trennzeichen).
         return ", ".join(segments)
 
@@ -581,20 +717,6 @@ class MedicationDosageTextGenerator:
         return ", ".join(
             f"{', '.join(times)} — {dose_text}" for times, dose_text in segments)
 
-    def _dose_value_as_number(self, value, field_name):
-        """Dosiswert als Zahl lesen.
-
-        FHIR führt Dosiswerte als decimal; einzelne Serialisierer liefern sie als
-        String. Beides wird akzeptiert, alles andere abgewiesen — ein nicht
-        auswertbarer Wert darf nicht ungeprüft in den Dosierungstext gelangen.
-        """
-        if isinstance(value, bool):
-            raise ValueError(f"{field_name} muss numerisch sein.")
-        try:
-            return float(value)
-        except (TypeError, ValueError):
-            raise ValueError(f"{field_name} muss numerisch sein.")
-
     def _extract_dose_quantity(self, dosage):
         """
         Extract dose quantity and unit from a dosage instruction.
@@ -622,35 +744,47 @@ class MedicationDosageTextGenerator:
         first_dose = dose_and_rate[0]
 
         if 'doseQuantity' in first_dose:
-            dose_quantity = first_dose.get('doseQuantity') or {}
+            dose_quantity = self._require_object(
+                first_dose.get('doseQuantity') or {}, 'doseQuantity')
             dose_value = dose_quantity.get('value')
             unit = dose_quantity.get('unit')
             if dose_value is None:
                 raise ValueError("doseQuantity.value ist für die Textgenerierung erforderlich.")
+            if unit is not None:
+                self._require_string(unit, 'doseQuantity.unit')
             if not unit:
                 raise ValueError("doseQuantity.unit ist für die Textgenerierung erforderlich.")
-            if self._dose_value_as_number(dose_value, 'doseQuantity.value') <= 0:
+            if self._require_decimal(dose_value, 'doseQuantity.value') <= 0:
                 raise ValueError("doseQuantity.value muss größer als 0 sein.")
             return (dose_value, unit)
 
         if 'doseRange' in first_dose:
-            dose_range = first_dose.get('doseRange') or {}
+            dose_range = self._require_object(
+                first_dose.get('doseRange') or {}, 'doseRange')
             low = dose_range.get('low')
             high = dose_range.get('high')
+            if low is not None:
+                self._require_object(low, 'doseRange.low')
+            if high is not None:
+                self._require_object(high, 'doseRange.high')
 
             if not high or high.get('value') is None:
                 raise ValueError("doseRange.high.value ist für die Textgenerierung erforderlich.")
+            if high.get('unit') is not None:
+                self._require_string(high.get('unit'), 'doseRange.high.unit')
             if not high.get('unit'):
                 raise ValueError("doseRange.high.unit ist für die Textgenerierung erforderlich.")
-            if self._dose_value_as_number(high.get('value'), 'doseRange.high.value') <= 0:
+            if self._require_decimal(high.get('value'), 'doseRange.high.value') <= 0:
                 raise ValueError("doseRange.high.value muss größer als 0 sein.")
 
-            if low:
+            if low is not None:
                 if low.get('value') is None:
                     raise ValueError("doseRange.low.value ist für die Textgenerierung erforderlich.")
+                if low.get('unit') is not None:
+                    self._require_string(low.get('unit'), 'doseRange.low.unit')
                 if not low.get('unit'):
                     raise ValueError("doseRange.low.unit ist für die Textgenerierung erforderlich.")
-                if self._dose_value_as_number(low.get('value'), 'doseRange.low.value') < 0:
+                if self._require_decimal(low.get('value'), 'doseRange.low.value') < 0:
                     raise ValueError("doseRange.low.value darf nicht negativ sein.")
                 if low.get('unit') != high.get('unit'):
                     raise ValueError("doseRange.low.unit und doseRange.high.unit müssen übereinstimmen.")
@@ -676,11 +810,8 @@ class MedicationDosageTextGenerator:
         """
         dose_value, unit = self._extract_dose_quantity(dosage)
         formatted_dose = dose_value if isinstance(dose_value, str) else self._format_decimal_value(dose_value)
-
-        if unit:
-            return f"je {formatted_dose} {unit}"
-        else:
-            return f"je {formatted_dose}"
+        # Die Einheit ist Pflicht (_extract_dose_quantity bricht sonst ab).
+        return f"je {formatted_dose} {unit}"
 
     def _extract_bounds_text(self, dosage):
         """
@@ -809,13 +940,15 @@ class MedicationDosageTextGenerator:
         return text.strip()
 
     def _format_duration_text(self, duration, prefix="", field_name="Duration"):
+        self._require_object(duration, field_name)
         duration_value = duration.get('value')
         duration_unit = duration.get('code')
+        if duration_unit is not None:
+            self._require_string(duration_unit, f"{field_name}.code")
         if duration_value is None:
             raise ValueError(f"{field_name}.value ist für die Textgenerierung erforderlich.")
-        if (isinstance(duration_value, bool) or
-                not isinstance(duration_value, (int, float)) or
-                duration_value <= 0):
+        self._require_decimal(duration_value, f"{field_name}.value")
+        if duration_value <= 0:
             raise ValueError(f"{field_name}.value muss größer als 0 sein.")
         if not duration_unit:
             raise ValueError(f"{field_name}.code ist für die Textgenerierung erforderlich.")
@@ -862,15 +995,20 @@ class MedicationDosageTextGenerator:
 
         if not re.fullmatch(
             r'\d{4}-\d{2}-\d{2}'
-            r'T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d'
+            r'T(?:[01]\d|2[0-3]):[0-5]\d:(?:[0-5]\d|60)'
             r'(?:\.\d+)?'
             r'(?:Z|[+-](?:(?:0\d|1[0-3]):[0-5]\d|14:00))',
             value
         ):
             raise ValueError(error_message)
 
+        # Sekunden werden nicht dargestellt. FHIR erlaubt beliebig viele
+        # Bruchteilstellen und die Schaltsekunde 60; datetime.fromisoformat
+        # versteht vor Python 3.11 nur 3 oder 6 Bruchteilstellen und nie :60.
+        # Deshalb Sekunden samt Bruchteilen vor dem Parsen auf :00 setzen.
+        normalized = re.sub(r'(T\d{2}:\d{2}):\d{2}(?:\.\d+)?', r'\1:00', value, count=1)
         try:
-            parsed_datetime = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            parsed_datetime = datetime.fromisoformat(normalized.replace("Z", "+00:00"))
             berlin_datetime = parsed_datetime.astimezone(self.OUTPUT_TIMEZONE)
         except ValueError:
             raise ValueError(error_message) from None
@@ -879,20 +1017,21 @@ class MedicationDosageTextGenerator:
 
     def _format_decimal_value(self, value):
         """
-        Format a numeric value with German decimal separator (comma).
-        Removes unnecessary decimal places for whole numbers.
+        Zahl mit deutschem Dezimalkomma und der Genauigkeit der Ressource
+        darstellen.
 
-        Args:
-            value (float/int): Numeric value
+        FHIR verlangt, die Genauigkeit eines decimal einschließlich nachfolgender
+        Nullen auch für die Darstellung zu erhalten (2.50 ist nicht 2.5). Das
+        gelingt nur, wenn der Wert als Decimal ankommt - die CLI liest JSON mit
+        parse_float=Decimal. Ein float hat die Nullen beim Einlesen bereits
+        verloren; er wird über str() (nicht über die Binärdarstellung) in ein
+        Decimal überführt und bestmöglich ausgegeben.
 
-        Returns:
-            str: Formatted value (e.g., "1" instead of "1,0", "1,5" kept as is)
+        Exponentialschreibweise wird nie erzeugt: 1E-2 formatiert als "0,01",
+        1E+2 als "100".
         """
-        if value == int(value):
-            return str(int(value))
-        else:
-            # Use comma as decimal separator for German format
-            return str(value).replace('.', ',')
+        decimal_value = value if isinstance(value, Decimal) else Decimal(str(value))
+        return format(decimal_value, 'f').replace('.', ',')
 
     def _format_time_german(self, time_string):
         """
@@ -916,7 +1055,7 @@ class MedicationDosageTextGenerator:
 
         match = re.fullmatch(
             r'((?:[01]\d|2[0-3])):([0-5]\d)'
-            r'(?::[0-5]\d(?:\.\d+)?)?',
+            r'(?::(?:[0-5]\d|60)(?:\.\d+)?)?',
             time_string
         )
         if not match:
@@ -985,6 +1124,7 @@ class MedicationDosageTextGenerator:
 
             # Associate this dose with each specified day
             for day_code in day_codes:
+                self._require_day_code(day_code)
                 if day_code in day_to_dose and day_to_dose[day_code] != dose_value:
                     raise ValueError(
                         f"Doppelte Belegung des Wochentags '{day_code}' mit unterschiedlicher Dosis.")
@@ -995,22 +1135,18 @@ class MedicationDosageTextGenerator:
 
         # Sort days by weekday order and format each day
         sorted_days = sorted(day_to_dose.keys(),
-                             key=lambda day: self.DAY_ORDER.index(day) if day in self.DAY_ORDER else 99)
+                             key=self.DAY_ORDER.index)
 
         day_text_parts = []
         for day_code in sorted_days:
             dose_value = day_to_dose[day_code]
 
             # Get German day name
-            day_name = self.DAY_TRANSLATIONS.get(day_code, day_code)
+            day_name = self.DAY_TRANSLATIONS[day_code]
 
             # Format dose value and create day entry
             formatted_dose = dose_value if isinstance(dose_value, str) else self._format_decimal_value(dose_value)
-            dose_text = f"je {formatted_dose}"
-            if unit_text:
-                dose_text += f" {unit_text}"
-
-            day_text_parts.append(f"{day_name} — {dose_text}")
+            day_text_parts.append(f"{day_name} — je {formatted_dose} {unit_text}")
 
         combined_days = "; ".join(day_text_parts)
         text = self._assemble(dosage_instructions[0], "", combined_days)
@@ -1175,14 +1311,12 @@ class MedicationDosageTextGenerator:
         has_time_of_day = 'timeOfDay' in repeat_element and repeat_element['timeOfDay']
         has_when_codes = 'when' in repeat_element and repeat_element['when']
 
-        # Delegate to appropriate sub-type generator
+        # Delegate to appropriate sub-type generator. Die Schema-Erkennung
+        # garantiert timeOfDay oder when; timeOfDay und when gemeinsam ist
+        # bereits in generate_dosage_text ausgeschlossen (tim-10).
         if has_time_of_day and not has_when_codes:
             return self._generate_dayofweek_timeofday_combination(dosage_instructions)
-        elif has_when_codes:  # Handle when codes (with or without timeOfDay)
-            return self._generate_dayofweek_when_combination(dosage_instructions)
-        else:
-            # Fallback to when-based logic if neither present
-            return self._generate_dayofweek_when_combination(dosage_instructions)
+        return self._generate_dayofweek_when_combination(dosage_instructions)
 
     def _generate_dayofweek_timeofday_combination(self, dosage_instructions):
         """
@@ -1203,18 +1337,19 @@ class MedicationDosageTextGenerator:
 
             # Group dosages by day
             for day_code in day_codes:
+                self._require_day_code(day_code)
                 if day_code not in day_to_dosages:
                     day_to_dosages[day_code] = []
                 day_to_dosages[day_code].append(dosage)
 
         # Format each day with its time-dose combinations
         sorted_days = sorted(day_to_dosages.keys(),
-                             key=lambda day: self.DAY_ORDER.index(day) if day in self.DAY_ORDER else 99)
+                             key=self.DAY_ORDER.index)
 
         day_text_parts = []
         for day_code in sorted_days:
             day_dosages = day_to_dosages[day_code]
-            day_name = self.DAY_TRANSLATIONS.get(day_code, day_code)
+            day_name = self.DAY_TRANSLATIONS[day_code]
 
             # Uhrzeiten innerhalb eines Tages: über alle Dosage-Elemente dieses
             # Tages global aufsteigend sortiert, mit Komma getrennt.
@@ -1253,6 +1388,7 @@ class MedicationDosageTextGenerator:
 
             # For each day and each when code, set the dose
             for day_code in day_codes:
+                self._require_day_code(day_code)
                 if day_code not in day_to_patterns:
                     day_to_patterns[day_code] = {code: 0 for code in self.WHEN_CODES_ORDER}
 
@@ -1272,7 +1408,7 @@ class MedicationDosageTextGenerator:
 
         # Format each day with its 4-schema pattern
         sorted_days = sorted(day_to_patterns.keys(),
-                             key=lambda day: self.DAY_ORDER.index(day) if day in self.DAY_ORDER else 99)
+                             key=self.DAY_ORDER.index)
 
         # Die Entscheidung kompakt/ausgeschrieben fällt einmal über alle Tage, damit
         # ein einzelner variabler Wert nicht zu zwei Notationen in einem Text führt.
@@ -1285,7 +1421,7 @@ class MedicationDosageTextGenerator:
         day_text_parts = []
         for day_code in sorted_days:
             dose_pattern = day_to_patterns[day_code]
-            day_name = self.DAY_TRANSLATIONS.get(day_code, day_code)
+            day_name = self.DAY_TRANSLATIONS[day_code]
 
             # Feste Dosen -> kompakt "1-0-1-0"; variable -> ausgeschrieben (Option 2).
             day_content = self._render_when_doses(
@@ -1326,13 +1462,11 @@ class MedicationDosageTextGenerator:
         timing = first_dosage.get('timing', {})
         repeat_element = timing.get('repeat', {})
 
+        # period und periodUnit sind hier vorhanden und numerisch: Die
+        # Schema-Erkennung verlangt beide Schlüssel, die Typprüfung den Wert.
         period = repeat_element.get('period')
         period_max = repeat_element.get('periodMax')
         period_unit = repeat_element.get('periodUnit')
-        if period is None or period_unit is None:
-            raise ValueError(
-                "Intervall-Kombinationen erfordern period und periodUnit."
-            )
         interval_text = self._format_period_only_rhythm(
             period, period_unit, period_max
         )
@@ -1469,7 +1603,8 @@ class MedicationDosageTextGenerator:
             return ""
 
         max_dose = dosage.get('maxDosePerPeriod') or {}
-        numerator = max_dose.get('numerator') or {}
+        numerator = self._require_object(
+            max_dose.get('numerator') or {}, 'maxDosePerPeriod.numerator')
         value = numerator.get('value')
         unit = numerator.get('unit')
         if value is None:
@@ -1477,12 +1612,10 @@ class MedicationDosageTextGenerator:
                 "maxDosePerPeriod.numerator.value ist für die "
                 "Textgenerierung erforderlich."
             )
-        if (isinstance(value, bool) or
-                not isinstance(value, (int, float))):
-            raise ValueError(
-                "maxDosePerPeriod.numerator.value muss numerisch sein."
-            )
-        if not isinstance(unit, str) or not unit.strip():
+        self._require_decimal(value, 'maxDosePerPeriod.numerator.value')
+        if unit is not None:
+            self._require_string(unit, 'maxDosePerPeriod.numerator.unit')
+        if not unit or not unit.strip():
             raise ValueError(
                 "maxDosePerPeriod.numerator.unit ist für die "
                 "Textgenerierung erforderlich."
@@ -1490,7 +1623,8 @@ class MedicationDosageTextGenerator:
 
         dose = self._format_decimal_value(value)
         dose = f"{dose} {unit.strip()}"
-        period = self._format_max_dose_period(max_dose.get('denominator') or {})
+        period = self._format_max_dose_period(self._require_object(
+            max_dose.get('denominator') or {}, 'maxDosePerPeriod.denominator'))
         return f"nicht mehr als {dose} {period}"
 
     def _format_max_dose_period(self, denominator):
@@ -1501,6 +1635,10 @@ class MedicationDosageTextGenerator:
         """
         value = denominator.get('value')
         code = denominator.get('code')
+        if value is not None:
+            self._require_decimal(value, 'maxDosePerPeriod.denominator.value')
+        if code is not None:
+            self._require_string(code, 'maxDosePerPeriod.denominator.code')
         if value is None:
             raise ValueError(
                 "maxDosePerPeriod.denominator.value ist für die "
@@ -1579,7 +1717,9 @@ def main():
 
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
-            resource = json.load(file)
+            # parse_float=Decimal: FHIR verlangt den Erhalt der Genauigkeit
+            # (2.50 ist nicht 2.5); ein float verwirft nachfolgende Nullen.
+            resource = json.load(file, parse_float=Decimal)
 
         generator = MedicationDosageTextGenerator()
         result = generator.generate_dosage_text(resource)

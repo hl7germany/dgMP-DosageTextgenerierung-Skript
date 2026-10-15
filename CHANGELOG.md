@@ -38,6 +38,20 @@ Daraus folgt für jeden Eintrag:
   - Die Normalisierung erfasst jedes Unicode-Leerraumzeichen (auch U+00A0) aus übernommenen Feldern; die Aussage „weder ersetzt noch normalisiert" gilt für die übrigen Zeichen. Bisher widersprachen sich beide Sätze.
   - Doppelpunkt-Regel präzisiert: Zeitrahmen und Intervall teilen sich einen Doppelpunkt; bei Bedarfsmedikation steht das Intervall rechts davon. Die reine Bedarfsdosierung kann keinen Zeitrahmen tragen (er liegt in `timing.repeat`); das Muster erweckte einen anderen Eindruck.
   - Die vom Algorithmus nicht gelesenen Felder verweisen auf die „Liste der aktuell nicht unterstützten Dosierkonfigurationen", wie der IG sie nennt, nicht mehr auf „zukünftig unterstützte".
+- Jedes gelesene Feld muss den JSON-Datentyp seines FHIR-Typs haben (neuer Schritt 3 des Gesamtalgorithmus); ein falscher Typ führt zum Abbruch statt zu stillschweigend falschem Text. Bisher wurde nur bei einigen Feldern geprüft, und die Lücken verfälschten den Text:
+  - Numerische Strings als Dosiswert (`"value": "2"`) wurden akzeptiert, aber nicht wie Zahlen formatiert: `"2"` kippte das 4‑Schema in die ausgeschriebene Form (`morgens — je 2 Stück` statt `2-0-0-0 Stück`), `"1.5"` ergab `je 1.5 Stück` ohne Dezimalkomma. Die Spezifikation hatte numerische Strings ausdrücklich zugelassen; FHIR `decimal` ist im JSON eine Zahl.
+  - `period = "1"` (String) wurde nicht als Tagesmuster erkannt und ergab `alle 1 Tage` statt `täglich`; `period = true` ergab `alle 1 Stunde`.
+  - `frequency = "2"` und `frequency = 2.5` wurden ausgegeben, obwohl `positiveInt` eine ganze Zahl verlangt; `frequency = true` zählte als `1`.
+  - `asNeededBoolean = "true"` galt nicht als Bedarf: Mit Timing wurde der Text ohne `bei Bedarf` erzeugt — das Bedarfskennzeichen fehlte.
+  - `doseQuantity.unit = 5` erschien als `1-0-0-0 5`.
+  - `dayOfWeek = "mon"` (String statt Liste) ergab `m — …; o — …; n — …`.
+  - Nicht-String in `text` oder `patientInstruction` und ein Objekt statt Liste in `doseAndRate` führten zu einem Python-Laufzeitfehler statt zu `ValueError`.
+- Ein `dayOfWeek`-Code außerhalb der Wochentags-Tabelle führt zum Abbruch (`Nicht unterstützter Wochentag (dayOfWeek): '{code}'.`), wie bei `when`. Bisher erschien er roh im Text (`xyz — je 1 Stück`).
+- Zahlen werden mit der Genauigkeit der Ressource ausgegeben (`1.0` → `1,0`, `2.50` → `2,50`), wie FHIR es für `decimal` verlangt — Genauigkeit einschließlich nachfolgender Nullen trägt Bedeutung und ist auch für die Darstellung zu erhalten. Die bisherige Regel `1.0` → `1` entfällt. Exponentialschreibweise aus der Ressource wird als Dezimalzahl ausgegeben (`1e-2` → `0,01`). Bisher hing die Darstellung vom JSON-Parser und der Float-Darstellung der Implementierung ab; zwei konforme Implementierungen konnten für dieselbe Ressource verschiedene Texte liefern. Die Referenzimplementierung liest JSON jetzt mit `parse_float=Decimal`.
+- Der Fehlerlisten-Eintrag „Intervall-Kombination ohne `period` oder `periodUnit`" ist gestrichen. Der Fall ist unerreichbar: Die Schema-Erkennung verlangt beide Schlüssel, die Typprüfung einen numerischen Wert.
+- `boundsPeriod` akzeptiert wie FHIR beliebig viele Sekundenbruchteile und die Schaltsekunde `60`; `timeOfDay` ebenfalls `60`. Bisher brach die Referenzimplementierung unter Python 3.10 bei einer oder sieben Bruchteilstellen ab (`datetime.fromisoformat` versteht dort nur drei oder sechs), obwohl Spezifikation und FHIR den Wert erlauben. Sekunden werden ohnehin nicht dargestellt.
+- Die Fehlerliste nennt die Meldungen zu `boundsDuration`, `boundsPeriod`, `maxDosePerPeriod` und zum Mindestabstand wörtlich und legt die Pfadkonvention fest (`[]` für Listenelemente, `Dosage` und `dosageInstruction`/`dosage` oberhalb des Elements).
+- Ein leeres `doseRange.low` (`{}`) gilt als vorhanden und bricht mit `doseRange.low.value ist für die Textgenerierung erforderlich.` ab; bisher wurde es wie ein fehlendes `low` behandelt (`je bis zu 2 Stück`).
 
 ### Referenzimplementierung und Repository
 
@@ -50,6 +64,10 @@ Daraus folgt für jeden Eintrag:
 
 - Die Fehlermeldungen zum Mindestabstand nennen wie in der Spezifikation festgelegt `MinimumIntervalBetweenAdministrations.valueDuration` statt des alten Namens `MindestabstandZwischenGaben.valueDuration`.
 - Kommentare, die noch die Großschreibung bei Bedarf und den entfallenen Baustein `, mit mindestens … Abstand` beschrieben, sind korrigiert.
+
+#### Removed
+
+- Unerreichbare Zweige: die Prüfung auf fehlendes `period`/`periodUnit` in der Intervall-Kombination, der Fallback in der Wochentags-Kombination für „weder `timeOfDay` noch `when`" sowie die Behandlung einer fehlenden Dosis-Einheit in vier Ausgabestellen — die Einheit ist Pflicht, `_extract_dose_quantity` bricht ohne sie ab.
 
 ## [2.0.0-ballot] - 2026-08-30
 
