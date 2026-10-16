@@ -1505,25 +1505,14 @@ class MedicationDosageTextGenerator:
 
         # period und periodUnit sind hier vorhanden und numerisch: Die
         # Schema-Erkennung verlangt beide Schlüssel, die Typprüfung den Wert.
+        # Wie die übrigen Rahmen-Angaben stammt der Rhythmus aus dem ersten
+        # Element; die Gleichheit sichert TimingOnlyOneTimeForInterval.
         period = repeat_element.get('period')
         period_max = repeat_element.get('periodMax')
         period_unit = repeat_element.get('periodUnit')
         interval_text = self._format_period_only_rhythm(
             period, period_unit, period_max
         )
-
-        # Der Rhythmus wird nur aus dem ersten Element gelesen. Ein spaeteres
-        # Element mit anderer Periode verloere sie stillschweigend - deshalb
-        # Abbruch (TimingOnlyOneTimeForInterval verlangt dieselbe Periode).
-        for dosage in dosage_instructions[1:]:
-            other_repeat = dosage.get('timing', {}).get('repeat', {})
-            other_text = self._format_period_only_rhythm(
-                other_repeat.get('period'), other_repeat.get('periodUnit'),
-                other_repeat.get('periodMax'))
-            if other_text != interval_text:
-                raise ValueError(
-                    "Alle Dosage-Elemente einer Intervall-Kombination müssen "
-                    "denselben Einnahmerhythmus tragen.")
 
         # Zeit-Schluessel ist die angezeigte Uhrzeit (HH:MM Uhr) bzw. der
         # when-Code, wie in den anderen Schemata: "08:00" und "08:00:00" sind
