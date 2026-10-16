@@ -468,8 +468,6 @@ class MedicationDosageTextGenerator:
         Returns:
             str: Schema type constant (e.g., SCHEMA_4_PATTERN, SCHEMA_TIME_OF_DAY)
         """
-        if not dosage_instructions:
-            return "Unknown"
 
         # Analyze the first dosage instruction (constraint ensures consistency)
         first_dosage = dosage_instructions[0]
@@ -695,8 +693,6 @@ class MedicationDosageTextGenerator:
             Input: [{"text": "Nach Bedarf"}, {"text": "bei Schmerzen"}]
             Output: "Nach Bedarf bei Schmerzen"
         """
-        if not dosage_instructions:
-            return ""
 
         # Freitext unverändert, auch Rand-Leerraum: FreeTextMatchesRenderedText
         # verlangt exakte Gleichheit mit Dosage.text; ein Trim machte sie fuer
@@ -724,12 +720,8 @@ class MedicationDosageTextGenerator:
 
         Example output: "täglich: 08:00 Uhr — je 1 Stück, 20:00 Uhr — je 2 Stück"
         """
-        if not dosage_instructions:
-            return ""
 
         combined_instructions = self._build_time_dose_segments(dosage_instructions)
-        if not combined_instructions:
-            return ""
 
         text = self._assemble(dosage_instructions[0], "täglich", combined_instructions)
         return self._append_trailing_instructions(text, dosage_instructions[0])
@@ -766,10 +758,6 @@ class MedicationDosageTextGenerator:
         for dosage in dosages:
             repeat_element = dosage.get('timing', {}).get('repeat', {})
             time_of_day_list = repeat_element.get('timeOfDay', [])
-
-            if not time_of_day_list:
-                continue
-
             dose_text = self._extract_dose_text_with_prefix(dosage)
             for time_value in time_of_day_list:
                 # Sortierschlüssel ist der unveränderte Eingabestring: Sekunden und
@@ -778,9 +766,6 @@ class MedicationDosageTextGenerator:
                 # muss, entspricht die lexikographische der chronologischen Ordnung.
                 time_dose_pairs.append(
                     (time_value, self._format_time_german(time_value), dose_text))
-
-        if not time_dose_pairs:
-            return ""
 
         time_dose_pairs.sort(key=lambda pair: pair[0])
 
@@ -1013,9 +998,6 @@ class MedicationDosageTextGenerator:
         Groß-/Kleinschreibung am Satzanfang bleibt dem anzeigenden System
         überlassen, das den Text in seinen eigenen Kontext einbettet.
         """
-        if not text:
-            return text
-
         return self._normalize_whitespace(text)
 
     def _normalize_whitespace(self, text):
@@ -1188,8 +1170,6 @@ class MedicationDosageTextGenerator:
 
         Example output: "montags — je 1 Stück; mittwochs — je 2 Stück"
         """
-        if not dosage_instructions:
-            return ""
 
         # Group dosages by day and collect dose information
         day_to_dose = {}  # day_code -> (dose_value, unit)
@@ -1210,9 +1190,6 @@ class MedicationDosageTextGenerator:
                 elif self._slot_key(day_to_dose[day_code]) != self._slot_key((dose_value, dose_unit)):
                     raise ValueError(
                         f"Doppelte Belegung des Wochentags '{day_code}' mit unterschiedlicher Dosis.")
-
-        if not day_to_dose:
-            return ""
 
         # Sort days by weekday order and format each day
         sorted_days = sorted(day_to_dose.keys(),
@@ -1252,8 +1229,6 @@ class MedicationDosageTextGenerator:
 
         Example output: "3 x täglich: je 1 Stück"
         """
-        if not dosage_instructions:
-            return ""
 
         # Ein Intervall laesst sich nicht aggregieren; ein zweites Element
         # entfiele stillschweigend (wie beim reinen Bedarf: Abbruch).
@@ -1349,9 +1324,8 @@ class MedicationDosageTextGenerator:
 
     def _format_period_only_rhythm(self, period, period_unit, period_max=None):
         """Formatiert einen Einnahmerhythmus ohne Frequenzangabe."""
+        # 1 d ohne periodMax ist ein Tagesmuster und fuehrt nie zu Regel 7.
         if period_max is None and period == 1:
-            if period_unit == 'd':
-                return "täglich"
             if period_unit == 'wk':
                 return "wöchentlich"
             if period_unit == 'mo':
@@ -1382,8 +1356,6 @@ class MedicationDosageTextGenerator:
         - DayOfWeek + TimeOfDay: "montags 08:00 Uhr — je 1 Stück; mittwochs 20:00 Uhr — je 2 Stück"
         - DayOfWeek + When: "montags 1-0-1-0 Stück; mittwochs 2-1-2-0 Stück"
         """
-        if not dosage_instructions:
-            return ""
 
         # Der Untertyp (Uhrzeiten oder Tagesabschnitte) wird ueber ALLE Elemente
         # bestimmt. Beide Untertypen fallen unter dieselbe Schema-Regel, die
@@ -1407,8 +1379,6 @@ class MedicationDosageTextGenerator:
 
         Example output: "montags 08:00 Uhr — je 1 Stück; mittwochs 20:00 Uhr — je 2 Stück"
         """
-        if not dosage_instructions:
-            return ""
 
         # Group dosages by day of week
         day_to_dosages = {}  # day_code -> list of dosages
@@ -1437,8 +1407,7 @@ class MedicationDosageTextGenerator:
             # Uhrzeiten innerhalb eines Tages: über alle Dosage-Elemente dieses
             # Tages global aufsteigend sortiert, mit Komma getrennt.
             combined_times = self._build_time_dose_segments(day_dosages)
-            if combined_times:
-                day_text_parts.append(f"{day_name} {combined_times}")
+            day_text_parts.append(f"{day_name} {combined_times}")
 
         combined_days = "; ".join(day_text_parts)
         text = self._assemble(dosage_instructions[0], "", combined_days)
@@ -1450,8 +1419,6 @@ class MedicationDosageTextGenerator:
 
         Example output: "montags 1-0-1-0 Stück; mittwochs 2-1-2-0 Stück"
         """
-        if not dosage_instructions:
-            return ""
 
         # Group dosages by day and build 4-schema pattern for each day
         day_to_patterns = {}  # day_code -> {MORN: (dose, unit) | None, NOON: …, EVE: …, NIGHT: …}
@@ -1484,9 +1451,6 @@ class MedicationDosageTextGenerator:
                         raise ValueError(
                             f"Doppelte Belegung der Kombination aus Wochentag '{day_code}' "
                             f"und Zeit-/Tagesabschnitt '{when_code}' mit unterschiedlicher Dosis.")
-
-        if not day_to_patterns:
-            return ""
 
         # Format each day with its 4-schema pattern
         sorted_days = sorted(day_to_patterns.keys(),
@@ -1530,8 +1494,6 @@ class MedicationDosageTextGenerator:
 
         Example output: "alle 2 Tage: 08:00 Uhr — je 1 Stück, 18:00 Uhr — je 2 Stück"
         """
-        if not dosage_instructions:
-            return ""
 
         # Extract the shared non-daily period from the first dosage. In an
         # interval combination, explicit timeOfDay/when segments already state
@@ -1622,8 +1584,6 @@ class MedicationDosageTextGenerator:
         gesetzt; die Maximalmenge wird zentral ergänzt
         (_append_trailing_instructions).
         """
-        if not dosage_instructions:
-            return ""
 
         dosage = dosage_instructions[0]
         dose_text = self._extract_dose_text_with_prefix(dosage)
