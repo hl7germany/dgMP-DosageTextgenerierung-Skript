@@ -519,6 +519,22 @@ class SchemaOutputTest(unittest.TestCase):
         self.assertEqual("alle 2 Tage: 08:00 Uhr — je 1 Stück, 18:00 Uhr — je 2 Stück",
                          self.generator.generate_dosage_text(self._resource([dosage_a, dosage_b])))
 
+    def test_interval_time_combo_sorts_unsorted_times_across_elements(self):
+        # Mehrere unsortierte Uhrzeiten je Element, über die Elemente verschränkt
+        dosage_a = {
+            "timing": {"repeat": {"period": 2, "periodUnit": "d", "timeOfDay": ["20:00:00", "08:00:00"]}},
+            "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "Stück"}}],
+        }
+        dosage_b = {
+            "timing": {"repeat": {"period": 2, "periodUnit": "d",
+                                  "timeOfDay": ["22:00:00", "10:00:00", "14:00:00"]}},
+            "doseAndRate": [{"doseQuantity": {"value": 2, "unit": "Stück"}}],
+        }
+        expected = ("alle 2 Tage: 08:00 Uhr — je 1 Stück, 10:00 Uhr — je 2 Stück, 14:00 Uhr — je 2 Stück, "
+                    "20:00 Uhr — je 1 Stück, 22:00 Uhr — je 2 Stück")
+        for order in ([dosage_a, dosage_b], [dosage_b, dosage_a]):
+            self.assertEqual(expected, self.generator.generate_dosage_text(self._resource(order)))
+
     # ── Dosis-Bereich (doseRange) ─────────────────────────────────────────────
 
     def test_dose_range_low_and_high(self):
