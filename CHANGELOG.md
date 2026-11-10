@@ -9,11 +9,10 @@ Jeder Abschnitt beschreibt die Unterschiede zum vorigen Release und hat zwei
 Teile:
 
 - **Algorithmus**: Änderungen an der Spezifikation. Sie gelten für jede
-  Implementierung. Nur sie führen zu einer neuen Versionsnummer.
+  Implementierung.
 - **Beispielimplementierung und Repository**: Änderungen am Python-Skript und
   an den Testvektoren, bei denen die Spezifikation gleich bleibt, etwa ein
-  behobener Fehler im Skript. Sie führen zu keiner neuen Versionsnummer und
-  stehen im Abschnitt der nächsten Algorithmus-Version.
+  behobener Fehler im Skript.
 
 Änderungen, die nur Tests oder CI betreffen, stehen nicht im Changelog.
 
