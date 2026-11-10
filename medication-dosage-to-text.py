@@ -345,10 +345,16 @@ class MedicationDosageTextGenerator:
                     if name == "modifierExtension" and url != self.URL_MINDESTABSTAND:
                         raise ValueError(f"Nicht unterstützte modifierExtension: '{url}'.")
         if "doseAndRate" in dosage:
-            # Gelesen wird nur doseAndRate[0]; weitere Einträge werden ignoriert.
             items = self._require_list(dosage["doseAndRate"], "doseAndRate")
+            # Der Text traegt genau eine Dosis je Element; ein weiterer Eintrag
+            # oder eine zweite Dosisangabe im selben Eintrag entfiele
+            # stillschweigend.
+            if len(items) > 1:
+                raise ValueError("doseAndRate darf höchstens einen Eintrag enthalten.")
             if items:
                 item = self._require_object(items[0], "doseAndRate[]")
+                if "doseQuantity" in item and "doseRange" in item:
+                    raise ValueError("doseQuantity und doseRange dürfen nicht gemeinsam angegeben werden.")
                 if "doseQuantity" in item:
                     self._check_quantity_types(item["doseQuantity"], "doseQuantity")
                 if "doseRange" in item:
