@@ -1,22 +1,21 @@
 # Changelog
 
-Die Versionsnummern in dieser Datei sind **Algorithmus-Versionen**: sie bezeichnen
-den in [dosage-text-algorithm-spec.md](dosage-text-algorithm-spec.md) festgelegten
-Algorithmus, nicht den Stand dieses Repositories. Eine eigene Implementierung
-trägt dieselbe Nummer, sobald sie diese Spezifikation umsetzt, und gibt sie als
-`algorithmVersion` weiter.
+Die Versionsnummern in dieser Datei sind die Versionen des Algorithmus, wie ihn
+[dosage-text-algorithm-spec.md](dosage-text-algorithm-spec.md) festlegt. Eine
+eigene Implementierung, die diese Spezifikation umsetzt, gibt dieselbe Nummer
+als `algorithmVersion` an.
 
-Daraus folgt für jeden Eintrag:
+Jeder Abschnitt beschreibt die Unterschiede zum vorigen Release und hat zwei
+Teile:
 
-- Abschnitt **Algorithmus** — Änderungen an der Spezifikation. Sie sind für jede
-  Implementierung verbindlich und nur sie rechtfertigen eine neue Versionsnummer.
-- Abschnitt **Beispielimplementierung und Repository** — Änderungen am Skript
-  und an den Testvektoren, die das festgelegte Verhalten nicht berühren. Sie
-  erscheinen unter der Version, mit der sie ausgeliefert wurden, begründen
-  aber keine. Änderungen, die nur Tests oder CI betreffen, erhalten keinen
-  Eintrag.
+- **Algorithmus**: Änderungen an der Spezifikation. Sie gelten für jede
+  Implementierung. Nur sie führen zu einer neuen Versionsnummer.
+- **Beispielimplementierung und Repository**: Änderungen am Python-Skript und
+  an den Testvektoren, bei denen die Spezifikation gleich bleibt, etwa ein
+  behobener Fehler im Skript. Sie führen zu keiner neuen Versionsnummer und
+  stehen im Abschnitt der nächsten Algorithmus-Version.
 
-Ändert sich nur die Beispielimplementierung, bleibt die Versionsnummer stehen.
+Änderungen, die nur Tests oder CI betreffen, stehen nicht im Changelog.
 
 ## [Unreleased]
 
