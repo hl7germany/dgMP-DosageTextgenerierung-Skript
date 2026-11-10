@@ -103,6 +103,17 @@ class MedicationDosageTextGenerator:
         'mo': 'Monate',
         'a': 'Jahre'
     }
+    # Plural im Dativ, nach "in" im Einnahmerhythmus ("2 x in 3 Tagen").
+    # Der Singular ist im Dativ unveraendert.
+    TIME_UNITS_PLURAL_DATIVE = {
+        's': 'Sekunden',
+        'min': 'Minuten',
+        'h': 'Stunden',
+        'd': 'Tagen',
+        'wk': 'Wochen',
+        'mo': 'Monaten',
+        'a': 'Jahren'
+    }
 
     # Kanonische Extension-URLs (exakter Vergleich, kein Teilstring-Match)
     URL_AS_NEEDED_FOR = 'http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor'
@@ -1152,13 +1163,14 @@ class MedicationDosageTextGenerator:
             )
         return f"{match.group(1)}:{match.group(2)} Uhr"
 
-    def _format_time_unit_german(self, value, unit):
+    def _format_time_unit_german(self, value, unit, dative=False):
         """
         Format time unit with proper German singular/plural form.
 
         Args:
             value (int/float): Numeric value
             unit (str): FHIR time unit code (s, min, h, d, wk, mo, a)
+            dative (bool): Plural im Dativ (nach "in"); der Singular bleibt gleich
 
         Returns:
             str: German unit name (e.g., "Tag" vs "Tage")
@@ -1168,7 +1180,12 @@ class MedicationDosageTextGenerator:
                 im erzeugten Text wäre für Patientinnen und Patienten nicht lesbar.
         """
         # Choose singular or plural based on value
-        unit_dict = self.TIME_UNITS_SINGULAR if value == 1 else self.TIME_UNITS_PLURAL
+        if value == 1:
+            unit_dict = self.TIME_UNITS_SINGULAR
+        elif dative:
+            unit_dict = self.TIME_UNITS_PLURAL_DATIVE
+        else:
+            unit_dict = self.TIME_UNITS_PLURAL
         if unit not in unit_dict:
             raise ValueError(f"Nicht unterstützte Zeiteinheit: '{unit}'.")
         return unit_dict[unit]
@@ -1278,6 +1295,7 @@ class MedicationDosageTextGenerator:
         - "täglich" (daily)
         - "3 x täglich" (3 times daily)
         - "alle 8 Stunden" (every 8 hours)
+        - "2 x in 3 Tagen" (2 times within 3 days)
         - "wöchentlich" (weekly)
 
         Args:
@@ -1325,23 +1343,28 @@ class MedicationDosageTextGenerator:
 
         # Feste Frequenzen > 1 und Frequenzbereiche (auch 1 bis n).
         frequency_text = f"{self._format_range_value(frequency, frequency_max)} x"
-        period_description = self._format_period_description(period, period_unit, period_max)
-        return f"{frequency_text} alle {period_description}"
+        if period == 1 and period_max is None:
+            period_description = self._format_period_description(period, period_unit)
+            return f"{frequency_text} alle {period_description}"
+        # Jede andere Periode: Anzahl der Gaben innerhalb der Periode ("2 x in 3 Tagen").
+        period_description = self._format_period_description(period, period_unit, period_max, dative=True)
+        return f"{frequency_text} in {period_description}"
 
-    def _format_period_description(self, period, period_unit, period_max=None):
+    def _format_period_description(self, period, period_unit, period_max=None, dative=False):
         """
         Format a period with unit into German description.
 
         Args:
             period (int/float): Numeric period value
             period_unit (str): FHIR period unit code
+            dative (bool): Plural im Dativ (nach "in")
 
         Returns:
             str: German period description like "3 Tage" or "2 Wochen"
         """
         formatted_period = self._format_range_value(period, period_max)
         unit_basis = period_max if period_max is not None else period
-        unit_name = self._format_time_unit_german(unit_basis, period_unit)
+        unit_name = self._format_time_unit_german(unit_basis, period_unit, dative=dative)
         return f"{formatted_period} {unit_name}"
 
     def _format_period_only_rhythm(self, period, period_unit, period_max=None):
