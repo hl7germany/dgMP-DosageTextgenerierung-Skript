@@ -35,6 +35,11 @@ Daraus folgt für jeden Eintrag:
 
 ### Referenzimplementierung und Repository
 
+#### Added
+
+- Testfall für die Intervall-Kombination mit mehreren unsortierten Uhrzeiten je `Dosage`-Element, über die Elemente verschränkt (`tests/test_regression_ordering.py`).
+- Testfälle in `tests/test_spec_examples.py` für die Änderungen dieser Version: zwei Mindestabstände, mehr als eine Dosisangabe je Element, die Typprüfung von `unit` und `code`, Leerraum nach `White_Space`, nicht endliche Zahlen, Zeitpunkte außerhalb der Jahre `0001` bis `9999` und eine leere `doseRange.low.unit`.
+
 #### Fixed
 
 - Eine leere `doseRange.low.unit` (`""`) neben einer `high.unit` führt wie in der Spezifikation festgelegt zum Abbruch (`doseRange.low.unit und doseRange.high.unit müssen übereinstimmen.`); bisher wurde sie wie eine fehlende Einheit behandelt.
