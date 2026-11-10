@@ -1,9 +1,9 @@
 # Changelog
 
-Die Versionsnummern in dieser Datei sind die Versionen des Algorithmus, wie ihn
-[dosage-text-algorithm-spec.md](dosage-text-algorithm-spec.md) festlegt. Eine
-eigene Implementierung, die diese Spezifikation umsetzt, gibt dieselbe Nummer
-als `algorithmVersion` an.
+Jedes Release von Spezifikation
+([dosage-text-algorithm-spec.md](dosage-text-algorithm-spec.md)) und
+Beispielimplementierung hat eine Versionsnummer. Eine eigene Implementierung
+gibt die Nummer der Spezifikation, die sie umsetzt, als `algorithmVersion` an.
 
 Jeder Abschnitt beschreibt die Unterschiede zum vorigen Release und hat zwei
 Teile:
@@ -14,6 +14,10 @@ Teile:
   an den Testvektoren, bei denen die Spezifikation gleich bleibt, etwa ein
   behobener Fehler im Skript.
 
+Ändert ein Release das festgelegte Verhalten nicht, erhöht es nur die
+Patch-Version (`2.0.0` → `2.0.1`). Eine Implementierung der vorigen Version
+erfüllt es unverändert.
+
 Änderungen, die nur Tests oder CI betreffen, stehen nicht im Changelog.
 
 ## [Unreleased]
@@ -22,6 +26,7 @@ Teile:
 
 #### Changed
 
+- Versionierung: Jedes Release erhält eine Versionsnummer aus Haupt-, Neben- und Patch-Version. Ein Release, das das festgelegte Verhalten nicht ändert (Korrektur an der Beispielimplementierung oder an den Testvektoren, redaktionelle Korrektur der Spezifikation), erhöht die Patch-Version; Versionen, die sich nur darin unterscheiden, legen denselben Algorithmus fest. Bisher entstand eine neue Nummer nur bei einer Änderung der Spezifikation, eine Korrektur allein am Skript ließ sich damit nicht ausliefern.
 - Mehr als eine Extension `MinimumIntervalBetweenAdministrations` an einem `Dosage`-Element führt zum Abbruch (`Es ist höchstens ein Mindestabstand (MinimumIntervalBetweenAdministrations) zulässig.`). Bisher wurde die erste verwendet und jede weitere entfiel.
 - Mehr als ein Eintrag in `doseAndRate` führt zum Abbruch (`doseAndRate darf höchstens einen Eintrag enthalten.`), ebenso `doseQuantity` und `doseRange` im selben Eintrag (`doseQuantity und doseRange dürfen nicht gemeinsam angegeben werden.`). Bisher wurden weitere Einträge ignoriert, und `doseQuantity` hatte Vorrang vor `doseRange`.
 - Die Typprüfung (Schritt 3) ist über die Felder der Feldreferenz festgelegt statt über „gelesene Felder": In jeder `Quantity` werden `value`, `unit` und `code` geprüft, die Werte der beiden bekannten Extensions in `extension` und `modifierExtension`. Dasselbe gilt für die `comparator`-Prüfung. Die Beispielimplementierung prüfte bereits so.
