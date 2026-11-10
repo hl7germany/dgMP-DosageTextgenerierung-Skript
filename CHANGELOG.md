@@ -10,9 +10,11 @@ Daraus folgt für jeden Eintrag:
 
 - Abschnitt **Algorithmus** — Änderungen an der Spezifikation. Sie sind für jede
   Implementierung verbindlich und nur sie rechtfertigen eine neue Versionsnummer.
-- Abschnitt **Beispielimplementierung und Repository** — Änderungen an Skript,
-  Tests oder CI, die das festgelegte Verhalten nicht berühren. Sie erscheinen
-  unter der Version, mit der sie ausgeliefert wurden, begründen aber keine.
+- Abschnitt **Beispielimplementierung und Repository** — Änderungen am Skript
+  und an den Testvektoren, die das festgelegte Verhalten nicht berühren. Sie
+  erscheinen unter der Version, mit der sie ausgeliefert wurden, begründen
+  aber keine. Änderungen, die nur Tests oder CI betreffen, erhalten keinen
+  Eintrag.
 
 Ändert sich nur die Beispielimplementierung, bleibt die Versionsnummer stehen.
 
@@ -37,9 +39,7 @@ Daraus folgt für jeden Eintrag:
 
 #### Added
 
-- `tests/cases/`: 370 Testvektoren als JSON, je Fall die `Dosage`-Elemente und der erwartete Text oder die erwartete Abbruchmeldung. Sie sind unabhängig von der Programmiersprache und gegen jede Implementierung ausführbar; das Format beschreibt `tests/cases/README.md`. `tests/test_cases.py` führt jeden Fall für `MedicationRequest`, `MedicationDispense` und `MedicationStatement` gegen das Skript aus.
-- Testfall für die Intervall-Kombination mit mehreren unsortierten Uhrzeiten je `Dosage`-Element, über die Elemente verschränkt (`tests/test_regression_ordering.py`).
-- Testfälle in `tests/test_spec_examples.py` für die Änderungen dieser Version: zwei Mindestabstände, mehr als eine Dosisangabe je Element, die Typprüfung von `unit` und `code`, Leerraum nach `White_Space`, nicht endliche Zahlen, Zeitpunkte außerhalb der Jahre `0001` bis `9999` und eine leere `doseRange.low.unit`.
+- `tests/cases/`: Testvektoren als JSON, je Fall die `Dosage`-Elemente und der erwartete Text oder die erwartete Abbruchmeldung. Sie sind unabhängig von der Programmiersprache und gegen jede Implementierung ausführbar; das Format beschreibt `tests/cases/README.md`. `tests/test_cases.py` führt jeden Fall für `MedicationRequest`, `MedicationDispense` und `MedicationStatement` gegen das Skript aus.
 
 #### Changed
 
