@@ -1,0 +1,784 @@
+{
+  "section": "Interval combination",
+  "cases": [
+    {
+      "name": "rhythm: combination wöchentlich",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 1,
+              "periodUnit": "wk",
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "wöchentlich: morgens — je 1 Stück"
+      }
+    },
+    {
+      "name": "rhythm: combination monatlich",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 1,
+              "periodUnit": "mo",
+              "timeOfDay": [
+                "08:00:00"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "monatlich: 08:00 Uhr — je 1 Stück"
+      }
+    },
+    {
+      "name": "interval combination",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "08:00:00"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "18:00:00"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "alle 2 Tage: 08:00 Uhr — je 1 Stück, 18:00 Uhr — je 2 Stück"
+      }
+    },
+    {
+      "name": "interval combination with bounds",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "08:00:00"
+              ],
+              "boundsDuration": {
+                "value": 7,
+                "code": "d"
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "für 7 Tage alle 2 Tage: 08:00 Uhr — je 1 Stück"
+      }
+    },
+    {
+      "name": "interval combination: same time (HH:MM and HH:MM:SS) with same dose only once",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "08:00"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "08:00:00",
+                "20:00:00"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "alle 2 Tage: 08:00 Uhr — je 1 Stück, 20:00 Uhr — je 1 Stück"
+      }
+    },
+    {
+      "name": "interval combination: when codes before times",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "08:00:00"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "when": [
+                "EVE"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "alle 2 Tage: abends — je 2 Stück, 08:00 Uhr — je 1 Stück"
+      }
+    },
+    {
+      "name": "every second day morning regression",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "alle 2 Tage: morgens — je 1 Stück"
+      }
+    },
+    {
+      "name": "interval time combination does not require frequency",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "10:00:00",
+                "14:00:00",
+                "22:00:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "alle 2 Tage: 10:00 Uhr — je 2 Stück, 14:00 Uhr — je 2 Stück, 22:00 Uhr — je 2 Stück"
+      }
+    },
+    {
+      "name": "interval time combination ignores optional frequency in text",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 2,
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "08:00:00",
+                "20:00:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        },
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 3,
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "10:00:00",
+                "14:00:00",
+                "22:00:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "alle 2 Tage: 08:00 Uhr — je 1 Stück, 10:00 Uhr — je 2 Stück, 14:00 Uhr — je 2 Stück, 20:00 Uhr — je 1 Stück, 22:00 Uhr — je 2 Stück"
+      }
+    },
+    {
+      "name": "interval when combination is not treated as daily 4 schema",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "when": [
+                "MORN",
+                "EVE"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "alle 2 Tage: morgens — je 1 Stück, abends — je 1 Stück"
+      }
+    },
+    {
+      "name": "when accepts optional frequency period and unit",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ],
+              "frequency": 1,
+              "period": 1,
+              "periodUnit": "wk"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "wöchentlich: morgens — je 1 Stück"
+      }
+    },
+    {
+      "name": "interval combination compares displayed time [3]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "08:00"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "08:00:00"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "alle 2 Tage: 08:00 Uhr — je 1 Stück"
+      }
+    },
+    {
+      "name": "interval combination reads rhythm from first element [1]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "when": [
+                "EVE"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "alle 2 Tage: morgens — je 1 Stück, abends — je 2 Stück"
+      }
+    },
+    {
+      "name": "interval combination reads rhythm from first element [2]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 3,
+              "periodUnit": "d",
+              "when": [
+                "EVE"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "alle 2 Tage: morgens — je 1 Stück, abends — je 2 Stück"
+      }
+    },
+    {
+      "name": "interval time combo",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "08:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        },
+        {
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "18:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "alle 2 Tage: 08:00 Uhr — je 1 Stück, 18:00 Uhr — je 2 Stück"
+      }
+    },
+    {
+      "name": "interval time combo sorts unsorted times across elements [1]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "20:00:00",
+                "08:00:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        },
+        {
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "22:00:00",
+                "10:00:00",
+                "14:00:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "alle 2 Tage: 08:00 Uhr — je 1 Stück, 10:00 Uhr — je 2 Stück, 14:00 Uhr — je 2 Stück, 20:00 Uhr — je 1 Stück, 22:00 Uhr — je 2 Stück"
+      }
+    },
+    {
+      "name": "interval time combo sorts unsorted times across elements [2]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "22:00:00",
+                "10:00:00",
+                "14:00:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ]
+        },
+        {
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "20:00:00",
+                "08:00:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "alle 2 Tage: 08:00 Uhr — je 1 Stück, 10:00 Uhr — je 2 Stück, 14:00 Uhr — je 2 Stück, 20:00 Uhr — je 1 Stück, 22:00 Uhr — je 2 Stück"
+      }
+    },
+    {
+      "name": "interval combination: alle 2 Wochen",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "wk",
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "alle 2 Wochen: morgens — je 1 Stück"
+      }
+    },
+    {
+      "name": "interval combination: alle 3 Monate",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 3,
+              "periodUnit": "mo",
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "alle 3 Monate: morgens — je 1 Stück"
+      }
+    },
+    {
+      "name": "interval combination: 1 wk with periodMax has no short form",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 1,
+              "periodMax": 2,
+              "periodUnit": "wk",
+              "timeOfDay": [
+                "08:00"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "alle 1 bis 2 Wochen: 08:00 Uhr — je 1 Stück"
+      }
+    },
+    {
+      "name": "interval combination: 1 d with periodMax is not a daily pattern",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 1,
+              "periodMax": 3,
+              "periodUnit": "d",
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "alle 1 bis 3 Tage: morgens — je 1 Stück"
+      }
+    }
+  ]
+}

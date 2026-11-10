@@ -1,0 +1,1291 @@
+{
+  "section": "Error: as needed, minimum interval and max dose",
+  "cases": [
+    {
+      "name": "pure as needed, two elements",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true
+        }
+      ],
+      "expect": {
+        "error": "Reine Bedarfsmedikation erlaubt genau ein Dosage-Element."
+      }
+    },
+    {
+      "name": "max dose with rhythm",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 8,
+              "periodUnit": "h"
+            }
+          },
+          "asNeededBoolean": true,
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 4,
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": 1,
+              "code": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Eine Maximalmenge ist nur bei reiner Bedarfsmedikation zulässig, nicht zusammen mit einem strukturierten Rhythmus."
+      }
+    },
+    {
+      "name": "minimum interval with rhythm",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 8,
+              "periodUnit": "h"
+            }
+          },
+          "asNeededBoolean": true,
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 4,
+                "code": "h"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Ein Mindestabstand ist nur bei reiner Bedarfsmedikation zulässig, nicht zusammen mit einem strukturierten Rhythmus."
+      }
+    },
+    {
+      "name": "two minimum intervals",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 4,
+                "code": "h"
+              }
+            },
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 6,
+                "code": "h"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Es ist höchstens ein Mindestabstand (MinimumIntervalBetweenAdministrations) zulässig."
+      }
+    },
+    {
+      "name": "two minimum intervals, the second incomplete",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 4,
+                "code": "h"
+              }
+            },
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations"
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Es ist höchstens ein Mindestabstand (MinimumIntervalBetweenAdministrations) zulässig."
+      }
+    },
+    {
+      "name": "asNeededFor without text",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {}
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "asNeededFor.valueCodeableConcept.text ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "minimum interval without valueDuration",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations"
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "MinimumIntervalBetweenAdministrations.valueDuration ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "minimum interval without value",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "code": "h"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "MinimumIntervalBetweenAdministrations.valueDuration.value ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "minimum interval without code",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 4
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "MinimumIntervalBetweenAdministrations.valueDuration.code ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "max dose without numerator value",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "maxDosePerPeriod": {
+            "numerator": {
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": 1,
+              "code": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "maxDosePerPeriod.numerator.value ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "max dose without numerator unit",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 4
+            },
+            "denominator": {
+              "value": 1,
+              "code": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "maxDosePerPeriod.numerator.unit ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "max dose without denominator value",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 4,
+              "unit": "Stück"
+            },
+            "denominator": {
+              "code": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "maxDosePerPeriod.denominator.value ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "max dose without denominator code",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 4,
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": 1
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "maxDosePerPeriod.denominator.code ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "max dose without numerator",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "maxDosePerPeriod": {
+            "denominator": {
+              "value": 1,
+              "code": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "maxDosePerPeriod.numerator.value ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "max dose denominator other than 1 d or 24 h",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 2,
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": 12,
+              "code": "h"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "maxDosePerPeriod.denominator muss 1 d oder 24 h sein."
+      }
+    },
+    {
+      "name": "unknown modifierExtension",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "modifierExtension": [
+            {
+              "url": "http://example.org/x",
+              "valueBoolean": true
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Nicht unterstützte modifierExtension: 'http://example.org/x'."
+      }
+    },
+    {
+      "name": "max dose with comparator",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 6,
+              "unit": "Stück",
+              "comparator": "<"
+            },
+            "denominator": {
+              "value": 1,
+              "code": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "maxDosePerPeriod.numerator.comparator wird nicht unterstützt."
+      }
+    },
+    {
+      "name": "reason without as needed flag",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 8,
+              "periodUnit": "h"
+            }
+          },
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Kopfschmerzen"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Ein Einnahmeanlass (asNeededFor) setzt asNeededBoolean = true voraus."
+      }
+    },
+    {
+      "name": "minimum interval without as needed flag",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 8,
+              "periodUnit": "h"
+            }
+          },
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 4,
+                "code": "h"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Ein Mindestabstand setzt asNeededBoolean = true voraus."
+      }
+    },
+    {
+      "name": "max dose without as needed flag",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 8,
+              "periodUnit": "h"
+            }
+          },
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 4,
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": 1,
+              "code": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Eine Maximalmenge setzt asNeededBoolean = true voraus."
+      }
+    },
+    {
+      "name": "reason without as needed flag in element 2",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "EVE"
+              ]
+            }
+          },
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Kopfschmerzen"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Ein Einnahmeanlass (asNeededFor) setzt asNeededBoolean = true voraus."
+      }
+    },
+    {
+      "name": "minimum interval with rhythm in element 2",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "asNeededBoolean": true
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "EVE"
+              ]
+            }
+          },
+          "asNeededBoolean": true,
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 4,
+                "code": "h"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Ein Mindestabstand ist nur bei reiner Bedarfsmedikation zulässig, nicht zusammen mit einem strukturierten Rhythmus."
+      }
+    },
+    {
+      "name": "max dose without as needed flag in element 2",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "EVE"
+              ]
+            }
+          },
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 4,
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": 1,
+              "code": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Eine Maximalmenge setzt asNeededBoolean = true voraus."
+      }
+    },
+    {
+      "name": "minimum interval without as needed flag and without timing",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 4,
+                "code": "h"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Ein Mindestabstand setzt asNeededBoolean = true voraus."
+      }
+    },
+    {
+      "name": "minimum interval on free text",
+      "dosages": [
+        {
+          "text": "Bei Kopfschmerzen 1 Stück",
+          "asNeededBoolean": true,
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 4,
+                "code": "h"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Ein Mindestabstand ist bei einer Freitext-Dosierung nicht darstellbar."
+      }
+    },
+    {
+      "name": "max dose on free text",
+      "dosages": [
+        {
+          "text": "Bei Kopfschmerzen 1 Stück",
+          "asNeededBoolean": true,
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 6,
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": 1,
+              "code": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Eine Maximalmenge ist bei einer Freitext-Dosierung nicht darstellbar."
+      }
+    },
+    {
+      "name": "minimum interval with structured rhythm is rejected [1]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 8,
+              "periodUnit": "h"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Kopfschmerzen"
+              }
+            }
+          ],
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 6,
+                "code": "h",
+                "unit": "Stunde(n)"
+              }
+            }
+          ],
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 4,
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": 24,
+              "code": "h"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Ein Mindestabstand ist nur bei reiner Bedarfsmedikation zulässig, nicht zusammen mit einem strukturierten Rhythmus."
+      }
+    },
+    {
+      "name": "as needed fields without as needed flag are rejected [1]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 4,
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": 1,
+              "code": "d"
+            }
+          },
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Eine Maximalmenge setzt asNeededBoolean = true voraus."
+      }
+    },
+    {
+      "name": "as needed preconditions apply to every element [1]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Kopfschmerzen"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "EVE"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Ein Einnahmeanlass (asNeededFor) setzt asNeededBoolean = true voraus."
+      }
+    },
+    {
+      "name": "as needed preconditions apply to every element [2]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 4,
+                "code": "h"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "EVE"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Ein Mindestabstand setzt asNeededBoolean = true voraus."
+      }
+    },
+    {
+      "name": "as needed preconditions apply to every element [3]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 4,
+                "code": "h"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "EVE"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Ein Mindestabstand setzt asNeededBoolean = true voraus."
+      }
+    },
+    {
+      "name": "as needed preconditions apply to every element [4]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 4,
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": 1,
+              "code": "d"
+            }
+          },
+          "timing": {
+            "repeat": {
+              "when": [
+                "EVE"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Eine Maximalmenge setzt asNeededBoolean = true voraus."
+      }
+    },
+    {
+      "name": "minimum interval is rejected with weekday rhythm [1]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 4,
+                "code": "h"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Ein Mindestabstand ist nur bei reiner Bedarfsmedikation zulässig, nicht zusammen mit einem strukturierten Rhythmus."
+      }
+    },
+    {
+      "name": "minimum interval is rejected with weekday rhythm [2]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 4,
+                "code": "h"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Ein Mindestabstand ist nur bei reiner Bedarfsmedikation zulässig, nicht zusammen mit einem strukturierten Rhythmus."
+      }
+    },
+    {
+      "name": "unknown modifier extension is rejected",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "modifierExtension": [
+            {
+              "url": "http://example.org/x"
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Nicht unterstützte modifierExtension: 'http://example.org/x'."
+      }
+    },
+    {
+      "name": "max dose with structured rhythm is rejected",
+      "dosages": [
+        {
+          "asNeededBoolean": true,
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 4,
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": 24,
+              "code": "h"
+            }
+          },
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 8,
+              "periodUnit": "h"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Eine Maximalmenge ist nur bei reiner Bedarfsmedikation zulässig, nicht zusammen mit einem strukturierten Rhythmus."
+      }
+    },
+    {
+      "name": "as needed multiple elements raises value error",
+      "dosages": [
+        {
+          "asNeededBoolean": true,
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        },
+        {
+          "asNeededBoolean": true,
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Reine Bedarfsmedikation erlaubt genau ein Dosage-Element."
+      }
+    }
+  ]
+}

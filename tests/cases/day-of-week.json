@@ -1,0 +1,463 @@
+{
+  "section": "Day-of-week schema",
+  "cases": [
+    {
+      "name": "day-of-week schema",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "wed"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "montags — je 1 Stück; mittwochs — je 2 Stück"
+      }
+    },
+    {
+      "name": "day-of-week schema: unit per segment",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Messlöffel"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "wed"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "montags — je 1 Stück; mittwochs — je 2 Messlöffel"
+      }
+    },
+    {
+      "name": "day-of-week schema with bounds",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "boundsDuration": {
+                "value": 7,
+                "code": "d"
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "für 7 Tage: montags — je 1 Stück"
+      }
+    },
+    {
+      "name": "as needed: with days of week (no interval, no comma)",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ]
+            }
+          },
+          "asNeededBoolean": true
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "wed"
+              ]
+            }
+          },
+          "asNeededBoolean": true
+        }
+      ],
+      "expect": {
+        "text": "bei Bedarf: montags — je 1 Stück; mittwochs — je 2 Stück"
+      }
+    },
+    {
+      "name": "day of week: one day",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "montags — je 1 Stück"
+      }
+    },
+    {
+      "name": "as needed with day of week: one day",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ]
+            }
+          },
+          "asNeededBoolean": true
+        }
+      ],
+      "expect": {
+        "text": "bei Bedarf: montags — je 1 Stück"
+      }
+    },
+    {
+      "name": "day of week schema uses canonical order",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "wed",
+                "mon"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "montags — je 1 Stück; mittwochs — je 1 Stück"
+      }
+    },
+    {
+      "name": "weekday accepts legacy frequency period and unit",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "tue",
+                "thu"
+              ],
+              "frequency": 2,
+              "period": 1,
+              "periodUnit": "wk"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "dienstags — je 1 Stück; donnerstags — je 1 Stück"
+      }
+    },
+    {
+      "name": "weekday legacy matrix across all resource types [1]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "tue",
+                "thu"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "dienstags — je 1 Stück; donnerstags — je 1 Stück"
+      }
+    },
+    {
+      "name": "differing dose units are shown per segment [2]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "mg"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "wed"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "montags — je 1 Stück; mittwochs — je 2 mg"
+      }
+    },
+    {
+      "name": "same dose twice is rendered once [1]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon",
+                "wed"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "montags — je 1 Stück; mittwochs — je 1 Stück"
+      }
+    },
+    {
+      "name": "day of week canonical order",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "fri",
+                "mon",
+                "wed"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "montags — je 1 Stück; mittwochs — je 1 Stück; freitags — je 1 Stück"
+      }
+    },
+    {
+      "name": "day of week: all seven days in canonical order",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "sun",
+                "sat",
+                "fri",
+                "thu",
+                "wed",
+                "tue",
+                "mon"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "montags — je 1 Stück; dienstags — je 1 Stück; mittwochs — je 1 Stück; donnerstags — je 1 Stück; freitags — je 1 Stück; samstags — je 1 Stück; sonntags — je 1 Stück"
+      }
+    },
+    {
+      "name": "normalization: whitespace before semicolon is removed",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück "
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon",
+                "wed"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "montags — je 1 Stück; mittwochs — je 1 Stück"
+      }
+    }
+  ]
+}

@@ -1,0 +1,2055 @@
+{
+  "section": "Error: schema, codes and duplicates",
+  "cases": [
+    {
+      "name": "unsupported resourceType",
+      "resource": {
+        "resourceType": "Patient"
+      },
+      "expect": {
+        "error": "Unsupported resource type: Patient"
+      }
+    },
+    {
+      "name": "no schema",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+      }
+    },
+    {
+      "name": "timeOfDay together with when (tim-10)",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ],
+              "timeOfDay": [
+                "08:00:00"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "timeOfDay und when dürfen nicht gemeinsam angegeben werden (tim-10)."
+      }
+    },
+    {
+      "name": "timing ohne repeat",
+      "dosages": [
+        {
+          "timing": {
+            "code": {
+              "text": "BID"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+      }
+    },
+    {
+      "name": "mixed schemas",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Alle Dosage-Elemente müssen demselben Schema folgen; Element 1 ergibt '4-Schema', Element 2 'DayOfWeek'."
+      }
+    },
+    {
+      "name": "timeOfDay not zero-padded",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "timeOfDay": [
+                "8:00"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "timeOfDay muss im Format HH:MM oder HH:MM:SS[.Bruchteile] angegeben sein."
+      }
+    },
+    {
+      "name": "minimum interval with unknown time unit",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 4,
+                "code": "x"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Nicht unterstützte Zeiteinheit: 'x'."
+      }
+    },
+    {
+      "name": "unknown when code",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "XYZ"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Nicht unterstützter Tagesabschnitt (when): 'XYZ'."
+      }
+    },
+    {
+      "name": "unknown when code in day-of-week combination",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "XYZ"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Nicht unterstützter Tagesabschnitt (when): 'XYZ'."
+      }
+    },
+    {
+      "name": "unknown dayOfWeek code",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "xyz"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Nicht unterstützter Wochentag (dayOfWeek): 'xyz'."
+      }
+    },
+    {
+      "name": "duplicate in four-schema",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Doppelte Belegung des Tagesabschnitts 'MORN' mit unterschiedlicher Dosis."
+      }
+    },
+    {
+      "name": "duplicate day of week",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Doppelte Belegung des Wochentags 'mon' mit unterschiedlicher Dosis."
+      }
+    },
+    {
+      "name": "duplicate day of week and time of day period",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Doppelte Belegung der Kombination aus Wochentag 'mon' und Zeit-/Tagesabschnitt 'MORN' mit unterschiedlicher Dosis."
+      }
+    },
+    {
+      "name": "duplicate in interval combination, time (HH:MM and HH:MM:SS)",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "08:00"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "08:00:00"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Doppelte Belegung der Uhrzeit '08:00 Uhr' mit unterschiedlicher Dosis."
+      }
+    },
+    {
+      "name": "duplicate in interval combination, when code",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Doppelte Belegung des Tagesabschnitts 'MORN' mit unterschiedlicher Dosis."
+      }
+    },
+    {
+      "name": "duplicate time",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "timeOfDay": [
+                "08:00:00"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "timeOfDay": [
+                "08:00:00"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Doppelte Belegung der Uhrzeit '08:00 Uhr' mit unterschiedlicher Dosis."
+      }
+    },
+    {
+      "name": "day-of-week combination mixing times and when codes",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "timeOfDay": [
+                "08:00:00"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "wed"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Wochentags-Kombinationen mit Uhrzeiten und mit Tagesabschnitten dürfen nicht gemischt werden."
+      }
+    },
+    {
+      "name": "interval, two elements",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 8,
+              "periodUnit": "h"
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 12,
+              "periodUnit": "h"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Wiederkehrende Intervalle erlauben genau ein Dosage-Element."
+      }
+    },
+    {
+      "name": "unknown time unit",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 8,
+              "periodUnit": "x"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Nicht unterstützte Zeiteinheit: 'x'."
+      }
+    },
+    {
+      "name": "unknown time unit in boundsDuration",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ],
+              "boundsDuration": {
+                "value": 7,
+                "code": "x"
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Nicht unterstützte Zeiteinheit: 'x'."
+      }
+    },
+    {
+      "name": "unknown day of week code is rejected like when [1]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "xyz"
+              ],
+              "timeOfDay": [
+                "08:00:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Nicht unterstützter Wochentag (dayOfWeek): 'xyz'."
+      }
+    },
+    {
+      "name": "unknown day of week code is rejected like when [2]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "xyz"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Nicht unterstützter Wochentag (dayOfWeek): 'xyz'."
+      }
+    },
+    {
+      "name": "explicit zero dose still detects conflicting duplicates [1]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 0,
+                "unit": "Stück"
+              }
+            }
+          ]
+        },
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Doppelte Belegung des Tagesabschnitts 'MORN' mit unterschiedlicher Dosis."
+      }
+    },
+    {
+      "name": "explicit zero dose still detects conflicting duplicates [2]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 0,
+                "unit": "Stück"
+              }
+            }
+          ]
+        },
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Doppelte Belegung der Kombination aus Wochentag 'mon' und Zeit-/Tagesabschnitt 'MORN' mit unterschiedlicher Dosis."
+      }
+    },
+    {
+      "name": "weekday interval rejected across all resource types [1]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "tue"
+              ],
+              "frequency": 1,
+              "period": 2,
+              "periodUnit": "wk"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+      }
+    },
+    {
+      "name": "weekday interval rejected across all resource types [2]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "tue"
+              ],
+              "when": [
+                "MORN"
+              ],
+              "frequency": 1,
+              "period": 3,
+              "periodUnit": "h"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+      }
+    },
+    {
+      "name": "weekday interval rejected across all resource types [3]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "tue"
+              ],
+              "timeOfDay": [
+                "08:00:00"
+              ],
+              "frequency": 1,
+              "period": 30,
+              "periodUnit": "min"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+      }
+    },
+    {
+      "name": "weekday rejects a real interval",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "tue"
+              ],
+              "frequency": 1,
+              "period": 3,
+              "periodUnit": "h"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+      }
+    },
+    {
+      "name": "day combination rejects mixed when and time of day across elements [1]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "timeOfDay": [
+                "08:00:00"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Wochentags-Kombinationen mit Uhrzeiten und mit Tagesabschnitten dürfen nicht gemischt werden."
+      }
+    },
+    {
+      "name": "day combination rejects mixed when and time of day across elements [2]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "timeOfDay": [
+                "08:00:00"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Wochentags-Kombinationen mit Uhrzeiten und mit Tagesabschnitten dürfen nicht gemischt werden."
+      }
+    },
+    {
+      "name": "day combination rejects mixed when and time of day across elements [3]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "wed"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "timeOfDay": [
+                "08:00:00"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Wochentags-Kombinationen mit Uhrzeiten und mit Tagesabschnitten dürfen nicht gemischt werden."
+      }
+    },
+    {
+      "name": "frequency max is not allowed in interval combination",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "frequencyMax": 2,
+              "period": 2,
+              "periodUnit": "d",
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+      }
+    },
+    {
+      "name": "interval combination compares displayed time [1]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "08:00:00"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "08:00:00.0"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Doppelte Belegung der Uhrzeit '08:00 Uhr' mit unterschiedlicher Dosis."
+      }
+    },
+    {
+      "name": "interval combination compares displayed time [2]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "08:00:00"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "08:00:30"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Doppelte Belegung der Uhrzeit '08:00 Uhr' mit unterschiedlicher Dosis."
+      }
+    },
+    {
+      "name": "quantity comparator is rejected [1]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ],
+              "boundsDuration": {
+                "value": 7,
+                "code": "d",
+                "comparator": ">"
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.boundsDuration.comparator wird nicht unterstützt."
+      }
+    },
+    {
+      "name": "same dose means same text and first value wins [1]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1.0,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Doppelte Belegung des Tagesabschnitts 'MORN' mit unterschiedlicher Dosis."
+      }
+    },
+    {
+      "name": "same dose means same text and first value wins [2]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1.0,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Doppelte Belegung des Wochentags 'mon' mit unterschiedlicher Dosis."
+      }
+    },
+    {
+      "name": "same time with different dose is rejected in time schemas [1]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "timeOfDay": [
+                "08:00:00"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "timeOfDay": [
+                "08:00:00"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Doppelte Belegung der Uhrzeit '08:00 Uhr' mit unterschiedlicher Dosis."
+      }
+    },
+    {
+      "name": "same time with different dose is rejected in time schemas [2]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "timeOfDay": [
+                "08:00"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "timeOfDay": [
+                "08:00:00"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Doppelte Belegung der Uhrzeit '08:00 Uhr' mit unterschiedlicher Dosis."
+      }
+    },
+    {
+      "name": "same value with different unit is a different dose",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Tablette"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Doppelte Belegung des Tagesabschnitts 'MORN' mit unterschiedlicher Dosis."
+      }
+    },
+    {
+      "name": "variable frequency or period is rejected in daily schemas [1]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ],
+              "frequencyMax": 3
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+      }
+    },
+    {
+      "name": "variable frequency or period is rejected in daily schemas [2]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ],
+              "periodMax": 3
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+      }
+    },
+    {
+      "name": "variable frequency or period is rejected in daily schemas [3]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "timeOfDay": [
+                "08:00:00"
+              ],
+              "frequencyMax": 3
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+      }
+    },
+    {
+      "name": "variable frequency or period is rejected in daily schemas [4]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "timeOfDay": [
+                "08:00:00"
+              ],
+              "periodMax": 3
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+      }
+    },
+    {
+      "name": "mixed schemas are rejected [1]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        },
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "EVE"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Alle Dosage-Elemente müssen demselben Schema folgen; Element 1 ergibt 'DayOfWeek', Element 2 '4-Schema'."
+      }
+    },
+    {
+      "name": "mixed schemas are rejected [2]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        },
+        {
+          "timing": {
+            "repeat": {
+              "timeOfDay": [
+                "20:00:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Alle Dosage-Elemente müssen demselben Schema folgen; Element 1 ergibt '4-Schema', Element 2 'TimeOfDay'."
+      }
+    },
+    {
+      "name": "mixed schemas are rejected [3]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        },
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 8,
+              "periodUnit": "h"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Alle Dosage-Elemente müssen demselben Schema folgen; Element 1 ergibt '4-Schema', Element 2 'Interval'."
+      }
+    },
+    {
+      "name": "mixed schemas are rejected [4]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        },
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "EVE"
+              ],
+              "periodMax": 3
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Alle Dosage-Elemente müssen demselben Schema folgen; Element 1 ergibt '4-Schema', Element 2 'Unknown'."
+      }
+    },
+    {
+      "name": "day time combo duplicate slot different dose raises value error",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "timeOfDay": [
+                "08:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stueck"
+              }
+            }
+          ]
+        },
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "timeOfDay": [
+                "08:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stueck"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Doppelte Belegung der Uhrzeit '08:00 Uhr' mit unterschiedlicher Dosis."
+      }
+    },
+    {
+      "name": "day when combo duplicate slot different dose raises value error [1]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stueck"
+              }
+            }
+          ]
+        },
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stueck"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Doppelte Belegung der Kombination aus Wochentag 'mon' und Zeit-/Tagesabschnitt 'MORN' mit unterschiedlicher Dosis."
+      }
+    },
+    {
+      "name": "day when combo duplicate slot different dose raises value error [2]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stueck"
+              }
+            }
+          ]
+        },
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stueck"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Doppelte Belegung der Kombination aus Wochentag 'mon' und Zeit-/Tagesabschnitt 'MORN' mit unterschiedlicher Dosis."
+      }
+    },
+    {
+      "name": "interval time schema duplicate time key different dose raises value error",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "08:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stueck"
+              }
+            }
+          ]
+        },
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "18:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stueck"
+              }
+            }
+          ]
+        },
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 2,
+              "periodUnit": "d",
+              "timeOfDay": [
+                "08:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 3,
+                "unit": "Stueck"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Doppelte Belegung der Uhrzeit '08:00 Uhr' mit unterschiedlicher Dosis."
+      }
+    },
+    {
+      "name": "interval time schema unknown when code raises value error",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 2,
+              "periodUnit": "d",
+              "when": [
+                "XYZ"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stueck"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Nicht unterstützter Tagesabschnitt (when): 'XYZ'."
+      }
+    },
+    {
+      "name": "unknown time unit raises value error",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 1,
+              "periodUnit": "x"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "Nicht unterstützte Zeiteinheit: 'x'."
+      }
+    },
+    {
+      "name": "text next to dose without timing and without as needed flag",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "text": "Text"
+        }
+      ],
+      "expect": {
+        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+      }
+    },
+    {
+      "name": "when with period but without periodUnit",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ],
+              "period": 2
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+      }
+    },
+    {
+      "name": "when with periodUnit but without period",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ],
+              "periodUnit": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+      }
+    }
+  ]
+}

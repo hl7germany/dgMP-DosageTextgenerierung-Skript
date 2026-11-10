@@ -14,6 +14,7 @@ Spezifikation und Python-Beispielimplementierung des Algorithmus zur Dosierungst
 |-------|--------------|
 | [dosage-text-algorithm-spec.md](dosage-text-algorithm-spec.md) | **Normative Spezifikation** des Algorithmus — verbindlich für alle Implementierungen |
 | [medication-dosage-to-text.py](medication-dosage-to-text.py) | Python-Beispielimplementierung — dient der Veranschaulichung, nicht als Standard |
+| [tests/cases/](tests/cases/) | Testvektoren (JSON) mit Eingabe und erwartetem Text oder Abbruch — ausführbar gegen jede Implementierung |
 
 **Die Spezifikation ist führend.** Die in `__version__` geführte Versionsnummer des Skripts bezeichnet die umgesetzte Algorithmus-Version und entspricht der in der Spezifikation angegebenen.
 

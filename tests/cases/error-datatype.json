@@ -1,0 +1,1352 @@
+{
+  "section": "Error: wrong JSON datatype",
+  "cases": [
+    {
+      "name": "type decimal",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": "8",
+              "periodUnit": "h"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.period muss numerisch sein."
+      }
+    },
+    {
+      "name": "type positiveInt",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 2.5,
+              "period": 8,
+              "periodUnit": "h"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.frequency muss eine ganze Zahl sein."
+      }
+    },
+    {
+      "name": "type code",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 8,
+              "periodUnit": 5
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.periodUnit muss ein String sein."
+      }
+    },
+    {
+      "name": "type list",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": "MORN"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.when muss eine Liste sein."
+      }
+    },
+    {
+      "name": "type object",
+      "dosages": [
+        {
+          "timing": "täglich",
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "timing muss ein Objekt sein."
+      }
+    },
+    {
+      "name": "type boolean",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "asNeededBoolean": "true"
+        }
+      ],
+      "expect": {
+        "error": "asNeededBoolean muss ein boolescher Wert sein."
+      }
+    },
+    {
+      "name": "dose value not numeric",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": "2",
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseQuantity.value muss numerisch sein."
+      }
+    },
+    {
+      "name": "type of code in a Quantity that contributes only its unit",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück",
+                "code": 5
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseQuantity.code muss ein String sein."
+      }
+    },
+    {
+      "name": "type of unit in a Duration that contributes only its code",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ],
+              "boundsDuration": {
+                "value": 7,
+                "code": "d",
+                "unit": 5
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.boundsDuration.unit muss ein String sein."
+      }
+    },
+    {
+      "name": "type of minimum interval extension placed in extension",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "extension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": 5
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "extension[].valueDuration muss ein Objekt sein."
+      }
+    },
+    {
+      "name": "boundsDuration not numeric",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ],
+              "boundsDuration": {
+                "value": "7",
+                "code": "d"
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.boundsDuration.value muss numerisch sein."
+      }
+    },
+    {
+      "name": "minimum interval not numeric",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": "4",
+                "code": "h"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "modifierExtension[].valueDuration.value muss numerisch sein."
+      }
+    },
+    {
+      "name": "max dose not numeric",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": "4",
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": 1,
+              "code": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "maxDosePerPeriod.numerator.value muss numerisch sein."
+      }
+    },
+    {
+      "name": "dosage list must be a list",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "dosageInstruction": {
+          "text": "x"
+        }
+      },
+      "expect": {
+        "error": "dosageInstruction muss eine Liste sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [1]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "frequency": "2",
+              "period": 8,
+              "periodUnit": "h"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.frequency muss eine ganze Zahl sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [2]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "frequency": true,
+              "period": 8,
+              "periodUnit": "h"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.frequency muss eine ganze Zahl sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [3]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 8,
+              "periodUnit": "h",
+              "frequencyMax": "3"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.frequencyMax muss eine ganze Zahl sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [4]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": "1",
+              "periodUnit": "d"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.period muss numerisch sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [5]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": true,
+              "periodUnit": "h"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.period muss numerisch sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [6]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 8,
+              "periodUnit": "h",
+              "periodMax": "3"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.periodMax muss numerisch sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [7]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": 5
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "doseQuantity.unit muss ein String sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [8]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "patientInstruction": 5
+        }
+      ],
+      "expect": {
+        "error": "patientInstruction muss ein String sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [9]",
+      "dosages": [
+        {
+          "text": 5
+        }
+      ],
+      "expect": {
+        "error": "text muss ein String sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [10]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": "mon"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.dayOfWeek muss eine Liste sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [11]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "timeOfDay": "08:00:00"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.timeOfDay muss eine Liste sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [12]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                5
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.when[] muss ein String sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [13]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": {
+            "doseQuantity": {
+              "value": 1,
+              "unit": "Stück"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseAndRate muss eine Liste sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [14]",
+      "dosages": [
+        {
+          "asNeededBoolean": true,
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "extension": {
+            "url": "x"
+          }
+        }
+      ],
+      "expect": {
+        "error": "extension muss eine Liste sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [15]",
+      "dosages": [
+        {
+          "asNeededBoolean": 1,
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "asNeededBoolean muss ein boolescher Wert sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [16]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": "1 Stück"
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "doseQuantity muss ein Objekt sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [17]",
+      "dosages": [
+        {
+          "asNeededBoolean": true,
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 2,
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": "1",
+              "code": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "maxDosePerPeriod.denominator.value muss numerisch sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [18]",
+      "dosages": [
+        {
+          "asNeededBoolean": true,
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "maxDosePerPeriod": {
+            "numerator": "2 Stück",
+            "denominator": {
+              "value": 1,
+              "code": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "maxDosePerPeriod.numerator muss ein Objekt sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [19]",
+      "dosages": [
+        {
+          "asNeededBoolean": true,
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": "Kopfschmerzen"
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "extension[].valueCodeableConcept muss ein Objekt sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [20]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ],
+              "boundsPeriod": {
+                "start": 2026
+              }
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.boundsPeriod.start muss ein String sein."
+      }
+    },
+    {
+      "name": "wrong json type is rejected per fhir datatype [21]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 1
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": "2",
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "doseQuantity.value muss numerisch sein."
+      }
+    },
+    {
+      "name": "non numeric dose values are rejected [1]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": "abc",
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "doseQuantity.value muss numerisch sein."
+      }
+    },
+    {
+      "name": "non numeric dose values are rejected [2]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": true,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "doseQuantity.value muss numerisch sein."
+      }
+    },
+    {
+      "name": "non numeric dose values are rejected [3]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseRange": {
+                "high": {
+                  "value": "abc",
+                  "unit": "Stück"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "doseRange.high.value muss numerisch sein."
+      }
+    },
+    {
+      "name": "numeric strings are rejected like any wrong type [1]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": "1.5",
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "doseQuantity.value muss numerisch sein."
+      }
+    },
+    {
+      "name": "numeric strings are rejected like any wrong type [2]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": "-1",
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "doseQuantity.value muss numerisch sein."
+      }
+    },
+    {
+      "name": "dosage element is not an object",
+      "dosages": [
+        "x"
+      ],
+      "expect": {
+        "error": "Dosage muss ein Objekt sein."
+      }
+    },
+    {
+      "name": "extension element is not an object",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 1,
+              "periodUnit": "d"
+            }
+          },
+          "extension": [
+            "x"
+          ]
+        }
+      ],
+      "expect": {
+        "error": "extension[] muss ein Objekt sein."
+      }
+    },
+    {
+      "name": "extension url is not a string",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 1,
+              "periodUnit": "d"
+            }
+          },
+          "extension": [
+            {
+              "url": 1
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "extension[].url muss ein String sein."
+      }
+    },
+    {
+      "name": "asNeededFor text is not a string",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": 5
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "extension[].valueCodeableConcept.text muss ein String sein."
+      }
+    },
+    {
+      "name": "doseAndRate element is not an object",
+      "dosages": [
+        {
+          "doseAndRate": [
+            "x"
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 1,
+              "periodUnit": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseAndRate[] muss ein Objekt sein."
+      }
+    },
+    {
+      "name": "doseRange is not an object",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseRange": "x"
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 1,
+              "periodUnit": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseRange muss ein Objekt sein."
+      }
+    },
+    {
+      "name": "doseRange.low is not an object",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseRange": {
+                "low": "x",
+                "high": {
+                  "value": 2,
+                  "unit": "Stück"
+                }
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 1,
+              "periodUnit": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseRange.low muss ein Objekt sein."
+      }
+    },
+    {
+      "name": "doseRange.high is not an object",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseRange": {
+                "high": "x"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 1,
+              "periodUnit": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseRange.high muss ein Objekt sein."
+      }
+    },
+    {
+      "name": "doseQuantity.unit is not a string",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": 5
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 1,
+              "periodUnit": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseQuantity.unit muss ein String sein."
+      }
+    },
+    {
+      "name": "maxDosePerPeriod is not an object",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "maxDosePerPeriod": "x"
+        }
+      ],
+      "expect": {
+        "error": "maxDosePerPeriod muss ein Objekt sein."
+      }
+    },
+    {
+      "name": "maxDosePerPeriod.denominator.code is not a string",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 4,
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": 1,
+              "code": 5
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "maxDosePerPeriod.denominator.code muss ein String sein."
+      }
+    },
+    {
+      "name": "timing.repeat is not an object",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": "x"
+          }
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat muss ein Objekt sein."
+      }
+    },
+    {
+      "name": "boundsPeriod is not an object",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 1,
+              "periodUnit": "d",
+              "boundsPeriod": "x"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.boundsPeriod muss ein Objekt sein."
+      }
+    },
+    {
+      "name": "boundsPeriod.start is not a string",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 1,
+              "periodUnit": "d",
+              "boundsPeriod": {
+                "start": 20260605
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.boundsPeriod.start muss ein String sein."
+      }
+    },
+    {
+      "name": "boundsPeriod.end is not a string",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 1,
+              "periodUnit": "d",
+              "boundsPeriod": {
+                "end": 20260605
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.boundsPeriod.end muss ein String sein."
+      }
+    }
+  ]
+}

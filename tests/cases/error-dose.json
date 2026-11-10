@@ -1,0 +1,675 @@
+{
+  "section": "Error: dose",
+  "cases": [
+    {
+      "name": "without doseAndRate",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseAndRate ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "doseAndRate empty list",
+      "dosages": [
+        {
+          "doseAndRate": [],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseAndRate ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "doseAndRate[0] empty",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {}
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "Dosisangabe in doseAndRate[0] fehlt."
+      }
+    },
+    {
+      "name": "doseQuantity without value",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseQuantity.value ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "doseQuantity without unit",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseQuantity.unit ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "dose value negative",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": -1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseQuantity.value darf nicht negativ sein."
+      }
+    },
+    {
+      "name": "doseRange.low negative",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseRange": {
+                "high": {
+                  "value": 2,
+                  "unit": "Stück"
+                },
+                "low": {
+                  "value": -1,
+                  "unit": "Stück"
+                }
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseRange.low.value darf nicht negativ sein."
+      }
+    },
+    {
+      "name": "doseRange.high negative",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseRange": {
+                "high": {
+                  "value": -2,
+                  "unit": "Stück"
+                }
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseRange.high.value darf nicht negativ sein."
+      }
+    },
+    {
+      "name": "doseRange without high",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseRange": {
+                "low": {
+                  "value": 1,
+                  "unit": "Stück"
+                }
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseRange.high.value ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "doseRange.high without unit",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseRange": {
+                "high": {
+                  "value": 2
+                }
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseRange.high.unit ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "doseRange.low empty",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseRange": {
+                "low": {},
+                "high": {
+                  "value": 2,
+                  "unit": "Stück"
+                }
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseRange.low.value ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "low.unit differs from high.unit",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseRange": {
+                "low": {
+                  "value": 1,
+                  "unit": "mg"
+                },
+                "high": {
+                  "value": 2,
+                  "unit": "Stück"
+                }
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseRange.low.unit und doseRange.high.unit müssen übereinstimmen."
+      }
+    },
+    {
+      "name": "low.unit empty",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseRange": {
+                "low": {
+                  "value": 1,
+                  "unit": ""
+                },
+                "high": {
+                  "value": 2,
+                  "unit": "Stück"
+                }
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseRange.low.unit und doseRange.high.unit müssen übereinstimmen."
+      }
+    },
+    {
+      "name": "doseQuantity and doseRange in the same entry",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              },
+              "doseRange": {
+                "high": {
+                  "value": 2,
+                  "unit": "Stück"
+                }
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseQuantity und doseRange dürfen nicht gemeinsam angegeben werden."
+      }
+    },
+    {
+      "name": "two doseAndRate entries",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            },
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseAndRate darf höchstens einen Eintrag enthalten."
+      }
+    },
+    {
+      "name": "two doseAndRate entries in a further element",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            },
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "EVE"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseAndRate darf höchstens einen Eintrag enthalten."
+      }
+    },
+    {
+      "name": "comparator",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück",
+                "comparator": "<"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseQuantity.comparator wird nicht unterstützt."
+      }
+    },
+    {
+      "name": "unit consisting of whitespace",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "  "
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseQuantity.unit ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "negative dose is rejected [1]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 8,
+              "periodUnit": "h"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": -1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "doseQuantity.value darf nicht negativ sein."
+      }
+    },
+    {
+      "name": "structured dosage without dose raises error",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 1,
+              "periodUnit": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseAndRate ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "4 schema when without dose raises value error [1]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 1,
+              "periodUnit": "d",
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 1,
+              "periodUnit": "d",
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stueck"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "doseAndRate ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "4 schema when without dose raises value error [2]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 1,
+              "periodUnit": "d",
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stueck"
+              }
+            }
+          ]
+        },
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 1,
+              "periodUnit": "d",
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseAndRate ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "day when without dose raises value error",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseAndRate ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "interval when without dose raises value error",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 2,
+              "periodUnit": "d",
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseAndRate ist für die Textgenerierung erforderlich."
+      }
+    },
+    {
+      "name": "text next to timing without dose",
+      "dosages": [
+        {
+          "text": "Text",
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseAndRate ist für die Textgenerierung erforderlich."
+      }
+    }
+  ]
+}
