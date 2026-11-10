@@ -540,6 +540,14 @@ class MedicationDosageTextTest(unittest.TestCase):
             self.generator.generate_dosage_text(
                 self.medication_request(dose_range({"value": 1, "unit": "mg"}))
             )
+        # Eine leere low.unit ist vorhanden und weicht von high.unit ab.
+        with self.assertRaisesRegex(
+            ValueError,
+            "doseRange.low.unit und doseRange.high.unit müssen übereinstimmen",
+        ):
+            self.generator.generate_dosage_text(
+                self.medication_request(dose_range({"value": 1, "unit": ""}))
+            )
 
     def test_generated_text_is_always_a_lowercase_fragment(self):
         """Auch Bedarfsmedikation wird nicht grossgeschrieben - es gibt keine Ausnahme."""

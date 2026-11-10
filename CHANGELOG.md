@@ -16,6 +16,21 @@ Daraus folgt für jeden Eintrag:
 
 Ändert sich nur die Referenzimplementierung, bleibt die Versionsnummer stehen.
 
+## [Unreleased]
+
+### Algorithmus
+
+#### Changed
+
+- Mehr als eine Extension `MinimumIntervalBetweenAdministrations` an einem `Dosage`-Element führt zum Abbruch (`Es ist höchstens ein Mindestabstand (MinimumIntervalBetweenAdministrations) zulässig.`). Bisher wurde die erste verwendet und jede weitere entfiel.
+- Die Typprüfung (Schritt 3) ist über die Felder der Feldreferenz festgelegt statt über „gelesene Felder": In jeder `Quantity` werden `value`, `unit` und `code` geprüft, `doseQuantity` und `doseRange` auch nebeneinander, die Werte der beiden bekannten Extensions in `extension` und `modifierExtension`. Dasselbe gilt für die `comparator`-Prüfung. Die Referenzimplementierung prüfte bereits so.
+
+### Referenzimplementierung und Repository
+
+#### Fixed
+
+- Eine leere `doseRange.low.unit` (`""`) neben einer `high.unit` führt wie in der Spezifikation festgelegt zum Abbruch (`doseRange.low.unit und doseRange.high.unit müssen übereinstimmen.`); bisher wurde sie wie eine fehlende Einheit behandelt.
+
 ## [2.0.0-rc.2] - 2026-10-16
 
 Release Candidate 2 für 2.0.0. Die Einträge beschreiben die Unterschiede zu 2.0.0-rc.1.

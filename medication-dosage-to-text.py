@@ -857,7 +857,8 @@ class MedicationDosageTextGenerator:
                 # Die Einheit erscheint nur einmal im Text und stammt aus high.
                 # low.unit wird deshalb nicht verlangt; ist sie vorhanden und
                 # weicht ab, würde der Text sie unterschlagen - dann Abbruch.
-                if low.get('unit') and low.get('unit') != high.get('unit'):
+                # Auch eine leere low.unit ist vorhanden und weicht ab.
+                if 'unit' in low and low['unit'] != high['unit']:
                     raise ValueError("doseRange.low.unit und doseRange.high.unit müssen übereinstimmen.")
                 value = (
                     f"{self._format_decimal_value(low.get('value'))} bis "
@@ -1602,20 +1603,29 @@ class MedicationDosageTextGenerator:
         return f"{', '.join(reasons[:-1])} oder {reasons[-1]}"
 
     def _extract_minimum_interval_text(self, dosage):
-        for extension in dosage.get('modifierExtension', []):
-            if extension.get('url') != self.URL_MINDESTABSTAND:
-                continue
-            duration = extension.get('valueDuration')
-            if duration is None:
-                raise ValueError(
-                    "MinimumIntervalBetweenAdministrations.valueDuration ist "
-                    "für die Textgenerierung erforderlich."
-                )
-            return self._format_duration_text(
-                duration,
-                field_name="MinimumIntervalBetweenAdministrations.valueDuration"
+        matching = [
+            extension for extension in dosage.get('modifierExtension', [])
+            if extension.get('url') == self.URL_MINDESTABSTAND
+        ]
+        if not matching:
+            return ""
+        # Der Text traegt genau einen Mindestabstand; ein zweiter entfiele
+        # stillschweigend.
+        if len(matching) > 1:
+            raise ValueError(
+                "Es ist höchstens ein Mindestabstand "
+                "(MinimumIntervalBetweenAdministrations) zulässig."
             )
-        return ""
+        duration = matching[0].get('valueDuration')
+        if duration is None:
+            raise ValueError(
+                "MinimumIntervalBetweenAdministrations.valueDuration ist "
+                "für die Textgenerierung erforderlich."
+            )
+        return self._format_duration_text(
+            duration,
+            field_name="MinimumIntervalBetweenAdministrations.valueDuration"
+        )
 
     def _extract_max_dose_text(self, dosage):
         if 'maxDosePerPeriod' not in dosage:
