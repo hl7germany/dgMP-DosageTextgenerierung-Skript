@@ -1,0 +1,72 @@
+{
+  "section": "Free text",
+  "cases": [
+    {
+      "name": "free text",
+      "dosages": [
+        {
+          "text": "Nach Bedarf bei Schmerzen"
+        }
+      ],
+      "expect": {
+        "text": "Nach Bedarf bei Schmerzen"
+      }
+    },
+    {
+      "name": "free text is passed through including surrounding whitespace",
+      "dosages": [
+        {
+          "text": "  Nach Bedarf\nbei Schmerzen "
+        }
+      ],
+      "expect": {
+        "text": "  Nach Bedarf\nbei Schmerzen "
+      }
+    },
+    {
+      "name": "free text is returned unchanged",
+      "dosages": [
+        {
+          "text": "Nach dem Essen — 2 Stück täglich"
+        }
+      ],
+      "expect": {
+        "text": "Nach dem Essen — 2 Stück täglich"
+      }
+    },
+    {
+      "name": "free text with minimum interval or max dose is rejected [1]",
+      "dosages": [
+        {
+          "text": "Bei Kopfschmerzen 1 Stück",
+          "asNeededBoolean": true,
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Kopfschmerzen"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "Bei Kopfschmerzen 1 Stück"
+      }
+    },
+    {
+      "name": "freetext multiple elements joined with space",
+      "dosages": [
+        {
+          "text": "Morgens Tablette."
+        },
+        {
+          "text": "Abends Kapsel"
+        }
+      ],
+      "expect": {
+        "text": "Morgens Tablette. Abends Kapsel"
+      }
+    }
+  ]
+}

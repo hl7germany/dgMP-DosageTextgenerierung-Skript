@@ -1,0 +1,12 @@
+{
+  "section": "Resource and dosage list",
+  "cases": [
+    {
+      "name": "empty dosage list returns empty string",
+      "dosages": [],
+      "expect": {
+        "text": ""
+      }
+    }
+  ]
+}

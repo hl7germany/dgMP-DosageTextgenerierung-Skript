@@ -1,0 +1,715 @@
+{
+  "section": "As-needed schema",
+  "cases": [
+    {
+      "name": "reason: bei Kopfschmerzen",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Kopfschmerzen"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "bei Kopfschmerzen: je 1 Stück"
+      }
+    },
+    {
+      "name": "reason: bei Bedarf",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true
+        }
+      ],
+      "expect": {
+        "text": "bei Bedarf: je 1 Stück"
+      }
+    },
+    {
+      "name": "reason: two reasons",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Kopfschmerzen"
+              }
+            },
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Fieber"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "bei Kopfschmerzen oder Fieber: je 1 Stück"
+      }
+    },
+    {
+      "name": "reason: three reasons",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Kopfschmerzen"
+              }
+            },
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Fieber"
+              }
+            },
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Gliederschmerzen"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "bei Kopfschmerzen, Fieber oder Gliederschmerzen: je 1 Stück"
+      }
+    },
+    {
+      "name": "minimum interval: 4 Stunden",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 4,
+                "code": "h"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "bei Bedarf: im Abstand von mindestens 4 Stunden je 1 Stück"
+      }
+    },
+    {
+      "name": "minimum interval: 30 Minuten",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 30,
+                "code": "min"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "bei Bedarf: im Abstand von mindestens 30 Minuten je 1 Stück"
+      }
+    },
+    {
+      "name": "max dose: in 24 Stunden",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 6,
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": 24,
+              "code": "h"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "bei Bedarf: je 1 Stück — nicht mehr als 6 Stück in 24 Stunden"
+      }
+    },
+    {
+      "name": "max dose: pro Tag",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 6,
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": 1,
+              "code": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "bei Bedarf: je 1 Stück — nicht mehr als 6 Stück pro Tag"
+      }
+    },
+    {
+      "name": "as needed: complete",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Kopfschmerzen"
+              }
+            }
+          ],
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 4,
+                "code": "h"
+              }
+            }
+          ],
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 6,
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": 24,
+              "code": "h"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "bei Kopfschmerzen: im Abstand von mindestens 4 Stunden je 1 Stück — nicht mehr als 6 Stück in 24 Stunden"
+      }
+    },
+    {
+      "name": "reason: unrelated extension is ignored",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "extension": [
+            {
+              "url": "http://example.org/andere",
+              "valueString": "x"
+            },
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Kopfschmerzen"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "bei Kopfschmerzen: je 1 Stück"
+      }
+    },
+    {
+      "name": "minimum interval with structured rhythm is rejected [2]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Kopfschmerzen"
+              }
+            }
+          ],
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 6,
+                "code": "h",
+                "unit": "Stunde(n)"
+              }
+            }
+          ],
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 4,
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": 24,
+              "code": "h"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "bei Kopfschmerzen: im Abstand von mindestens 6 Stunden je 1 Stück — nicht mehr als 4 Stück in 24 Stunden"
+      }
+    },
+    {
+      "name": "pure as needed includes reason minimum and maximum",
+      "dosages": [
+        {
+          "asNeededBoolean": true,
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Kopfschmerzen"
+              }
+            }
+          ],
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 4,
+                "code": "h",
+                "unit": "Stunde(n)"
+              }
+            }
+          ],
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 6,
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": 24,
+              "code": "h"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "bei Kopfschmerzen: im Abstand von mindestens 4 Stunden je 1 Stück — nicht mehr als 6 Stück in 24 Stunden"
+      }
+    },
+    {
+      "name": "as needed with max dose 1d",
+      "dosages": [
+        {
+          "asNeededBoolean": true,
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 4,
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": 1,
+              "code": "d"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "bei Bedarf: je 1 Stück — nicht mehr als 4 Stück pro Tag"
+      }
+    },
+    {
+      "name": "as needed with max dose 24h",
+      "dosages": [
+        {
+          "asNeededBoolean": true,
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "maxDosePerPeriod": {
+            "numerator": {
+              "value": 4,
+              "unit": "Stück"
+            },
+            "denominator": {
+              "value": 24,
+              "code": "h"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "bei Bedarf: je 1 Stück — nicht mehr als 4 Stück in 24 Stunden"
+      }
+    },
+    {
+      "name": "as needed with mindestabstand",
+      "dosages": [
+        {
+          "asNeededBoolean": true,
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 4,
+                "code": "h"
+              }
+            }
+          ],
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "bei Bedarf: im Abstand von mindestens 4 Stunden je 1 Stück"
+      }
+    },
+    {
+      "name": "as needed with single reason",
+      "dosages": [
+        {
+          "asNeededBoolean": true,
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Kopfschmerzen"
+              }
+            }
+          ],
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "bei Kopfschmerzen: je 1 Stück"
+      }
+    },
+    {
+      "name": "as needed with three reasons",
+      "dosages": [
+        {
+          "asNeededBoolean": true,
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Kopfschmerzen"
+              }
+            },
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Fieber"
+              }
+            },
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Gliederschmerzen"
+              }
+            }
+          ],
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "bei Kopfschmerzen, Fieber oder Gliederschmerzen: je 1 Stück"
+      }
+    },
+    {
+      "name": "as needed with two reasons",
+      "dosages": [
+        {
+          "asNeededBoolean": true,
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Kopfschmerzen"
+              }
+            },
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Fieber"
+              }
+            }
+          ],
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "bei Kopfschmerzen oder Fieber: je 1 Stück"
+      }
+    },
+    {
+      "name": "as needed without reason",
+      "dosages": [
+        {
+          "asNeededBoolean": true,
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "bei Bedarf: je 1 Stück"
+      }
+    },
+    {
+      "name": "minimum interval: 1 Stunde",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 1,
+                "code": "h"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "bei Bedarf: im Abstand von mindestens 1 Stunde je 1 Stück"
+      }
+    },
+    {
+      "name": "minimum interval: 1 Minute",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "modifierExtension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": {
+                "value": 1,
+                "code": "min"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "bei Bedarf: im Abstand von mindestens 1 Minute je 1 Stück"
+      }
+    },
+    {
+      "name": "text next to dose is ignored in pure as needed",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "text": "Ignorierter Text"
+        }
+      ],
+      "expect": {
+        "text": "bei Bedarf: je 1 Stück"
+      }
+    },
+    {
+      "name": "normalization: whitespace before colon is removed",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "asNeededBoolean": true,
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor",
+              "valueCodeableConcept": {
+                "text": "Schmerzen "
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "bei Schmerzen: je 1 Stück"
+      }
+    }
+  ]
+}

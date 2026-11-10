@@ -1,0 +1,740 @@
+{
+  "section": "Day-of-week combination",
+  "cases": [
+    {
+      "name": "day-of-week combination with times",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "timeOfDay": [
+                "08:00:00"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "timeOfDay": [
+                "12:00:00"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "wed"
+              ],
+              "timeOfDay": [
+                "20:00:00"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "montags 08:00 Uhr — je 1 Stück, 12:00 Uhr — je 2 Stück; mittwochs 20:00 Uhr — je 1 Stück"
+      }
+    },
+    {
+      "name": "day-of-week combination with when codes",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN",
+                "EVE"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "wed"
+              ],
+              "when": [
+                "MORN",
+                "EVE"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "wed"
+              ],
+              "when": [
+                "NOON"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "montags 1-0-1-0 Stück; mittwochs 2-1-2-0 Stück"
+      }
+    },
+    {
+      "name": "day-of-week combination: variable dose",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseRange": {
+                "high": {
+                  "value": 2,
+                  "unit": "Stück"
+                },
+                "low": {
+                  "value": 1,
+                  "unit": "Stück"
+                }
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "wed"
+              ],
+              "when": [
+                "EVE"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "montags morgens — je 1 bis 2 Stück; mittwochs abends — je 2 Stück"
+      }
+    },
+    {
+      "name": "day-of-week combination in written form: several when codes on one day",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseRange": {
+                "high": {
+                  "value": 2,
+                  "unit": "Stück"
+                },
+                "low": {
+                  "value": 1,
+                  "unit": "Stück"
+                }
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "EVE"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "montags morgens — je 1 bis 2 Stück, abends — je 2 Stück"
+      }
+    },
+    {
+      "name": "day of week time combination sorts days and times",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "fri",
+                "mon"
+              ],
+              "timeOfDay": [
+                "20:00:00",
+                "08:00:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "montags 08:00 Uhr, 20:00 Uhr — je 1 Stück; freitags 08:00 Uhr, 20:00 Uhr — je 1 Stück"
+      }
+    },
+    {
+      "name": "weekday legacy matrix across all resource types [2]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "tue"
+              ],
+              "when": [
+                "MORN",
+                "EVE"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "dienstags 1-0-1-0 Stück"
+      }
+    },
+    {
+      "name": "weekday legacy matrix across all resource types [3]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "tue"
+              ],
+              "when": [
+                "MORN",
+                "EVE"
+              ],
+              "frequency": 2,
+              "period": 1,
+              "periodUnit": "wk"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "dienstags 1-0-1-0 Stück"
+      }
+    },
+    {
+      "name": "weekday legacy matrix across all resource types [4]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "tue"
+              ],
+              "timeOfDay": [
+                "08:00:00",
+                "20:00:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "dienstags 08:00 Uhr, 20:00 Uhr — je 1 Stück"
+      }
+    },
+    {
+      "name": "weekday legacy matrix across all resource types [5]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "tue"
+              ],
+              "timeOfDay": [
+                "08:00:00",
+                "20:00:00"
+              ],
+              "frequency": 2,
+              "period": 1,
+              "periodUnit": "wk"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "dienstags 08:00 Uhr, 20:00 Uhr — je 1 Stück"
+      }
+    },
+    {
+      "name": "differing dose units are shown per segment [3]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "mg"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "EVE"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "montags morgens — je 1 Stück, abends — je 2 mg"
+      }
+    },
+    {
+      "name": "same dose twice is rendered once [2]",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN",
+                "EVE"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "montags 1-0-1-0 Stück"
+      }
+    },
+    {
+      "name": "units differing only between days stay compact",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "mg"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "wed"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "montags 1-0-0-0 Stück; mittwochs 2-0-0-0 mg"
+      }
+    },
+    {
+      "name": "day time combo is order independent [1]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "timeOfDay": [
+                "20:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stueck"
+              }
+            }
+          ]
+        },
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "timeOfDay": [
+                "08:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stueck"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "montags 08:00 Uhr — je 1 Stueck, 20:00 Uhr — je 2 Stueck"
+      }
+    },
+    {
+      "name": "day time combo is order independent [2]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "timeOfDay": [
+                "08:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stueck"
+              }
+            }
+          ]
+        },
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "timeOfDay": [
+                "20:00"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stueck"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "montags 08:00 Uhr — je 1 Stueck, 20:00 Uhr — je 2 Stueck"
+      }
+    },
+    {
+      "name": "day when combo merges different slots for same day [1]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stueck"
+              }
+            }
+          ]
+        },
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "EVE"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stueck"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "montags 1-0-2-0 Stueck"
+      }
+    },
+    {
+      "name": "day when combo merges different slots for same day [2]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "EVE"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stueck"
+              }
+            }
+          ]
+        },
+        {
+          "timing": {
+            "repeat": {
+              "dayOfWeek": [
+                "mon"
+              ],
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stueck"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "montags 1-0-2-0 Stueck"
+      }
+    }
+  ]
+}

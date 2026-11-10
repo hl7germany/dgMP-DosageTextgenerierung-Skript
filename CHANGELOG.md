@@ -16,6 +16,14 @@ Daraus folgt für jeden Eintrag:
 
 Ändert sich nur die Referenzimplementierung, bleibt die Versionsnummer stehen.
 
+## [Unreleased]
+
+### Referenzimplementierung und Repository
+
+#### Added
+
+- `tests/cases/`: 403 Testvektoren als JSON, je Fall die `Dosage`-Elemente und der erwartete Text oder die erwartete Abbruchmeldung. Sie sind unabhängig von der Programmiersprache und gegen jede Implementierung ausführbar; das Format beschreibt `tests/cases/README.md`. `tests/test_cases.py` führt jeden Fall für `MedicationRequest`, `MedicationDispense` und `MedicationStatement` gegen das Skript aus.
+
 ## [2.0.0-rc.2] - 2026-10-16
 
 Release Candidate 2 für 2.0.0. Die Einträge beschreiben die Unterschiede zu 2.0.0-rc.1.
