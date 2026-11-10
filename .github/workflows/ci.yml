@@ -25,7 +25,7 @@ jobs:
         # Aeltestes und neuestes unterstuetztes Python. Das Skript nutzt
         # ausschliesslich die Standardbibliothek; die Versionen dazwischen
         # koennen nichts finden, was diese beiden nicht auch finden.
-        python-version: ["3.10", "3.13"]
+        python-version: ["3.10", "3.15"]
 
     steps:
       - name: Checkout
@@ -47,6 +47,23 @@ jobs:
       - name: Run tests
         run: python -m unittest discover -s tests -p "test_*.py" -v
 
+  tests:
+    # Ein Check fuer alle Python-Versionen: Das Ruleset fuer main verlangt nur
+    # diesen Job. Aendert sich die Matrix, muss das Ruleset nicht angepasst
+    # werden.
+    name: Tests
+    if: always()
+    needs: test
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Check matrix result
+        env:
+          RESULT: ${{ needs.test.result }}
+        run: |
+          echo "Ergebnis der Testmatrix: $RESULT"
+          test "$RESULT" = "success"
+
   version-matches-tag:
     name: __version__ matches tag
     if: startsWith(github.ref, 'refs/tags/')
@@ -60,7 +77,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.15"
 
       - name: Compare __version__ with tag
         env:
