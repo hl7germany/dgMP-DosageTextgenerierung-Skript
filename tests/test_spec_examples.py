@@ -322,6 +322,10 @@ ERROR_CASES = (
      req(d(dq(1), {"when": ["MORN"], "boundsPeriod": {"start": "0001-01-01T00:00:00+14:00"}})),
      "boundsPeriod.start muss ein parsebares FHIR-dateTime mit vollständigem Datum im Format JJJJ-MM-TT sein; "
      "eine Uhrzeit erfordert eine Zeitzone."),
+    ("boundsPeriod.start liegt nur in UTC vor dem Jahr 0001",
+     req(d(dq(1), {"when": ["MORN"], "boundsPeriod": {"start": "0001-01-01T00:30:00+01:00"}})),
+     "boundsPeriod.start muss ein parsebares FHIR-dateTime mit vollständigem Datum im Format JJJJ-MM-TT sein; "
+     "eine Uhrzeit erfordert eine Zeitzone."),
     ("boundsPeriod.end verlässt bei der Umrechnung das Jahr 9999",
      req(d(dq(1), {"when": ["MORN"], "boundsPeriod": {"end": "9999-12-31T23:59:59-12:00"}})),
      "boundsPeriod.end muss ein parsebares FHIR-dateTime mit vollständigem Datum im Format JJJJ-MM-TT sein; "
