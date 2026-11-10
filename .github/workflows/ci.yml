@@ -25,7 +25,7 @@ jobs:
         # Aeltestes und neuestes unterstuetztes Python. Das Skript nutzt
         # ausschliesslich die Standardbibliothek; die Versionen dazwischen
         # koennen nichts finden, was diese beiden nicht auch finden.
-        python-version: ["3.10", "3.13"]
+        python-version: ["3.10", "3.15"]
 
     steps:
       - name: Checkout
@@ -60,7 +60,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.15"
 
       - name: Compare __version__ with tag
         env:
