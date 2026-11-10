@@ -10,11 +10,11 @@ Daraus folgt für jeden Eintrag:
 
 - Abschnitt **Algorithmus** — Änderungen an der Spezifikation. Sie sind für jede
   Implementierung verbindlich und nur sie rechtfertigen eine neue Versionsnummer.
-- Abschnitt **Referenzimplementierung und Repository** — Änderungen an Skript,
+- Abschnitt **Beispielimplementierung und Repository** — Änderungen an Skript,
   Tests oder CI, die das festgelegte Verhalten nicht berühren. Sie erscheinen
   unter der Version, mit der sie ausgeliefert wurden, begründen aber keine.
 
-Ändert sich nur die Referenzimplementierung, bleibt die Versionsnummer stehen.
+Ändert sich nur die Beispielimplementierung, bleibt die Versionsnummer stehen.
 
 ## [Unreleased]
 
@@ -24,21 +24,26 @@ Daraus folgt für jeden Eintrag:
 
 - Mehr als eine Extension `MinimumIntervalBetweenAdministrations` an einem `Dosage`-Element führt zum Abbruch (`Es ist höchstens ein Mindestabstand (MinimumIntervalBetweenAdministrations) zulässig.`). Bisher wurde die erste verwendet und jede weitere entfiel.
 - Mehr als ein Eintrag in `doseAndRate` führt zum Abbruch (`doseAndRate darf höchstens einen Eintrag enthalten.`), ebenso `doseQuantity` und `doseRange` im selben Eintrag (`doseQuantity und doseRange dürfen nicht gemeinsam angegeben werden.`). Bisher wurden weitere Einträge ignoriert, und `doseQuantity` hatte Vorrang vor `doseRange`.
-- Die Typprüfung (Schritt 3) ist über die Felder der Feldreferenz festgelegt statt über „gelesene Felder": In jeder `Quantity` werden `value`, `unit` und `code` geprüft, die Werte der beiden bekannten Extensions in `extension` und `modifierExtension`. Dasselbe gilt für die `comparator`-Prüfung. Die Referenzimplementierung prüfte bereits so.
-- **Leerraum** ist auf die Zeichen mit der Unicode-Eigenschaft `White_Space` festgelegt (bisher „jedes Unicode-Leerraumzeichen“). Das gilt für die Normalisierung, das Entfernen von Rand-Leerraum bei Einnahmeanlass und Hinweis und die Prüfung auf eine leere Einheit. U+001C bis U+001F, U+200B und U+FEFF zählen nicht dazu; die Referenzimplementierung fasste U+001C bis U+001F bisher mit zusammen.
+- Die Typprüfung (Schritt 3) ist über die Felder der Feldreferenz festgelegt statt über „gelesene Felder": In jeder `Quantity` werden `value`, `unit` und `code` geprüft, die Werte der beiden bekannten Extensions in `extension` und `modifierExtension`. Dasselbe gilt für die `comparator`-Prüfung. Die Beispielimplementierung prüfte bereits so.
+- **Leerraum** ist auf die Zeichen mit der Unicode-Eigenschaft `White_Space` festgelegt (bisher „jedes Unicode-Leerraumzeichen“). Das gilt für die Normalisierung, das Entfernen von Rand-Leerraum bei Einnahmeanlass und Hinweis und die Prüfung auf eine leere Einheit. U+001C bis U+001F, U+200B und U+FEFF zählen nicht dazu; die Beispielimplementierung fasste U+001C bis U+001F bisher mit zusammen.
 - Nicht endliche Werte (`NaN`, `Infinity`) gelten in der Typprüfung nicht als Zahl (`… muss numerisch sein.`). Bisher erschien `je NaN Stück`, wenn der JSON-Parser solche Werte annahm.
-- Ein Zeitpunkt in `boundsPeriod`, der in UTC oder in der Zielzeitzone außerhalb der Jahre `0001` bis `9999` liegt (etwa `0001-01-01T00:00:00+14:00`), führt zum Abbruch mit der Meldung für nicht parsebare Werte. Die Referenzimplementierung brach bisher mit einem `OverflowError` ab.
+- Ein Zeitpunkt in `boundsPeriod`, der in UTC oder in der Zielzeitzone außerhalb der Jahre `0001` bis `9999` liegt (etwa `0001-01-01T00:00:00+14:00`), führt zum Abbruch mit der Meldung für nicht parsebare Werte. Die Beispielimplementierung brach bisher mit einem `OverflowError` ab.
 
 #### Fixed
 
 - Unter „Vergleichsart“ ist der Verweis auf die Gleichheit von Einnahmerhythmen entfallen; Einnahmerhythmen werden nirgends verglichen.
 
-### Referenzimplementierung und Repository
+### Beispielimplementierung und Repository
 
 #### Added
 
 - Testfall für die Intervall-Kombination mit mehreren unsortierten Uhrzeiten je `Dosage`-Element, über die Elemente verschränkt (`tests/test_regression_ordering.py`).
 - Testfälle in `tests/test_spec_examples.py` für die Änderungen dieser Version: zwei Mindestabstände, mehr als eine Dosisangabe je Element, die Typprüfung von `unit` und `code`, Leerraum nach `White_Space`, nicht endliche Zahlen, Zeitpunkte außerhalb der Jahre `0001` bis `9999` und eine leere `doseRange.low.unit`.
+
+#### Changed
+
+- Das Skript heißt in Spezifikation, README und Changelog durchgehend „Beispielimplementierung“ (bisher teils „Referenzimplementierung“); führend ist die Spezifikation.
+- README: Die Badges „Release“ und „Release On Tag“ verwiesen auf nicht vorhandene Workflows und sind entfallen; neu ist ein Badge mit der zuletzt veröffentlichten Algorithmus-Version.
 
 #### Fixed
 
@@ -54,7 +59,7 @@ Release Candidate 2 für 2.0.0. Die Einträge beschreiben die Unterschiede zu 2.
 
 - Ein abweichender Einnahmerhythmus (`period`, `periodMax`, `periodUnit`) eines weiteren Elements der Intervall-Kombination führt nicht mehr zum Abbruch. Der Rhythmus zählt wie Zeitrahmen, Bedarfsangaben und Hinweis zu den Rahmen-Angaben, die aus dem ersten Element gelesen werden; ihre Gleichheit sichert das Profil (`TimingOnlyOneTimeForInterval`, das im Medication IG DE jetzt auch `periodMax` vergleicht). Die Meldung `Alle Dosage-Elemente einer Intervall-Kombination müssen denselben Einnahmerhythmus tragen.` entfällt. Für eine gegen das Profil validierte Ressource ändert sich kein Text.
 
-### Referenzimplementierung und Repository
+### Beispielimplementierung und Repository
 
 #### Added
 
@@ -108,7 +113,7 @@ Release Candidate für 2.0.0. Die Einträge beschreiben die Unterschiede zu 2.0.
 #### Fixed
 
 - Die Kurzformen `täglich`, `wöchentlich` und `monatlich` gelten nur noch für eine feste Periode von `1` ohne `periodMax`. Bisher fiel bei `period = 1` mit `periodMax` die Obergrenze weg: Aus `frequency = 1`, `period = 1`, `periodMax = 3`, `periodUnit = d` wurde `täglich` statt `alle 1 bis 3 Tage`. Bei einer Frequenz größer als `1` entsprechend `2 x alle 1 bis 3 Tage` statt `2 x täglich`.
-- Widersprüche in der Spezifikation beseitigt. Das festgelegte Verhalten ändert sich nicht; die Referenzimplementierung setzte es bereits so um.
+- Widersprüche in der Spezifikation beseitigt. Das festgelegte Verhalten ändert sich nicht; die Beispielimplementierung setzte es bereits so um.
   - Schritt 8 des Gesamtalgorithmus verlangte bei Bedarf noch einen Großbuchstaben am Textanfang. Seit 2.0.0-ballot ist jeder erzeugte Text ein kleingeschriebenes Fragment.
   - Zwei Beispiele im Schema für Bedarfsmedikation kombinierten eine Maximalmenge mit Uhrzeiten beziehungsweise einem Intervall; das führt seit 2.0.0-ballot zum Abbruch. Sie zeigen jetzt den strukturierten Bedarf ohne Maximalmenge. Die Regel, nach der die Maximalmenge hinter dem letzten von mehreren Segmenten steht, entfällt: Mehrere Segmente setzen einen Rhythmus voraus, die Maximalmenge schließt ihn aus.
   - Der Abbruch „Mindestabstand zusammen mit einem strukturierten Rhythmus" fehlte in der Fehlerliste; er ist ergänzt. Die Meldungen zu Mindestabstand und Maximalmenge schreiben `zulässig` statt `zulaessig` — das Zeichenrepertoire verlangt die NFC-Umlaute auch in Meldungen.
@@ -132,12 +137,12 @@ Release Candidate für 2.0.0. Die Einträge beschreiben die Unterschiede zu 2.0.
   - `dayOfWeek = "mon"` (String statt Liste) ergab `m — …; o — …; n — …`.
   - Nicht-String in `text` oder `patientInstruction` und ein Objekt statt Liste in `doseAndRate` führten zu einem Python-Laufzeitfehler statt zu `ValueError`.
 - Ein `dayOfWeek`-Code außerhalb der Wochentags-Tabelle führt zum Abbruch (`Nicht unterstützter Wochentag (dayOfWeek): '{code}'.`), wie bei `when`. Bisher erschien er roh im Text (`xyz — je 1 Stück`).
-- Zahlen werden mit der Genauigkeit der Ressource ausgegeben (`1.0` → `1,0`, `2.50` → `2,50`), wie FHIR es für `decimal` verlangt — Genauigkeit einschließlich nachfolgender Nullen trägt Bedeutung und ist auch für die Darstellung zu erhalten. Die bisherige Regel `1.0` → `1` entfällt. Exponentialschreibweise aus der Ressource wird als Dezimalzahl ausgegeben (`1e-2` → `0,01`). Bisher hing die Darstellung vom JSON-Parser und der Float-Darstellung der Implementierung ab; zwei konforme Implementierungen konnten für dieselbe Ressource verschiedene Texte liefern. Die Referenzimplementierung liest JSON jetzt mit `parse_float=Decimal`.
+- Zahlen werden mit der Genauigkeit der Ressource ausgegeben (`1.0` → `1,0`, `2.50` → `2,50`), wie FHIR es für `decimal` verlangt — Genauigkeit einschließlich nachfolgender Nullen trägt Bedeutung und ist auch für die Darstellung zu erhalten. Die bisherige Regel `1.0` → `1` entfällt. Exponentialschreibweise aus der Ressource wird als Dezimalzahl ausgegeben (`1e-2` → `0,01`). Bisher hing die Darstellung vom JSON-Parser und der Float-Darstellung der Implementierung ab; zwei konforme Implementierungen konnten für dieselbe Ressource verschiedene Texte liefern. Die Beispielimplementierung liest JSON jetzt mit `parse_float=Decimal`.
 - Der Fehlerlisten-Eintrag „Intervall-Kombination ohne `period` oder `periodUnit`" ist gestrichen. Der Fall ist unerreichbar: Die Schema-Erkennung verlangt beide Schlüssel, die Typprüfung einen numerischen Wert.
-- `boundsPeriod` akzeptiert wie FHIR beliebig viele Sekundenbruchteile und die Schaltsekunde `60`; `timeOfDay` ebenfalls `60`. Bisher lehnte die Referenzimplementierung die Schaltsekunde auf jeder Python-Version ab und brach unter Python 3.10 bei einer oder sieben Bruchteilstellen ab (`datetime.fromisoformat` versteht dort nur drei oder sechs), obwohl Spezifikation und FHIR den Wert erlauben. Sekunden werden ohnehin nicht dargestellt.
+- `boundsPeriod` akzeptiert wie FHIR beliebig viele Sekundenbruchteile und die Schaltsekunde `60`; `timeOfDay` ebenfalls `60`. Bisher lehnte die Beispielimplementierung die Schaltsekunde auf jeder Python-Version ab und brach unter Python 3.10 bei einer oder sieben Bruchteilstellen ab (`datetime.fromisoformat` versteht dort nur drei oder sechs), obwohl Spezifikation und FHIR den Wert erlauben. Sekunden werden ohnehin nicht dargestellt.
 - Die Fehlerliste nennt die Meldungen zu `boundsDuration`, `boundsPeriod`, `maxDosePerPeriod` und zum Mindestabstand wörtlich und legt die Pfadkonvention fest (`[]` für Listenelemente, `Dosage` und `dosageInstruction`/`dosage` oberhalb des Elements).
 
-### Referenzimplementierung und Repository
+### Beispielimplementierung und Repository
 
 #### Added
 
@@ -145,7 +150,7 @@ Release Candidate für 2.0.0. Die Einträge beschreiben die Unterschiede zu 2.0.
 - Testfälle für strukturierten Bedarf mit Uhrzeiten und mit Intervall sowie für die Fehlermeldungen zum Mindestabstand.
 - Testfälle für die Intervall-Kombination (Uhrzeit in verschiedenen Schreibweisen, abweichender Rhythmus, Tagesabschnitte vor Uhrzeiten), die Vorbedingungen der Bedarfs-Bausteine in jedem Element, `comparator`, Einheit aus Leerraum sowie die bisher nicht abgedeckten Meldungen zu `maxDosePerPeriod`, zum Mindestabstand, zu `boundsPeriod.end` und zur Zeiteinheit in `boundsDuration`.
 - Testfälle für Dosis `0`, negative Dosis, `boundsDuration = 0`, fehlendes und abweichendes `doseRange.low.unit`, doppelte `when`-Belegung mit gleicher Dosis sowie explizite `0` in der ausgeschriebenen Form und in der Duplikatprüfung.
-- `tests/test_spec_examples.py`: Jedes Textbeispiel der Spezifikation wird als FHIR-Ressource nachgebaut und muss zeichengenau erzeugt werden; jeder Eintrag der Fehlerliste hat einen Fall mit der wörtlichen Meldung. Ein Meta-Test liest die Meldungen aus der Spezifikation und scheitert, wenn eine davon von keinem Fall erzeugt wird oder ein Fall eine Meldung erzeugt, die dort fehlt. So können Spezifikation und Referenzimplementierung nicht mehr unbemerkt auseinanderlaufen.
+- `tests/test_spec_examples.py`: Jedes Textbeispiel der Spezifikation wird als FHIR-Ressource nachgebaut und muss zeichengenau erzeugt werden; jeder Eintrag der Fehlerliste hat einen Fall mit der wörtlichen Meldung. Ein Meta-Test liest die Meldungen aus der Spezifikation und scheitert, wenn eine davon von keinem Fall erzeugt wird oder ein Fall eine Meldung erzeugt, die dort fehlt. So können Spezifikation und Beispielimplementierung nicht mehr unbemerkt auseinanderlaufen.
 
 #### Fixed
 
@@ -171,7 +176,7 @@ Erste Version mit normativer Spezifikation. Die Einträge beschreiben die Unters
 
 #### Added
 
-- Normative Spezifikation [dosage-text-algorithm-spec.md](dosage-text-algorithm-spec.md). Sie ist gegenüber der Referenzimplementierung führend; weicht das Skript ab, gilt die Spezifikation.
+- Normative Spezifikation [dosage-text-algorithm-spec.md](dosage-text-algorithm-spec.md). Sie ist gegenüber der Beispielimplementierung führend; weicht das Skript ab, gilt die Spezifikation.
 - Bedarfsmedikation. Reine Bedarfsdosierung (`asNeededBoolean = true` ohne `timing`) mit optionalem Einnahmeanlass (`asNeededFor`, mehrere als Aufzählung), Mindestabstand (Extension `MinimumIntervalBetweenAdministrations`) und Maximalmenge (`maxDosePerPeriod`, Bezugszeitraum `24 h` oder `1 d`): `bei Kopfschmerzen: im Abstand von mindestens 4 Stunden je 1 Stück — nicht mehr als 6 Stück in 24 Stunden`. Mindestabstand und Maximalmenge sind nur bei reiner Bedarfsdosierung zulässig; zusammen mit einem strukturierten Rhythmus bricht der Algorithmus ab. Ein strukturiertes Schema kann als Bedarf gekennzeichnet sein: `bei Kopfschmerzen: alle 8 Stunden je 1 Stück`. 1.0.2 lieferte für reinen Bedarf `Unbekanntes Dosierungsschema: Unknown` und ließ bei strukturiertem Bedarf die Kennzeichnung weg (`alle 8 Stunden: je 1 Stück`).
 - Start- und Endzeitpunkt (`boundsPeriod`): `ab dem …`, `vom … bis zum …`, `bis zum …`, eine Uhrzeit umgerechnet nach `Europe/Berlin`. 1.0.2 ignorierte `boundsPeriod` (`1-0-0-0 Stück` statt `vom 05.06.2026 bis zum 05.07.2026: 1-0-0-0 Stück`).
 - Variable Frequenz und Periode im reinen Intervall: `1 bis 2 x alle 8 Stunden`, `alle 2 bis 3 Tage`. 1.0.2 ignorierte `frequencyMax` und `periodMax` (`alle 8 Stunden`, `alle 2 Tage`).
@@ -200,7 +205,7 @@ Erste Version mit normativer Spezifikation. Die Einträge beschreiben die Unters
 - `doseQuantity.value` und `doseRange.high.value` müssen größer als `0` sein; `0` bleibt nur als `doseRange.low.value` zulässig. 1.0.2 gab `je 0 Stück` aus.
 - Nicht numerische Dosiswerte werden mit `<Feld> muss numerisch sein.` abgewiesen. 1.0.2 brach mit einem Python-Fehler ab; numerische Strings werden wie Zahlen geprüft.
 
-### Referenzimplementierung und Repository
+### Beispielimplementierung und Repository
 
 #### Added
 

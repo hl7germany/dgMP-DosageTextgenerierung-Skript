@@ -48,7 +48,7 @@ class MedicationDosageTextGenerator:
     """
     Converts FHIR medication dosage instructions to German text.
 
-    This class implements the reference algorithm for generating human-readable
+    This class is an example implementation of the algorithm for generating human-readable
     dosage instructions from FHIR resources according to the German FHIR
     medication dosage implementation guide.
     """
