@@ -141,6 +141,13 @@ EXAMPLES = (
     ("Anlass: drei Anlässe",
      req(d(dq(1), asNeededBoolean=True, extension=reason("Kopfschmerzen", "Fieber", "Gliederschmerzen"))),
      "bei Kopfschmerzen, Fieber oder Gliederschmerzen: je 1 Stück"),
+    # Normalisierung: Leerraum ist die Unicode-Eigenschaft White_Space
+    ("Leerraum: U+00A0, U+202F, U+2009, U+3000, U+0085",
+     req(d(dq(1), EVERY_8_H, patientInstruction="a\u00a0b\u202fc\u2009d\u3000e\u0085f")),
+     "alle 8 Stunden: je 1 Stück. Hinweis: a b c d e f"),
+    ("kein Leerraum: U+001F, U+200B, U+FEFF",
+     req(d(dq(1), EVERY_8_H, patientInstruction="\u001fa\u001fb\u200bc\ufeffd\u001f")),
+     "alle 8 Stunden: je 1 Stück. Hinweis: \u001fa\u001fb\u200bc\ufeffd\u001f"),
     # Teil A: Mindestabstand, Maximalmenge, Hinweis
     ("Mindestabstand: 4 Stunden", req(d(dq(1), asNeededBoolean=True, modifierExtension=min_interval(4, "h"))),
      "bei Bedarf: im Abstand von mindestens 4 Stunden je 1 Stück"),
@@ -308,6 +315,17 @@ ERROR_CASES = (
     ("low.unit weicht ab", req(d([{"doseRange": {"low": {"value": 1, "unit": "mg"}, "high": {"value": 2, "unit": "Stück"}}}],
                                  {"when": ["MORN"]})),
      "doseRange.low.unit und doseRange.high.unit müssen übereinstimmen."),
+    ("Dosiswert NaN", req(d(dq(float("nan")), {"when": ["MORN"]})), "doseQuantity.value muss numerisch sein."),
+    ("Periode Infinity", req(d(dq(1), {**EVERY_8_H, "period": Decimal("Infinity")})),
+     "timing.repeat.period muss numerisch sein."),
+    ("boundsPeriod.start verlässt bei der Umrechnung das Jahr 0001",
+     req(d(dq(1), {"when": ["MORN"], "boundsPeriod": {"start": "0001-01-01T00:00:00+14:00"}})),
+     "boundsPeriod.start muss ein parsebares FHIR-dateTime mit vollständigem Datum im Format JJJJ-MM-TT sein; "
+     "eine Uhrzeit erfordert eine Zeitzone."),
+    ("boundsPeriod.end verlässt bei der Umrechnung das Jahr 9999",
+     req(d(dq(1), {"when": ["MORN"], "boundsPeriod": {"end": "9999-12-31T23:59:59-12:00"}})),
+     "boundsPeriod.end muss ein parsebares FHIR-dateTime mit vollständigem Datum im Format JJJJ-MM-TT sein; "
+     "eine Uhrzeit erfordert eine Zeitzone."),
     ("low.unit leer", req(d([{"doseRange": {"low": {"value": 1, "unit": ""}, "high": {"value": 2, "unit": "Stück"}}}],
                             {"when": ["MORN"]})),
      "doseRange.low.unit und doseRange.high.unit müssen übereinstimmen."),

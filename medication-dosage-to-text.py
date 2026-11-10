@@ -112,6 +112,15 @@ class MedicationDosageTextGenerator:
     OUTPUT_TIMEZONE_NAME = "Europe/Berlin"
     OUTPUT_TIMEZONE = ZoneInfo(OUTPUT_TIMEZONE_NAME)
 
+    # Leerraum im Sinne der Spezifikation: die Zeichen mit der Unicode-Eigenschaft
+    # White_Space. str.isspace() und \s zaehlen in Python zusaetzlich U+001C bis
+    # U+001F dazu und werden deshalb nicht verwendet.
+    WHITE_SPACE = (
+        "\t\n\x0b\x0c\r \x85\xa0\u1680"
+        "\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a"
+        "\u2028\u2029\u202f\u205f\u3000"
+    )
+
     def __init__(self):
         """Initialize the dosage text generator with German language settings."""
         pass
@@ -285,6 +294,10 @@ class MedicationDosageTextGenerator:
         JSON die Genauigkeit erhält, die FHIR fuer decimal verlangt (2.50 ist
         nicht 2.5); ein float hat sie beim Einlesen bereits verloren."""
         if isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
+            raise ValueError(f"{field_name} muss numerisch sein.")
+        # NaN und Infinity sind kein JSON, json.load nimmt sie aber an; im Text
+        # staende sonst "je NaN Stück".
+        if not isinstance(value, int) and not Decimal(value).is_finite():
             raise ValueError(f"{field_name} muss numerisch sein.")
         return value
 
@@ -829,7 +842,7 @@ class MedicationDosageTextGenerator:
             unit = dose_quantity.get('unit')
             if dose_value is None:
                 raise ValueError("doseQuantity.value ist für die Textgenerierung erforderlich.")
-            if not unit or not unit.strip():
+            if not unit or not unit.strip(self.WHITE_SPACE):
                 raise ValueError("doseQuantity.unit ist für die Textgenerierung erforderlich.")
             # "je 0 Stück" ist ein eindeutiger Text; eine negative Dosis ist
             # keine Anweisung und wird nicht dargestellt.
@@ -844,7 +857,7 @@ class MedicationDosageTextGenerator:
 
             if high is None or high.get('value') is None:
                 raise ValueError("doseRange.high.value ist für die Textgenerierung erforderlich.")
-            if not high.get('unit') or not high['unit'].strip():
+            if not high.get('unit') or not high['unit'].strip(self.WHITE_SPACE):
                 raise ValueError("doseRange.high.unit ist für die Textgenerierung erforderlich.")
             if high['value'] < 0:
                 raise ValueError("doseRange.high.value darf nicht negativ sein.")
@@ -1013,9 +1026,9 @@ class MedicationDosageTextGenerator:
         FreeTextMatchesRenderedText verlangt exakte Gleichheit von
         renderedDosageInstruction und Dosage.text.
         """
-        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(f'[{re.escape(self.WHITE_SPACE)}]+', ' ', text)
         text = re.sub(r' ([;:.,])', r'\1', text)
-        return text.strip()
+        return text.strip(self.WHITE_SPACE)
 
     def _format_duration_text(self, duration, prefix="", field_name="Duration"):
         # Typen prueft Schritt 3; hier nur Vorhandensein.
@@ -1082,7 +1095,9 @@ class MedicationDosageTextGenerator:
         try:
             parsed_datetime = datetime.fromisoformat(normalized.replace("Z", "+00:00"))
             berlin_datetime = parsed_datetime.astimezone(self.OUTPUT_TIMEZONE)
-        except ValueError:
+        # OverflowError: Der Zeitpunkt verlaesst bei der Umrechnung den
+        # darstellbaren Bereich (Jahr 1 beziehungsweise 9999).
+        except (ValueError, OverflowError):
             raise ValueError(error_message) from None
 
         return berlin_datetime.strftime("%d.%m.%Y um %H:%M Uhr")
@@ -1590,12 +1605,12 @@ class MedicationDosageTextGenerator:
                 continue
             concept = extension.get('valueCodeableConcept') or {}
             reason_text = concept.get('text')
-            if not isinstance(reason_text, str) or not reason_text.strip():
+            if not isinstance(reason_text, str) or not reason_text.strip(self.WHITE_SPACE):
                 raise ValueError(
                     "asNeededFor.valueCodeableConcept.text ist für die "
                     "Textgenerierung erforderlich."
                 )
-            reasons.append(reason_text.strip())
+            reasons.append(reason_text.strip(self.WHITE_SPACE))
         if not reasons:
             return ""
         if len(reasons) == 1:
@@ -1641,14 +1656,14 @@ class MedicationDosageTextGenerator:
                 "maxDosePerPeriod.numerator.value ist für die "
                 "Textgenerierung erforderlich."
             )
-        if not unit or not unit.strip():
+        if not unit or not unit.strip(self.WHITE_SPACE):
             raise ValueError(
                 "maxDosePerPeriod.numerator.unit ist für die "
                 "Textgenerierung erforderlich."
             )
 
         dose = self._format_decimal_value(value)
-        dose = f"{dose} {unit.strip()}"
+        dose = f"{dose} {unit.strip(self.WHITE_SPACE)}"
         period = self._format_max_dose_period(max_dose.get('denominator') or {})
         return f"nicht mehr als {dose} {period}"
 
@@ -1689,7 +1704,7 @@ class MedicationDosageTextGenerator:
 
         instruction_text = self._extract_patient_instruction_text(dosage)
         if instruction_text:
-            separator = " " if text.rstrip().endswith(".") else ". "
+            separator = " " if text.rstrip(self.WHITE_SPACE).endswith(".") else ". "
             text = f"{text}{separator}Hinweis: {instruction_text}"
 
         return text
@@ -1702,7 +1717,7 @@ class MedicationDosageTextGenerator:
         Angaben reserviert).
         """
         instruction = dosage.get('patientInstruction')
-        return instruction.strip() if instruction else ""
+        return instruction.strip(self.WHITE_SPACE) if instruction else ""
 
 # ============================================================================
 # MAIN FUNCTION - Command line interface
