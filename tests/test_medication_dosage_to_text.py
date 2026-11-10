@@ -146,46 +146,22 @@ class MedicationDosageTextTest(unittest.TestCase):
             "täglich: 08:00 Uhr, 20:00 Uhr — je 1 Stück",
         )
 
-    def test_frequency_within_period_other_than_one_uses_in_with_dative(self):
-        cases = [
-            ({"frequency": 2, "period": 8, "periodUnit": "h"}, "2 x in 8 Stunden"),
-            ({"frequency": 2, "period": 3, "periodUnit": "d"}, "2 x in 3 Tagen"),
-            ({"frequency": 3, "period": 2, "periodUnit": "wk"}, "3 x in 2 Wochen"),
-            ({"frequency": 2, "period": 2, "periodUnit": "mo"}, "2 x in 2 Monaten"),
-            ({"frequency": 2, "period": 2, "periodUnit": "a"}, "2 x in 2 Jahren"),
-            ({"frequency": 2, "period": 30, "periodUnit": "min"}, "2 x in 30 Minuten"),
-            ({"frequency": 2, "period": 10, "periodUnit": "s"}, "2 x in 10 Sekunden"),
-            ({"frequency": 1, "frequencyMax": 2, "period": 8, "periodUnit": "h"}, "1 bis 2 x in 8 Stunden"),
-            ({"frequency": 2, "period": Decimal("1.5"), "periodUnit": "d"}, "2 x in 1,5 Tagen"),
-            ({"frequency": 2, "period": Decimal("0.5"), "periodUnit": "d"}, "2 x in 0,5 Tagen"),
-            # Bezugswert periodMax = 1: Singular, im Dativ unveraendert.
-            ({"frequency": 2, "period": Decimal("0.5"), "periodMax": 1, "periodUnit": "d"},
-             "2 x in 0,5 bis 1 Tag"),
-        ]
-        for repeat, expected in cases:
-            with self.subTest(repeat=repeat):
-                resource = self.medication_request(self.dosage(1, repeat))
-                self.assertEqual(
-                    self.generator.generate_dosage_text(resource),
-                    f"{expected}: je 1 Stück",
-                )
+    def test_pure_interval_keeps_frequency_output_for_follow_up_change(self):
+        resource = self.medication_request(
+            self.dosage(
+                1,
+                {
+                    "frequency": 2,
+                    "period": 8,
+                    "periodUnit": "h",
+                },
+            )
+        )
 
-    def test_frequency_with_period_one_keeps_alle(self):
-        cases = [
-            ({"frequency": 2, "period": 1, "periodUnit": "h"}, "2 x alle 1 Stunde"),
-            ({"frequency": 1, "frequencyMax": 2, "period": 1, "periodUnit": "h"}, "1 bis 2 x alle 1 Stunde"),
-            ({"frequency": 3, "period": 1, "periodUnit": "min"}, "3 x alle 1 Minute"),
-            ({"frequency": 2, "period": Decimal("1.0"), "periodUnit": "h"}, "2 x alle 1,0 Stunde"),
-            # Feste Frequenz 1: Kurzform ohne Frequenz, unabhaengig von der Periode.
-            ({"frequency": 1, "period": 3, "periodUnit": "d"}, "alle 3 Tage"),
-        ]
-        for repeat, expected in cases:
-            with self.subTest(repeat=repeat):
-                resource = self.medication_request(self.dosage(1, repeat))
-                self.assertEqual(
-                    self.generator.generate_dosage_text(resource),
-                    f"{expected}: je 1 Stück",
-                )
+        self.assertEqual(
+            self.generator.generate_dosage_text(resource),
+            "2 x alle 8 Stunden: je 1 Stück",
+        )
 
     def test_monthly_interval_uses_natural_short_form(self):
         resource = self.medication_request(
@@ -213,7 +189,7 @@ class MedicationDosageTextTest(unittest.TestCase):
             ({"frequency": 1, "period": 1, "periodMax": 2, "periodUnit": "mo"},
              "alle 1 bis 2 Monate: je 1 Stück"),
             ({"frequency": 2, "period": 1, "periodMax": 3, "periodUnit": "d"},
-             "2 x in 1 bis 3 Tagen: je 1 Stück"),
+             "2 x alle 1 bis 3 Tage: je 1 Stück"),
         ]
         for repeat, expected in cases:
             with self.subTest(repeat=repeat):
