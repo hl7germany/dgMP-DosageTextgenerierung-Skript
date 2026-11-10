@@ -16,6 +16,14 @@ Daraus folgt für jeden Eintrag:
 
 Ändert sich nur die Referenzimplementierung, bleibt die Versionsnummer stehen.
 
+## [Unreleased]
+
+### Algorithmus
+
+#### Changed
+
+- Bei einer Frequenz größer als `1` oder einem Frequenzbereich lautet der Einnahmerhythmus für jede Periode außer `1` ohne `periodMax` jetzt `{Frequenzwert} x in {Periodenwert} {Einheit}`, die Einheit im Plural im Dativ: `2 x in 3 Tagen`, `2 x in 1,5 Tagen`, `2 x in 1 bis 3 Tagen` statt `2 x alle 3 Tage`, `2 x alle 1,5 Tage`, `2 x alle 1 bis 3 Tage`. `frequency` zählt die Gaben innerhalb der Periode; `2 x alle 3 Tage` ließ sich auch als zwei Gaben im Abstand von drei Tagen lesen. Die Einheiten-Tabelle führt dafür die Spalte „Plural im Dativ (nach `in`)“ (`Tagen`, `Monaten`, `Jahren`). Bei Periode `1` ohne `periodMax` bleibt die Form `{Frequenzwert} x alle {Periodenwert} {Einheit}` (`2 x alle 1 Stunde`). Für eine gegen das Profil validierte Ressource ändert sich kein Text: `TimingFreqOrPeriodGtOne` lässt eine Frequenz oder Frequenzobergrenze größer als `1` nur mit Periode `1` ohne `periodMax` zu. Betroffen sind Texte zu Eingaben außerhalb des Profils, etwa im Freitext-Fallback der Migration 1.0.7 → 2.0.0.
+
 ## [2.0.0-rc.2] - 2026-10-16
 
 Release Candidate 2 für 2.0.0. Die Einträge beschreiben die Unterschiede zu 2.0.0-rc.1.

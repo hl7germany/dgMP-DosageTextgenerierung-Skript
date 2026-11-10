@@ -138,7 +138,9 @@ Aus `frequency`, `frequencyMax`, `period`, `periodMax` und `periodUnit` entsteht
 * wöchentliches Muster (`periodUnit='wk'`, `period=1`, `periodMax` fehlt): `wöchentlich` bei `frequency=1` und fehlendem `frequencyMax`, sonst `{Frequenzwert} x wöchentlich`
 * monatliches Muster (`periodUnit='mo'`, `period=1`, `periodMax` fehlt): `monatlich` bei `frequency=1` und fehlendem `frequencyMax`, sonst `{Frequenzwert} x monatlich`
 * sonstige Perioden bei einer **festen Frequenz von genau 1** (`frequency=1`, `frequencyMax` fehlt): `alle {Periodenwert} {Einheit}` (z. B. `alle 8 Stunden`)
-* sonstige Perioden bei einem **Frequenzbereich** (`frequencyMax` vorhanden, auch bei `frequency=1`) oder einer festen Frequenz größer als 1: `{Frequenzwert} x alle {Periodenwert} {Einheit}` (z. B. `1 bis 2 x alle 8 Stunden` beziehungsweise `2 x alle 8 Stunden`)
+* sonstige Perioden bei einem **Frequenzbereich** (`frequencyMax` vorhanden, auch bei `frequency=1`) oder einer festen Frequenz größer als 1:
+  * `period=1`, `periodMax` fehlt: `{Frequenzwert} x alle {Periodenwert} {Einheit}` (z. B. `2 x alle 1 Stunde` beziehungsweise `1 bis 2 x alle 1 Stunde`)
+  * sonst: `{Frequenzwert} x in {Periodenwert} {Einheit}`, die Einheit im Plural im Dativ (z. B. `2 x in 3 Tagen`, `2 x in 1,5 Tagen` beziehungsweise `2 x in 1 bis 3 Tagen`)
 
 `{Frequenzwert}` bezeichnet entweder `frequency` allein oder `frequency bis frequencyMax`; `{Periodenwert}` entsprechend `period` allein oder `period bis periodMax`. Die Perioden-Einheit wird nach den Regeln unter [Einheiten und Pluralisierung](#einheiten-und-pluralisierung) ausgegeben. Beispiele für Bereiche sind `2 bis 3 x täglich` und `alle 2 bis 3 Tage`. Eine Periode `1` mit vorhandenem `periodMax` ist ein Periodenbereich und fällt unter die sonstigen Perioden: `alle 1 bis 3 Tage`, nicht `täglich`.
 
@@ -150,17 +152,17 @@ Fehlen `frequency`, `period` und `periodUnit` vollständig, wird kein Baustein f
 
 Es sind zwei Arten von Einheiten zu unterscheiden:
 
-**1. Zeit-Einheiten** (aus `periodUnit`, `boundsDuration.code`, `MinimumIntervalBetweenAdministrations`): Sie werden über eine **feste Tabelle** in ihre deutsche Bezeichnung übersetzt. Die Form richtet sich ausschließlich nach dem für die Einheit verwendeten Bezugswert: **Singular genau dann, wenn dieser Wert gleich `1` ist**, sonst **Plural**. Bei einem Periodenbereich ist `periodMax` der Bezugswert; ohne `periodMax` ist es `period`. Bei `boundsDuration` und beim Mindestabstand ist es der jeweilige `value` (`boundsDuration` mit `1 d` ergibt daher `für 1 Tag`).
+**1. Zeit-Einheiten** (aus `periodUnit`, `boundsDuration.code`, `MinimumIntervalBetweenAdministrations`): Sie werden über eine **feste Tabelle** in ihre deutsche Bezeichnung übersetzt. Die Form richtet sich ausschließlich nach dem für die Einheit verwendeten Bezugswert: **Singular genau dann, wenn dieser Wert gleich `1` ist**, sonst **Plural**; nach `in` im Einnahmerhythmus steht der Plural im Dativ, der Singular ist unverändert. Bei einem Periodenbereich ist `periodMax` der Bezugswert; ohne `periodMax` ist es `period`. Bei `boundsDuration` und beim Mindestabstand ist es der jeweilige `value` (`boundsDuration` mit `1 d` ergibt daher `für 1 Tag`).
 
-| Code | Singular (Wert = 1) | Plural (sonst) |
-|------|---------------------|----------------|
-| `s`  | Sekunde | Sekunden |
-| `min`| Minute | Minuten |
-| `h`  | Stunde | Stunden |
-| `d`  | Tag | Tage |
-| `wk` | Woche | Wochen |
-| `mo` | Monat | Monate |
-| `a`  | Jahr | Jahre |
+| Code | Singular (Wert = 1) | Plural (sonst) | Plural im Dativ (nach `in`) |
+|------|---------------------|----------------|-----------------------------|
+| `s`  | Sekunde | Sekunden | Sekunden |
+| `min`| Minute | Minuten | Minuten |
+| `h`  | Stunde | Stunden | Stunden |
+| `d`  | Tag | Tage | Tagen |
+| `wk` | Woche | Wochen | Wochen |
+| `mo` | Monat | Monate | Monaten |
+| `a`  | Jahr | Jahre | Jahren |
 
 Die Tabelle ist **abschließend**; ein Code außerhalb der Tabelle führt zum Abbruch (Grund 1). Der Algorithmus prüft nicht, ob ein Code für das jeweilige Feld zulässig ist.
 
@@ -335,7 +337,7 @@ Die Bedingung `hatZulaessigeLegacyFelder` gilt für alle vier betroffenen Schema
 | `hatZulaessigeLegacyFelder('wk')` | `period = 1`, `periodUnit = wk` | Regel 4 und 5 (Wochentage) |
 | `hatZulaessigeLegacyFelder('d')` | `period = 1`, `periodUnit = d` | Regel 3 und 6 (Tagesabschnitte, Uhrzeiten) |
 
-`frequency` wird in keiner der beiden Bedingungen geprüft; in diesen Schemata beeinflusst es weder die Schema-Erkennung noch die Ausgabe. Nur bei **wiederkehrenden Intervallen** (Regel 8) ist `frequency` keine Legacy-Angabe: Dort ist es konstituierend und erscheint im Text, etwa als `2 x alle 8 Stunden`.
+`frequency` wird in keiner der beiden Bedingungen geprüft; in diesen Schemata beeinflusst es weder die Schema-Erkennung noch die Ausgabe. Nur bei **wiederkehrenden Intervallen** (Regel 8) ist `frequency` keine Legacy-Angabe: Dort ist es konstituierend und erscheint im Text, etwa als `3 x täglich`.
 
 Jede **andere** Periode beschreibt ein echtes Intervall: Bei `dayOfWeek` ist sie unzulässig, bei `when` oder `timeOfDay` führt sie über `istNichtTagesmuster` zu Regel 7. Eine variable Frequenz oder Periode ist bei Wochentagen ebenfalls ausgeschlossen.
 
