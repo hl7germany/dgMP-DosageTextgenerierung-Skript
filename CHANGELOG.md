@@ -14,9 +14,14 @@ Teile:
   an den Testvektoren, bei denen die Spezifikation gleich bleibt, etwa ein
   behobener Fehler im Skript.
 
-Ändert ein Release das festgelegte Verhalten nicht, erhöht es nur die
-Patch-Version (`2.0.0` → `2.0.1`). Eine Implementierung der vorigen Version
-erfüllt es unverändert.
+Enthält ein Release nur Korrekturen am Python-Skript oder an den
+Testvektoren, erhöht es die Patch-Version (`2.0.0` → `2.0.1`). Wer das Skript
+nutzt, erhält in den korrigierten Fällen einen anderen Text oder einen
+Abbruch. Eine andere Implementierung der vorigen Version erfüllt das Release
+unverändert.
+
+Redaktionelle Korrekturen der Spezifikation führen zu keinem eigenen Release;
+sie erscheinen mit dem nächsten.
 
 Änderungen, die nur Tests oder CI betreffen, stehen nicht im Changelog.
 
@@ -26,7 +31,7 @@ erfüllt es unverändert.
 
 #### Changed
 
-- Versionierung: Jedes Release erhält eine Versionsnummer aus Haupt-, Neben- und Patch-Version. Ein Release, das das festgelegte Verhalten nicht ändert (Korrektur an der Beispielimplementierung oder an den Testvektoren, redaktionelle Korrektur der Spezifikation), erhöht die Patch-Version; Versionen, die sich nur darin unterscheiden, legen denselben Algorithmus fest. Bisher entstand eine neue Nummer nur bei einer Änderung der Spezifikation; eine Patch-Version war nicht festgelegt.
+- Versionierung: Jedes Release erhält eine Versionsnummer aus Haupt-, Neben- und Patch-Version. Die Patch-Version steigt, wenn nur die Beispielimplementierung oder die Testvektoren korrigiert sind und der Algorithmus unverändert ist; eine Implementierung, die `2.0.0` umsetzt, erfüllt `2.0.1` unverändert. Redaktionelle Korrekturen der Spezifikation begründen kein eigenes Release. Bisher entstand eine neue Nummer nur bei einer Änderung der Spezifikation; eine Patch-Version war nicht festgelegt.
 - Mehr als eine Extension `MinimumIntervalBetweenAdministrations` an einem `Dosage`-Element führt zum Abbruch (`Es ist höchstens ein Mindestabstand (MinimumIntervalBetweenAdministrations) zulässig.`). Bisher wurde die erste verwendet und jede weitere entfiel.
 - Mehr als ein Eintrag in `doseAndRate` führt zum Abbruch (`doseAndRate darf höchstens einen Eintrag enthalten.`), ebenso `doseQuantity` und `doseRange` im selben Eintrag (`doseQuantity und doseRange dürfen nicht gemeinsam angegeben werden.`). Bisher wurden weitere Einträge ignoriert, und `doseQuantity` hatte Vorrang vor `doseRange`.
 - Die Typprüfung (Schritt 3) ist über die Felder der Feldreferenz festgelegt statt über „gelesene Felder": In jeder `Quantity` werden `value`, `unit` und `code` geprüft, die Werte der beiden bekannten Extensions in `extension` und `modifierExtension`. Dasselbe gilt für die `comparator`-Prüfung. Die Beispielimplementierung prüfte bereits so.

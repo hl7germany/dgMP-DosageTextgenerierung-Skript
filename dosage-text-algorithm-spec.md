@@ -607,13 +607,13 @@ Die Version des verwendeten Algorithmus MUSS über die Extension [GeneratedDosag
 
 Diese Seite beschreibt die Algorithmus-Version **2.0.0-rc.2**. Die Nummer bezeichnet den hier festgelegten Algorithmus, nicht ein einzelnes Programm: Die Beispielimplementierung führt sie in `__version__` und gibt sie beim Erzeugen der Beispiele in `algorithmVersion` weiter. Eine eigene Implementierung trägt dieselbe Nummer ein, sobald sie diesen Algorithmus umsetzt.
 
-Jedes Release von Spezifikation und Beispielimplementierung erhält eine Versionsnummer aus Haupt-, Neben- und Patch-Version. Welche Stelle sich erhöht, richtet sich nach der Wirkung auf die erzeugten Texte:
+Jedes Release von Spezifikation und Beispielimplementierung erhält eine Versionsnummer aus Haupt-, Neben- und Patch-Version:
 
-* **Hauptversion:** Bereits erzeugte Texte können sich ändern. Das gilt für einen geänderten oder entfallenen Baustein und für jede Verschärfung der Eingabeprüfung.
-* **Nebenversion:** Vorhandene Ausgaben bleiben unberührt. Das gilt für ein zusätzliches Schema und für eine gelockerte Prüfung.
-* **Patch-Version:** Das festgelegte Verhalten ändert sich nicht. Das gilt für Korrekturen an der Beispielimplementierung oder an den Testvektoren und für redaktionelle Korrekturen dieser Spezifikation.
+* **Hauptversion:** Der Algorithmus ändert sich so, dass bereits erzeugte Texte abweichen können. Das gilt für einen geänderten oder entfallenen Baustein und für jede Verschärfung der Eingabeprüfung.
+* **Nebenversion:** Der Algorithmus ändert sich, vorhandene Ausgaben bleiben unberührt. Das gilt für ein zusätzliches Schema und für eine gelockerte Prüfung.
+* **Patch-Version:** Die Beispielimplementierung oder die Testvektoren sind korrigiert, der Algorithmus ist unverändert. Die Beispielimplementierung kann in den korrigierten Fällen einen anderen Text erzeugen oder abbrechen. Eine Implementierung, die `2.0.0` umsetzt, erfüllt `2.0.1` unverändert.
 
-Versionen, die sich nur in der Patch-Version unterscheiden, legen denselben Algorithmus fest: Eine Implementierung, die `2.0.0` umsetzt, erfüllt `2.0.1` unverändert.
+Eine Klarstellung, nach der eine Regel anders umzusetzen ist als bisher lesbar, ist eine Änderung des Algorithmus. Redaktionelle Korrekturen dieser Spezifikation begründen kein eigenes Release; sie erscheinen mit dem nächsten.
 
 Die Versionshistorie führt [CHANGELOG.md](CHANGELOG.md); jeder Abschnitt trennt dort Änderungen am Algorithmus von Änderungen an der Beispielimplementierung.
 
