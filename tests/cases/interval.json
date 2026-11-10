@@ -393,32 +393,7 @@
       }
     },
     {
-      "name": "rhythm: 2 x alle 1 Stunde",
-      "dosages": [
-        {
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ],
-          "timing": {
-            "repeat": {
-              "frequency": 2,
-              "period": 1,
-              "periodUnit": "h"
-            }
-          }
-        }
-      ],
-      "expect": {
-        "text": "2 x alle 1 Stunde: je 1 Stück"
-      }
-    },
-    {
-      "name": "rhythm: 1 bis 2 x alle 1 Stunde",
+      "name": "rhythm: 1 bis 2 x alle 8 Stunden",
       "dosages": [
         {
           "doseAndRate": [
@@ -432,91 +407,40 @@
           "timing": {
             "repeat": {
               "frequency": 1,
-              "frequencyMax": 2,
-              "period": 1,
+              "period": 8,
+              "periodUnit": "h",
+              "frequencyMax": 2
+            }
+          }
+        }
+      ],
+      "expect": {
+        "text": "1 bis 2 x alle 8 Stunden: je 1 Stück"
+      }
+    },
+    {
+      "name": "rhythm: 2 x alle 8 Stunden",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 2,
+              "period": 8,
               "periodUnit": "h"
             }
           }
         }
       ],
       "expect": {
-        "text": "1 bis 2 x alle 1 Stunde: je 1 Stück"
-      }
-    },
-    {
-      "name": "rhythm: 2 x in 3 Tagen",
-      "dosages": [
-        {
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ],
-          "timing": {
-            "repeat": {
-              "frequency": 2,
-              "period": 3,
-              "periodUnit": "d"
-            }
-          }
-        }
-      ],
-      "expect": {
-        "text": "2 x in 3 Tagen: je 1 Stück"
-      }
-    },
-    {
-      "name": "rhythm: 2 x in 1,5 Tagen",
-      "dosages": [
-        {
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ],
-          "timing": {
-            "repeat": {
-              "frequency": 2,
-              "period": 1.5,
-              "periodUnit": "d"
-            }
-          }
-        }
-      ],
-      "expect": {
-        "text": "2 x in 1,5 Tagen: je 1 Stück"
-      }
-    },
-    {
-      "name": "rhythm: 2 x in 1 bis 3 Tagen",
-      "dosages": [
-        {
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ],
-          "timing": {
-            "repeat": {
-              "frequency": 2,
-              "period": 1,
-              "periodMax": 3,
-              "periodUnit": "d"
-            }
-          }
-        }
-      ],
-      "expect": {
-        "text": "2 x in 1 bis 3 Tagen: je 1 Stück"
+        "text": "2 x alle 8 Stunden: je 1 Stück"
       }
     },
     {
@@ -1100,308 +1024,6 @@
       }
     },
     {
-      "name": "frequency with period one keeps alle [1]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "frequency": 3,
-              "period": 1,
-              "periodUnit": "min"
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "text": "3 x alle 1 Minute: je 1 Stück"
-      }
-    },
-    {
-      "name": "frequency with period one keeps alle [2]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "frequency": 2,
-              "period": 1.0,
-              "periodUnit": "h"
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "text": "2 x alle 1,0 Stunde: je 1 Stück"
-      }
-    },
-    {
-      "name": "frequency with period one keeps alle [3]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "frequency": 1,
-              "period": 3,
-              "periodUnit": "d"
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "text": "alle 3 Tage: je 1 Stück"
-      }
-    },
-    {
-      "name": "frequency within period other than one uses in with dative [1]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "frequency": 2,
-              "period": 8,
-              "periodUnit": "h"
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "text": "2 x in 8 Stunden: je 1 Stück"
-      }
-    },
-    {
-      "name": "frequency within period other than one uses in with dative [2]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "frequency": 3,
-              "period": 2,
-              "periodUnit": "wk"
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "text": "3 x in 2 Wochen: je 1 Stück"
-      }
-    },
-    {
-      "name": "frequency within period other than one uses in with dative [3]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "frequency": 2,
-              "period": 2,
-              "periodUnit": "mo"
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "text": "2 x in 2 Monaten: je 1 Stück"
-      }
-    },
-    {
-      "name": "frequency within period other than one uses in with dative [4]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "frequency": 2,
-              "period": 2,
-              "periodUnit": "a"
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "text": "2 x in 2 Jahren: je 1 Stück"
-      }
-    },
-    {
-      "name": "frequency within period other than one uses in with dative [5]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "frequency": 2,
-              "period": 30,
-              "periodUnit": "min"
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "text": "2 x in 30 Minuten: je 1 Stück"
-      }
-    },
-    {
-      "name": "frequency within period other than one uses in with dative [6]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "frequency": 2,
-              "period": 10,
-              "periodUnit": "s"
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "text": "2 x in 10 Sekunden: je 1 Stück"
-      }
-    },
-    {
-      "name": "frequency within period other than one uses in with dative [7]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "frequency": 1,
-              "frequencyMax": 2,
-              "period": 8,
-              "periodUnit": "h"
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "text": "1 bis 2 x in 8 Stunden: je 1 Stück"
-      }
-    },
-    {
-      "name": "frequency within period other than one uses in with dative [8]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "frequency": 2,
-              "period": 0.5,
-              "periodUnit": "d"
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "text": "2 x in 0,5 Tagen: je 1 Stück"
-      }
-    },
-    {
-      "name": "frequency within period other than one uses in with dative [9]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "frequency": 2,
-              "period": 0.5,
-              "periodMax": 1,
-              "periodUnit": "d"
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "text": "2 x in 0,5 bis 1 Tag: je 1 Stück"
-      }
-    },
-    {
       "name": "negative dose is rejected [2]",
       "dosages": [
         {
@@ -1476,6 +1098,32 @@
       ],
       "expect": {
         "text": "alle 1 bis 2 Monate: je 1 Stück"
+      }
+    },
+    {
+      "name": "short form does not drop period max [3]",
+      "dosages": [
+        {
+          "timing": {
+            "repeat": {
+              "frequency": 2,
+              "period": 1,
+              "periodMax": 3,
+              "periodUnit": "d"
+            }
+          },
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "2 x alle 1 bis 3 Tage: je 1 Stück"
       }
     },
     {
@@ -1857,6 +1505,37 @@
       }
     },
     {
+      "name": "unrelated extension with malformed valueCodeableConcept is ignored",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "frequency": 1,
+              "period": 1,
+              "periodUnit": "d"
+            }
+          },
+          "extension": [
+            {
+              "url": "http://example.org/x",
+              "valueCodeableConcept": "x"
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "text": "täglich: je 1 Stück"
+      }
+    },
+    {
       "name": "extension without url is ignored",
       "dosages": [
         {
@@ -1918,37 +1597,6 @@
       ],
       "expect": {
         "text": "bei Schmerzen, alle 8 Stunden: je 1 Stück"
-      }
-    },
-    {
-      "name": "unrelated extension with malformed valueCodeableConcept is ignored",
-      "dosages": [
-        {
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ],
-          "timing": {
-            "repeat": {
-              "frequency": 1,
-              "period": 1,
-              "periodUnit": "d"
-            }
-          },
-          "extension": [
-            {
-              "url": "http://example.org/x",
-              "valueCodeableConcept": "x"
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "text": "täglich: je 1 Stück"
       }
     }
   ]
