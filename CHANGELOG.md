@@ -44,7 +44,6 @@ Daraus folgt für jeden Eintrag:
 #### Changed
 
 - Das Skript heißt in Spezifikation, README und Changelog durchgehend „Beispielimplementierung“ (bisher teils „Referenzimplementierung“); führend ist die Spezifikation.
-- README: Die Badges „Release“ und „Release On Tag“ verwiesen auf nicht vorhandene Workflows und sind entfallen; neu ist ein Badge mit der zuletzt veröffentlichten Algorithmus-Version.
 
 #### Fixed
 
