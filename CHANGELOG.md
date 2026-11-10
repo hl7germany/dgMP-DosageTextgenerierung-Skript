@@ -1,20 +1,20 @@
 # Changelog
 
-Die Versionsnummern in dieser Datei sind **Algorithmus-Versionen**: sie bezeichnen
-den in [dosage-text-algorithm-spec.md](dosage-text-algorithm-spec.md) festgelegten
-Algorithmus, nicht den Stand dieses Repositories. Eine eigene Implementierung
-trägt dieselbe Nummer, sobald sie diese Spezifikation umsetzt, und gibt sie als
-`algorithmVersion` weiter.
+Die Versionsnummern in dieser Datei sind die Versionen des Algorithmus, wie ihn
+[dosage-text-algorithm-spec.md](dosage-text-algorithm-spec.md) festlegt. Eine
+eigene Implementierung, die diese Spezifikation umsetzt, gibt dieselbe Nummer
+als `algorithmVersion` an.
 
-Daraus folgt für jeden Eintrag:
+Jeder Abschnitt beschreibt die Unterschiede zum vorigen Release und hat zwei
+Teile:
 
-- Abschnitt **Algorithmus** — Änderungen an der Spezifikation. Sie sind für jede
-  Implementierung verbindlich und nur sie rechtfertigen eine neue Versionsnummer.
-- Abschnitt **Beispielimplementierung und Repository** — Änderungen an Skript,
-  Tests oder CI, die das festgelegte Verhalten nicht berühren. Sie erscheinen
-  unter der Version, mit der sie ausgeliefert wurden, begründen aber keine.
+- **Algorithmus**: Änderungen an der Spezifikation. Sie gelten für jede
+  Implementierung.
+- **Beispielimplementierung und Repository**: Änderungen am Python-Skript und
+  an den Testvektoren, bei denen die Spezifikation gleich bleibt, etwa ein
+  behobener Fehler im Skript.
 
-Ändert sich nur die Beispielimplementierung, bleibt die Versionsnummer stehen.
+Änderungen, die nur Tests oder CI betreffen, stehen nicht im Changelog.
 
 ## [Unreleased]
 
@@ -37,14 +37,11 @@ Daraus folgt für jeden Eintrag:
 
 #### Added
 
-- `tests/cases/`: 370 Testvektoren als JSON, je Fall die `Dosage`-Elemente und der erwartete Text oder die erwartete Abbruchmeldung. Sie sind unabhängig von der Programmiersprache und gegen jede Implementierung ausführbar; das Format beschreibt `tests/cases/README.md`. `tests/test_cases.py` führt jeden Fall für `MedicationRequest`, `MedicationDispense` und `MedicationStatement` gegen das Skript aus.
-- Testfall für die Intervall-Kombination mit mehreren unsortierten Uhrzeiten je `Dosage`-Element, über die Elemente verschränkt (`tests/test_regression_ordering.py`).
-- Testfälle in `tests/test_spec_examples.py` für die Änderungen dieser Version: zwei Mindestabstände, mehr als eine Dosisangabe je Element, die Typprüfung von `unit` und `code`, Leerraum nach `White_Space`, nicht endliche Zahlen, Zeitpunkte außerhalb der Jahre `0001` bis `9999` und eine leere `doseRange.low.unit`.
+- `tests/cases/`: Testvektoren als JSON, je Fall die `Dosage`-Elemente und der erwartete Text oder die erwartete Abbruchmeldung. Sie sind unabhängig von der Programmiersprache und gegen jede Implementierung ausführbar; das Format beschreibt `tests/cases/README.md`. `tests/test_cases.py` führt jeden Fall für `MedicationRequest`, `MedicationDispense` und `MedicationStatement` gegen das Skript aus.
 
 #### Changed
 
 - Das Skript heißt in Spezifikation, README und Changelog durchgehend „Beispielimplementierung“ (bisher teils „Referenzimplementierung“); führend ist die Spezifikation.
-- README: Die Badges „Release“ und „Release On Tag“ verwiesen auf nicht vorhandene Workflows und sind entfallen; neu ist ein Badge mit der zuletzt veröffentlichten Algorithmus-Version.
 
 #### Fixed
 
