@@ -48,7 +48,7 @@ class MedicationDosageTextGenerator:
     """
     Converts FHIR medication dosage instructions to German text.
 
-    This class implements the reference algorithm for generating human-readable
+    This class is an example implementation of the algorithm for generating human-readable
     dosage instructions from FHIR resources according to the German FHIR
     medication dosage implementation guide.
     """
@@ -103,6 +103,17 @@ class MedicationDosageTextGenerator:
         'mo': 'Monate',
         'a': 'Jahre'
     }
+    # Plural im Dativ, nach "in" im Einnahmerhythmus ("2 x in 3 Tagen").
+    # Der Singular ist im Dativ unveraendert.
+    TIME_UNITS_PLURAL_DATIVE = {
+        's': 'Sekunden',
+        'min': 'Minuten',
+        'h': 'Stunden',
+        'd': 'Tagen',
+        'wk': 'Wochen',
+        'mo': 'Monaten',
+        'a': 'Jahren'
+    }
 
     # Kanonische Extension-URLs (exakter Vergleich, kein Teilstring-Match)
     URL_AS_NEEDED_FOR = 'http://hl7.org/fhir/5.0/StructureDefinition/extension-Dosage.asNeededFor'
@@ -111,6 +122,15 @@ class MedicationDosageTextGenerator:
     # Verbindliche IANA-Zielzeitzone für die Darstellung von boundsPeriod.
     OUTPUT_TIMEZONE_NAME = "Europe/Berlin"
     OUTPUT_TIMEZONE = ZoneInfo(OUTPUT_TIMEZONE_NAME)
+
+    # Leerraum im Sinne der Spezifikation: die Zeichen mit der Unicode-Eigenschaft
+    # White_Space. str.isspace() und \s zaehlen in Python zusaetzlich U+001C bis
+    # U+001F dazu und werden deshalb nicht verwendet.
+    WHITE_SPACE = (
+        "\t\n\x0b\x0c\r \x85\xa0\u1680"
+        "\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a"
+        "\u2028\u2029\u202f\u205f\u3000"
+    )
 
     def __init__(self):
         """Initialize the dosage text generator with German language settings."""
@@ -286,6 +306,10 @@ class MedicationDosageTextGenerator:
         nicht 2.5); ein float hat sie beim Einlesen bereits verloren."""
         if isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
             raise ValueError(f"{field_name} muss numerisch sein.")
+        # NaN und Infinity sind kein JSON, json.load nimmt sie aber an; im Text
+        # staende sonst "je NaN Stück".
+        if not isinstance(value, int) and not Decimal(value).is_finite():
+            raise ValueError(f"{field_name} muss numerisch sein.")
         return value
 
     def _require_integer(self, value, field_name):
@@ -332,10 +356,16 @@ class MedicationDosageTextGenerator:
                     if name == "modifierExtension" and url != self.URL_MINDESTABSTAND:
                         raise ValueError(f"Nicht unterstützte modifierExtension: '{url}'.")
         if "doseAndRate" in dosage:
-            # Gelesen wird nur doseAndRate[0]; weitere Einträge werden ignoriert.
             items = self._require_list(dosage["doseAndRate"], "doseAndRate")
+            # Der Text traegt genau eine Dosis je Element; ein weiterer Eintrag
+            # oder eine zweite Dosisangabe im selben Eintrag entfiele
+            # stillschweigend.
+            if len(items) > 1:
+                raise ValueError("doseAndRate darf höchstens einen Eintrag enthalten.")
             if items:
                 item = self._require_object(items[0], "doseAndRate[]")
+                if "doseQuantity" in item and "doseRange" in item:
+                    raise ValueError("doseQuantity und doseRange dürfen nicht gemeinsam angegeben werden.")
                 if "doseQuantity" in item:
                     self._check_quantity_types(item["doseQuantity"], "doseQuantity")
                 if "doseRange" in item:
@@ -829,7 +859,7 @@ class MedicationDosageTextGenerator:
             unit = dose_quantity.get('unit')
             if dose_value is None:
                 raise ValueError("doseQuantity.value ist für die Textgenerierung erforderlich.")
-            if not unit or not unit.strip():
+            if not unit or not unit.strip(self.WHITE_SPACE):
                 raise ValueError("doseQuantity.unit ist für die Textgenerierung erforderlich.")
             # "je 0 Stück" ist ein eindeutiger Text; eine negative Dosis ist
             # keine Anweisung und wird nicht dargestellt.
@@ -844,7 +874,7 @@ class MedicationDosageTextGenerator:
 
             if high is None or high.get('value') is None:
                 raise ValueError("doseRange.high.value ist für die Textgenerierung erforderlich.")
-            if not high.get('unit') or not high['unit'].strip():
+            if not high.get('unit') or not high['unit'].strip(self.WHITE_SPACE):
                 raise ValueError("doseRange.high.unit ist für die Textgenerierung erforderlich.")
             if high['value'] < 0:
                 raise ValueError("doseRange.high.value darf nicht negativ sein.")
@@ -857,7 +887,8 @@ class MedicationDosageTextGenerator:
                 # Die Einheit erscheint nur einmal im Text und stammt aus high.
                 # low.unit wird deshalb nicht verlangt; ist sie vorhanden und
                 # weicht ab, würde der Text sie unterschlagen - dann Abbruch.
-                if low.get('unit') and low.get('unit') != high.get('unit'):
+                # Auch eine leere low.unit ist vorhanden und weicht ab.
+                if 'unit' in low and low['unit'] != high['unit']:
                     raise ValueError("doseRange.low.unit und doseRange.high.unit müssen übereinstimmen.")
                 value = (
                     f"{self._format_decimal_value(low.get('value'))} bis "
@@ -1012,9 +1043,9 @@ class MedicationDosageTextGenerator:
         FreeTextMatchesRenderedText verlangt exakte Gleichheit von
         renderedDosageInstruction und Dosage.text.
         """
-        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(f'[{re.escape(self.WHITE_SPACE)}]+', ' ', text)
         text = re.sub(r' ([;:.,])', r'\1', text)
-        return text.strip()
+        return text.strip(self.WHITE_SPACE)
 
     def _format_duration_text(self, duration, prefix="", field_name="Duration"):
         # Typen prueft Schritt 3; hier nur Vorhandensein.
@@ -1081,7 +1112,9 @@ class MedicationDosageTextGenerator:
         try:
             parsed_datetime = datetime.fromisoformat(normalized.replace("Z", "+00:00"))
             berlin_datetime = parsed_datetime.astimezone(self.OUTPUT_TIMEZONE)
-        except ValueError:
+        # OverflowError: Der Zeitpunkt verlaesst bei der Umrechnung den
+        # darstellbaren Bereich (Jahr 1 beziehungsweise 9999).
+        except (ValueError, OverflowError):
             raise ValueError(error_message) from None
 
         return berlin_datetime.strftime("%d.%m.%Y um %H:%M Uhr")
@@ -1130,13 +1163,14 @@ class MedicationDosageTextGenerator:
             )
         return f"{match.group(1)}:{match.group(2)} Uhr"
 
-    def _format_time_unit_german(self, value, unit):
+    def _format_time_unit_german(self, value, unit, dative=False):
         """
         Format time unit with proper German singular/plural form.
 
         Args:
             value (int/float): Numeric value
             unit (str): FHIR time unit code (s, min, h, d, wk, mo, a)
+            dative (bool): Plural im Dativ (nach "in"); der Singular bleibt gleich
 
         Returns:
             str: German unit name (e.g., "Tag" vs "Tage")
@@ -1146,7 +1180,12 @@ class MedicationDosageTextGenerator:
                 im erzeugten Text wäre für Patientinnen und Patienten nicht lesbar.
         """
         # Choose singular or plural based on value
-        unit_dict = self.TIME_UNITS_SINGULAR if value == 1 else self.TIME_UNITS_PLURAL
+        if value == 1:
+            unit_dict = self.TIME_UNITS_SINGULAR
+        elif dative:
+            unit_dict = self.TIME_UNITS_PLURAL_DATIVE
+        else:
+            unit_dict = self.TIME_UNITS_PLURAL
         if unit not in unit_dict:
             raise ValueError(f"Nicht unterstützte Zeiteinheit: '{unit}'.")
         return unit_dict[unit]
@@ -1256,6 +1295,7 @@ class MedicationDosageTextGenerator:
         - "täglich" (daily)
         - "3 x täglich" (3 times daily)
         - "alle 8 Stunden" (every 8 hours)
+        - "2 x in 3 Tagen" (2 times within 3 days)
         - "wöchentlich" (weekly)
 
         Args:
@@ -1303,23 +1343,28 @@ class MedicationDosageTextGenerator:
 
         # Feste Frequenzen > 1 und Frequenzbereiche (auch 1 bis n).
         frequency_text = f"{self._format_range_value(frequency, frequency_max)} x"
-        period_description = self._format_period_description(period, period_unit, period_max)
-        return f"{frequency_text} alle {period_description}"
+        if period == 1 and period_max is None:
+            period_description = self._format_period_description(period, period_unit)
+            return f"{frequency_text} alle {period_description}"
+        # Jede andere Periode: Anzahl der Gaben innerhalb der Periode ("2 x in 3 Tagen").
+        period_description = self._format_period_description(period, period_unit, period_max, dative=True)
+        return f"{frequency_text} in {period_description}"
 
-    def _format_period_description(self, period, period_unit, period_max=None):
+    def _format_period_description(self, period, period_unit, period_max=None, dative=False):
         """
         Format a period with unit into German description.
 
         Args:
             period (int/float): Numeric period value
             period_unit (str): FHIR period unit code
+            dative (bool): Plural im Dativ (nach "in")
 
         Returns:
             str: German period description like "3 Tage" or "2 Wochen"
         """
         formatted_period = self._format_range_value(period, period_max)
         unit_basis = period_max if period_max is not None else period
-        unit_name = self._format_time_unit_german(unit_basis, period_unit)
+        unit_name = self._format_time_unit_german(unit_basis, period_unit, dative=dative)
         return f"{formatted_period} {unit_name}"
 
     def _format_period_only_rhythm(self, period, period_unit, period_max=None):
@@ -1589,12 +1634,12 @@ class MedicationDosageTextGenerator:
                 continue
             concept = extension.get('valueCodeableConcept') or {}
             reason_text = concept.get('text')
-            if not isinstance(reason_text, str) or not reason_text.strip():
+            if not isinstance(reason_text, str) or not reason_text.strip(self.WHITE_SPACE):
                 raise ValueError(
                     "asNeededFor.valueCodeableConcept.text ist für die "
                     "Textgenerierung erforderlich."
                 )
-            reasons.append(reason_text.strip())
+            reasons.append(reason_text.strip(self.WHITE_SPACE))
         if not reasons:
             return ""
         if len(reasons) == 1:
@@ -1602,20 +1647,29 @@ class MedicationDosageTextGenerator:
         return f"{', '.join(reasons[:-1])} oder {reasons[-1]}"
 
     def _extract_minimum_interval_text(self, dosage):
-        for extension in dosage.get('modifierExtension', []):
-            if extension.get('url') != self.URL_MINDESTABSTAND:
-                continue
-            duration = extension.get('valueDuration')
-            if duration is None:
-                raise ValueError(
-                    "MinimumIntervalBetweenAdministrations.valueDuration ist "
-                    "für die Textgenerierung erforderlich."
-                )
-            return self._format_duration_text(
-                duration,
-                field_name="MinimumIntervalBetweenAdministrations.valueDuration"
+        matching = [
+            extension for extension in dosage.get('modifierExtension', [])
+            if extension.get('url') == self.URL_MINDESTABSTAND
+        ]
+        if not matching:
+            return ""
+        # Der Text traegt genau einen Mindestabstand; ein zweiter entfiele
+        # stillschweigend.
+        if len(matching) > 1:
+            raise ValueError(
+                "Es ist höchstens ein Mindestabstand "
+                "(MinimumIntervalBetweenAdministrations) zulässig."
             )
-        return ""
+        duration = matching[0].get('valueDuration')
+        if duration is None:
+            raise ValueError(
+                "MinimumIntervalBetweenAdministrations.valueDuration ist "
+                "für die Textgenerierung erforderlich."
+            )
+        return self._format_duration_text(
+            duration,
+            field_name="MinimumIntervalBetweenAdministrations.valueDuration"
+        )
 
     def _extract_max_dose_text(self, dosage):
         if 'maxDosePerPeriod' not in dosage:
@@ -1631,14 +1685,14 @@ class MedicationDosageTextGenerator:
                 "maxDosePerPeriod.numerator.value ist für die "
                 "Textgenerierung erforderlich."
             )
-        if not unit or not unit.strip():
+        if not unit or not unit.strip(self.WHITE_SPACE):
             raise ValueError(
                 "maxDosePerPeriod.numerator.unit ist für die "
                 "Textgenerierung erforderlich."
             )
 
         dose = self._format_decimal_value(value)
-        dose = f"{dose} {unit.strip()}"
+        dose = f"{dose} {unit.strip(self.WHITE_SPACE)}"
         period = self._format_max_dose_period(max_dose.get('denominator') or {})
         return f"nicht mehr als {dose} {period}"
 
@@ -1679,7 +1733,7 @@ class MedicationDosageTextGenerator:
 
         instruction_text = self._extract_patient_instruction_text(dosage)
         if instruction_text:
-            separator = " " if text.rstrip().endswith(".") else ". "
+            separator = " " if text.rstrip(self.WHITE_SPACE).endswith(".") else ". "
             text = f"{text}{separator}Hinweis: {instruction_text}"
 
         return text
@@ -1692,7 +1746,7 @@ class MedicationDosageTextGenerator:
         Angaben reserviert).
         """
         instruction = dosage.get('patientInstruction')
-        return instruction.strip() if instruction else ""
+        return instruction.strip(self.WHITE_SPACE) if instruction else ""
 
 # ============================================================================
 # MAIN FUNCTION - Command line interface

@@ -300,6 +300,147 @@
       }
     },
     {
+      "name": "low.unit empty",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseRange": {
+                "low": {
+                  "value": 1,
+                  "unit": ""
+                },
+                "high": {
+                  "value": 2,
+                  "unit": "Stück"
+                }
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseRange.low.unit und doseRange.high.unit müssen übereinstimmen."
+      }
+    },
+    {
+      "name": "doseQuantity and doseRange in the same entry",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              },
+              "doseRange": {
+                "high": {
+                  "value": 2,
+                  "unit": "Stück"
+                }
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseQuantity und doseRange dürfen nicht gemeinsam angegeben werden."
+      }
+    },
+    {
+      "name": "two doseAndRate entries",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            },
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseAndRate darf höchstens einen Eintrag enthalten."
+      }
+    },
+    {
+      "name": "two doseAndRate entries in a further element",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        },
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            },
+            {
+              "doseQuantity": {
+                "value": 2,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "EVE"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseAndRate darf höchstens einen Eintrag enthalten."
+      }
+    },
+    {
       "name": "comparator",
       "dosages": [
         {
@@ -348,65 +489,6 @@
       ],
       "expect": {
         "error": "doseQuantity.unit ist für die Textgenerierung erforderlich."
-      }
-    },
-    {
-      "name": "empty dose range low counts as present",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "when": [
-                "MORN"
-              ]
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseRange": {
-                "low": {},
-                "high": {
-                  "value": 2,
-                  "unit": "Stück"
-                }
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "error": "doseRange.low.value ist für die Textgenerierung erforderlich."
-      }
-    },
-    {
-      "name": "dose range low unit is optional but must match when present [2]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "when": [
-                "MORN"
-              ]
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseRange": {
-                "low": {
-                  "value": 1,
-                  "unit": "mg"
-                },
-                "high": {
-                  "value": 2,
-                  "unit": "Stück"
-                }
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "error": "doseRange.low.unit und doseRange.high.unit müssen übereinstimmen."
       }
     },
     {

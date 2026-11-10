@@ -77,6 +77,16 @@ class CaseFilesTest(unittest.TestCase):
                     for value in case["expect"].values():
                         self.assertIsInstance(value, str)
 
+    def test_inputs_are_unique(self):
+        seen = {}
+        for file_name, content in load_files().items():
+            for case in content["cases"]:
+                kind = "dosages" if "dosages" in case else "resource"
+                key = (kind, json.dumps(case[kind], default=str, sort_keys=True))
+                with self.subTest(file=file_name, name=case["name"]):
+                    self.assertNotIn(key, seen, "Dieselbe Eingabe steht bereits in einem anderen Fall.")
+                seen[key] = case["name"]
+
 
 class CasesTest(unittest.TestCase):
     def test_every_case_produces_its_expected_result(self):

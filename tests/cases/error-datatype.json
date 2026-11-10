@@ -170,6 +170,93 @@
       }
     },
     {
+      "name": "type of code in a Quantity that contributes only its unit",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück",
+                "code": 5
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "doseQuantity.code muss ein String sein."
+      }
+    },
+    {
+      "name": "type of unit in a Duration that contributes only its code",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ],
+              "boundsDuration": {
+                "value": 7,
+                "code": "d",
+                "unit": 5
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "timing.repeat.boundsDuration.unit muss ein String sein."
+      }
+    },
+    {
+      "name": "type of minimum interval extension placed in extension",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ]
+            }
+          },
+          "extension": [
+            {
+              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
+              "valueDuration": 5
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "error": "extension[].valueDuration muss ein Objekt sein."
+      }
+    },
+    {
       "name": "boundsDuration not numeric",
       "dosages": [
         {
@@ -298,31 +385,6 @@
         {
           "timing": {
             "repeat": {
-              "frequency": 2.5,
-              "period": 8,
-              "periodUnit": "h"
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "error": "timing.repeat.frequency muss eine ganze Zahl sein."
-      }
-    },
-    {
-      "name": "wrong json type is rejected per fhir datatype [3]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
               "frequency": true,
               "period": 8,
               "periodUnit": "h"
@@ -343,7 +405,7 @@
       }
     },
     {
-      "name": "wrong json type is rejected per fhir datatype [4]",
+      "name": "wrong json type is rejected per fhir datatype [3]",
       "dosages": [
         {
           "timing": {
@@ -369,7 +431,7 @@
       }
     },
     {
-      "name": "wrong json type is rejected per fhir datatype [5]",
+      "name": "wrong json type is rejected per fhir datatype [4]",
       "dosages": [
         {
           "timing": {
@@ -394,7 +456,7 @@
       }
     },
     {
-      "name": "wrong json type is rejected per fhir datatype [6]",
+      "name": "wrong json type is rejected per fhir datatype [5]",
       "dosages": [
         {
           "timing": {
@@ -419,7 +481,7 @@
       }
     },
     {
-      "name": "wrong json type is rejected per fhir datatype [7]",
+      "name": "wrong json type is rejected per fhir datatype [6]",
       "dosages": [
         {
           "timing": {
@@ -445,32 +507,7 @@
       }
     },
     {
-      "name": "wrong json type is rejected per fhir datatype [8]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "frequency": 1,
-              "period": 8,
-              "periodUnit": 5
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "error": "timing.repeat.periodUnit muss ein String sein."
-      }
-    },
-    {
-      "name": "wrong json type is rejected per fhir datatype [9]",
+      "name": "wrong json type is rejected per fhir datatype [7]",
       "dosages": [
         {
           "timing": {
@@ -495,7 +532,7 @@
       }
     },
     {
-      "name": "wrong json type is rejected per fhir datatype [10]",
+      "name": "wrong json type is rejected per fhir datatype [8]",
       "dosages": [
         {
           "timing": {
@@ -521,7 +558,7 @@
       }
     },
     {
-      "name": "wrong json type is rejected per fhir datatype [11]",
+      "name": "wrong json type is rejected per fhir datatype [9]",
       "dosages": [
         {
           "text": 5
@@ -532,7 +569,7 @@
       }
     },
     {
-      "name": "wrong json type is rejected per fhir datatype [12]",
+      "name": "wrong json type is rejected per fhir datatype [10]",
       "dosages": [
         {
           "timing": {
@@ -555,30 +592,7 @@
       }
     },
     {
-      "name": "wrong json type is rejected per fhir datatype [13]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "when": "MORN"
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "error": "timing.repeat.when muss eine Liste sein."
-      }
-    },
-    {
-      "name": "wrong json type is rejected per fhir datatype [14]",
+      "name": "wrong json type is rejected per fhir datatype [11]",
       "dosages": [
         {
           "timing": {
@@ -601,7 +615,7 @@
       }
     },
     {
-      "name": "wrong json type is rejected per fhir datatype [15]",
+      "name": "wrong json type is rejected per fhir datatype [12]",
       "dosages": [
         {
           "timing": {
@@ -626,7 +640,7 @@
       }
     },
     {
-      "name": "wrong json type is rejected per fhir datatype [16]",
+      "name": "wrong json type is rejected per fhir datatype [13]",
       "dosages": [
         {
           "timing": {
@@ -649,7 +663,7 @@
       }
     },
     {
-      "name": "wrong json type is rejected per fhir datatype [17]",
+      "name": "wrong json type is rejected per fhir datatype [14]",
       "dosages": [
         {
           "asNeededBoolean": true,
@@ -671,33 +685,7 @@
       }
     },
     {
-      "name": "wrong json type is rejected per fhir datatype [18]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "when": [
-                "MORN"
-              ]
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ],
-          "asNeededBoolean": "true"
-        }
-      ],
-      "expect": {
-        "error": "asNeededBoolean muss ein boolescher Wert sein."
-      }
-    },
-    {
-      "name": "wrong json type is rejected per fhir datatype [19]",
+      "name": "wrong json type is rejected per fhir datatype [15]",
       "dosages": [
         {
           "asNeededBoolean": 1,
@@ -716,7 +704,7 @@
       }
     },
     {
-      "name": "wrong json type is rejected per fhir datatype [20]",
+      "name": "wrong json type is rejected per fhir datatype [16]",
       "dosages": [
         {
           "timing": {
@@ -738,7 +726,7 @@
       }
     },
     {
-      "name": "wrong json type is rejected per fhir datatype [21]",
+      "name": "wrong json type is rejected per fhir datatype [17]",
       "dosages": [
         {
           "asNeededBoolean": true,
@@ -767,7 +755,7 @@
       }
     },
     {
-      "name": "wrong json type is rejected per fhir datatype [22]",
+      "name": "wrong json type is rejected per fhir datatype [18]",
       "dosages": [
         {
           "asNeededBoolean": true,
@@ -793,7 +781,7 @@
       }
     },
     {
-      "name": "wrong json type is rejected per fhir datatype [23]",
+      "name": "wrong json type is rejected per fhir datatype [19]",
       "dosages": [
         {
           "asNeededBoolean": true,
@@ -818,35 +806,7 @@
       }
     },
     {
-      "name": "wrong json type is rejected per fhir datatype [24]",
-      "dosages": [
-        {
-          "asNeededBoolean": true,
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ],
-          "modifierExtension": [
-            {
-              "url": "http://ig.fhir.de/igs/medication/StructureDefinition/MinimumIntervalBetweenAdministrations",
-              "valueDuration": {
-                "value": "4",
-                "code": "h"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "error": "modifierExtension[].valueDuration.value muss numerisch sein."
-      }
-    },
-    {
-      "name": "wrong json type is rejected per fhir datatype [25]",
+      "name": "wrong json type is rejected per fhir datatype [20]",
       "dosages": [
         {
           "timing": {
@@ -874,36 +834,7 @@
       }
     },
     {
-      "name": "wrong json type is rejected per fhir datatype [26]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "when": [
-                "MORN"
-              ],
-              "boundsDuration": {
-                "value": "7",
-                "code": "d"
-              }
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "error": "timing.repeat.boundsDuration.value muss numerisch sein."
-      }
-    },
-    {
-      "name": "wrong json type is rejected per fhir datatype [27]",
+      "name": "wrong json type is rejected per fhir datatype [21]",
       "dosages": [
         {
           "timing": {
@@ -1016,31 +947,6 @@
           "doseAndRate": [
             {
               "doseQuantity": {
-                "value": "2",
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "error": "doseQuantity.value muss numerisch sein."
-      }
-    },
-    {
-      "name": "numeric strings are rejected like any wrong type [2]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "when": [
-                "MORN"
-              ]
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
                 "value": "1.5",
                 "unit": "Stück"
               }
@@ -1053,7 +959,7 @@
       }
     },
     {
-      "name": "numeric strings are rejected like any wrong type [3]",
+      "name": "numeric strings are rejected like any wrong type [2]",
       "dosages": [
         {
           "timing": {

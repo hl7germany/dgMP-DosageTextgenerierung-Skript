@@ -592,35 +592,6 @@
       }
     },
     {
-      "name": "bounds period formats start and end",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "when": [
-                "MORN"
-              ],
-              "boundsPeriod": {
-                "start": "2026-06-05",
-                "end": "2026-07-05"
-              }
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "text": "vom 05.06.2026 bis zum 05.07.2026 täglich: 1-0-0-0 Stück"
-      }
-    },
-    {
       "name": "daily four schema accepts optional frequency period and unit",
       "dosages": [
         {
@@ -647,48 +618,6 @@
       ],
       "expect": {
         "text": "täglich: 1-0-1-0 Stück"
-      }
-    },
-    {
-      "name": "daily four schema aggregates different doses",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "when": [
-                "MORN"
-              ]
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        },
-        {
-          "timing": {
-            "repeat": {
-              "when": [
-                "EVE"
-              ]
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 2,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "text": "täglich: 1-0-2-0 Stück"
       }
     },
     {
@@ -761,111 +690,6 @@
       ],
       "expect": {
         "text": "täglich: 1-0-0-0 Stück"
-      }
-    },
-    {
-      "name": "explicit zero dose is kept in written four schema",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "when": [
-                "MORN"
-              ]
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 0,
-                "unit": "Stück"
-              }
-            }
-          ]
-        },
-        {
-          "timing": {
-            "repeat": {
-              "when": [
-                "EVE"
-              ]
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseRange": {
-                "low": {
-                  "value": 1,
-                  "unit": "Stück"
-                },
-                "high": {
-                  "value": 2,
-                  "unit": "Stück"
-                }
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "text": "täglich: morgens — je 0 Stück, abends — je 1 bis 2 Stück"
-      }
-    },
-    {
-      "name": "generated text is always a lowercase fragment [1]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "boundsPeriod": {
-                "start": "2026-06-05"
-              },
-              "when": [
-                "MORN"
-              ]
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "text": "ab dem 05.06.2026 täglich: 1-0-0-0 Stück"
-      }
-    },
-    {
-      "name": "generated text is always a lowercase fragment [2]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "boundsPeriod": {
-                "start": "2026-06-05"
-              },
-              "when": [
-                "MORN"
-              ]
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ],
-          "asNeededBoolean": true
-        }
-      ],
-      "expect": {
-        "text": "ab dem 05.06.2026 bei Bedarf, täglich: 1-0-0-0 Stück"
       }
     },
     {
@@ -1050,48 +874,6 @@
       ],
       "expect": {
         "text": "täglich: morgens — je 1 Stück, abends — je 2 mg"
-      }
-    },
-    {
-      "name": "same dose means same text and first value wins [3]",
-      "dosages": [
-        {
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ],
-          "timing": {
-            "repeat": {
-              "when": [
-                "MORN"
-              ]
-            }
-          }
-        },
-        {
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ],
-          "timing": {
-            "repeat": {
-              "when": [
-                "MORN"
-              ]
-            }
-          }
-        }
-      ],
-      "expect": {
-        "text": "täglich: 1-0-0-0 Stück"
       }
     },
     {

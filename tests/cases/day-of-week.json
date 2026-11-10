@@ -403,31 +403,6 @@
       }
     },
     {
-      "name": "day of week single day",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "dayOfWeek": [
-                "mon"
-              ]
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "text": "montags — je 1 Stück"
-      }
-    },
-    {
       "name": "day of week: all seven days in canonical order",
       "dosages": [
         {

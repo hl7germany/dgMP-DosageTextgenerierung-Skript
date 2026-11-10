@@ -2,6 +2,90 @@
   "section": "Error: bounds",
   "cases": [
     {
+      "name": "boundsPeriod.start leaves year 0001 on conversion",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ],
+              "boundsPeriod": {
+                "start": "0001-01-01T00:00:00+14:00"
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "boundsPeriod.start muss ein parsebares FHIR-dateTime mit vollständigem Datum im Format JJJJ-MM-TT sein; eine Uhrzeit erfordert eine Zeitzone."
+      }
+    },
+    {
+      "name": "boundsPeriod.start is before year 0001 in UTC only",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ],
+              "boundsPeriod": {
+                "start": "0001-01-01T00:30:00+01:00"
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "boundsPeriod.start muss ein parsebares FHIR-dateTime mit vollständigem Datum im Format JJJJ-MM-TT sein; eine Uhrzeit erfordert eine Zeitzone."
+      }
+    },
+    {
+      "name": "boundsPeriod.end leaves year 9999 on conversion",
+      "dosages": [
+        {
+          "doseAndRate": [
+            {
+              "doseQuantity": {
+                "value": 1,
+                "unit": "Stück"
+              }
+            }
+          ],
+          "timing": {
+            "repeat": {
+              "when": [
+                "MORN"
+              ],
+              "boundsPeriod": {
+                "end": "9999-12-31T23:59:59-12:00"
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "boundsPeriod.end muss ein parsebares FHIR-dateTime mit vollständigem Datum im Format JJJJ-MM-TT sein; eine Uhrzeit erfordert eine Zeitzone."
+      }
+    },
+    {
       "name": "boundsDuration without value",
       "dosages": [
         {

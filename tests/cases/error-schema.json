@@ -675,6 +675,9 @@
             "repeat": {
               "dayOfWeek": [
                 "xyz"
+              ],
+              "timeOfDay": [
+                "08:00:00"
               ]
             }
           },
@@ -701,34 +704,6 @@
               "dayOfWeek": [
                 "xyz"
               ],
-              "timeOfDay": [
-                "08:00:00"
-              ]
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "error": "Nicht unterstützter Wochentag (dayOfWeek): 'xyz'."
-      }
-    },
-    {
-      "name": "unknown day of week code is rejected like when [3]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "dayOfWeek": [
-                "xyz"
-              ],
               "when": [
                 "MORN"
               ]
@@ -746,48 +721,6 @@
       ],
       "expect": {
         "error": "Nicht unterstützter Wochentag (dayOfWeek): 'xyz'."
-      }
-    },
-    {
-      "name": "duplicate when segment raises error only for different dose [2]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "when": [
-                "MORN"
-              ]
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        },
-        {
-          "timing": {
-            "repeat": {
-              "when": [
-                "MORN"
-              ]
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 2,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "error": "Doppelte Belegung des Tagesabschnitts 'MORN' mit unterschiedlicher Dosis."
       }
     },
     {
@@ -878,34 +811,6 @@
       ],
       "expect": {
         "error": "Doppelte Belegung der Kombination aus Wochentag 'mon' und Zeit-/Tagesabschnitt 'MORN' mit unterschiedlicher Dosis."
-      }
-    },
-    {
-      "name": "time of day and when together raise error",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "when": [
-                "MORN"
-              ],
-              "timeOfDay": [
-                "08:00:00"
-              ]
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "error": "timeOfDay und when dürfen nicht gemeinsam angegeben werden (tim-10)."
       }
     },
     {
@@ -1647,48 +1552,6 @@
         {
           "timing": {
             "repeat": {
-              "when": [
-                "MORN"
-              ]
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        },
-        {
-          "timing": {
-            "repeat": {
-              "dayOfWeek": [
-                "mon"
-              ]
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 2,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "error": "Alle Dosage-Elemente müssen demselben Schema folgen; Element 1 ergibt '4-Schema', Element 2 'DayOfWeek'."
-      }
-    },
-    {
-      "name": "mixed schemas are rejected [2]",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
               "dayOfWeek": [
                 "mon"
               ]
@@ -1726,7 +1589,7 @@
       }
     },
     {
-      "name": "mixed schemas are rejected [3]",
+      "name": "mixed schemas are rejected [2]",
       "dosages": [
         {
           "timing": {
@@ -1768,7 +1631,7 @@
       }
     },
     {
-      "name": "mixed schemas are rejected [4]",
+      "name": "mixed schemas are rejected [3]",
       "dosages": [
         {
           "timing": {
@@ -1810,7 +1673,7 @@
       }
     },
     {
-      "name": "mixed schemas are rejected [5]",
+      "name": "mixed schemas are rejected [4]",
       "dosages": [
         {
           "timing": {

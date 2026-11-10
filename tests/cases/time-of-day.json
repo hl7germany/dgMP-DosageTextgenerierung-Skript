@@ -250,32 +250,6 @@
       }
     },
     {
-      "name": "time of day without period remains daily",
-      "dosages": [
-        {
-          "timing": {
-            "repeat": {
-              "timeOfDay": [
-                "08:00:00",
-                "20:00:00"
-              ]
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "text": "täglich: 08:00 Uhr, 20:00 Uhr — je 1 Stück"
-      }
-    },
-    {
       "name": "same time with same dose is rendered once",
       "dosages": [
         {
@@ -438,50 +412,6 @@
       ],
       "expect": {
         "text": "täglich: 08:00 Uhr — je 1 Stueck, 20:00 Uhr — je 2 Stueck"
-      }
-    },
-    {
-      "name": "structured as needed with time of day",
-      "dosages": [
-        {
-          "asNeededBoolean": true,
-          "timing": {
-            "repeat": {
-              "timeOfDay": [
-                "08:00:00"
-              ]
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 1,
-                "unit": "Stück"
-              }
-            }
-          ]
-        },
-        {
-          "asNeededBoolean": true,
-          "timing": {
-            "repeat": {
-              "timeOfDay": [
-                "20:00:00"
-              ]
-            }
-          },
-          "doseAndRate": [
-            {
-              "doseQuantity": {
-                "value": 2,
-                "unit": "Stück"
-              }
-            }
-          ]
-        }
-      ],
-      "expect": {
-        "text": "bei Bedarf, täglich: 08:00 Uhr — je 1 Stück, 20:00 Uhr — je 2 Stück"
       }
     },
     {
