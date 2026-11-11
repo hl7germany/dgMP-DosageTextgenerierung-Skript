@@ -17,7 +17,7 @@ Der gesamte Fließtext dieser Seite ist verbindlich, ebenso die Codeblöcke mit 
 **Vorbedingung der Textgenerierung ist eine gegen die dgMP-Profile des Medication IG DE validierte Ressource.** Im Profil gestrichene Elemente sind nicht Teil der Verarbeitung. Der Algorithmus prüft weder Wertebereiche noch Kardinalitäten oder Invarianten, die den Text nicht berühren. Er bricht nur aus drei Gründen ab:
 
 1. Der Text ist **nicht bildbar**: Eine Angabe fehlt, ist nicht lesbar oder liegt außerhalb der festgelegten Tabellen.
-2. Der Text wäre **falsch oder mehrdeutig**: Er würde eine Angabe der Ressource unterschlagen oder ließe sich in zwei Bedeutungen lesen.
+2. Der Text gäbe die Ressource **nicht vollständig oder nicht widerspruchsfrei** wieder: Er würde eine gelesene Angabe unterschlagen, oder gelesene Angaben widersprechen sich (etwa zwei Dosen zur selben Uhrzeit).
 3. Ein geprüftes Feld (Schritt 3) hat den **falschen JSON-Datentyp**.
 
 In diesen Fällen bricht der Algorithmus ab; es gibt keinen Ersatz- oder Teiltext. Ein Wert von `0` ist kein Abbruchgrund; ein negativer Dosiswert führt zum Abbruch, weil er keine sinnvolle Anweisung darstellt (Grund 1). Alle Abbruchbedingungen sind unter [Fehler und Validierung](#fehler-und-validierung) aufgeführt; die Abschnitte dieser Seite verweisen mit „Grund 1“ bis „Grund 3“ auf die Aufzählung oben.

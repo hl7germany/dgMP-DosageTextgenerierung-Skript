@@ -42,6 +42,7 @@ sie erscheinen mit dem nächsten.
 
 #### Fixed
 
+- Grund 2 der Grundsätze nennt widersprüchliche Angaben der Ressource statt eines Textes, der sich „in zwei Bedeutungen lesen“ lässt. Eine sprachlich mehrdeutige Formulierung ist kein Abbruchgrund; die Abbruchbedingungen sind unverändert.
 - Unter „Vergleichsart“ ist der Verweis auf die Gleichheit von Einnahmerhythmen entfallen; Einnahmerhythmen werden nirgends verglichen.
 
 ### Beispielimplementierung und Repository
