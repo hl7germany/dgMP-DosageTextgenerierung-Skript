@@ -25,7 +25,7 @@ sie erscheinen mit dem nächsten.
 
 Änderungen, die nur Tests oder CI betreffen, stehen nicht im Changelog.
 
-## [Unreleased]
+## [2.0.0-rc.3] - 2026-11-11
 
 ### Algorithmus
 
