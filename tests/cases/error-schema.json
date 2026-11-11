@@ -7,7 +7,7 @@
         "resourceType": "Patient"
       },
       "expect": {
-        "error": "Unsupported resource type: Patient"
+        "error": true
       }
     },
     {
@@ -30,7 +30,7 @@
         }
       ],
       "expect": {
-        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+        "error": true
       }
     },
     {
@@ -58,7 +58,7 @@
         }
       ],
       "expect": {
-        "error": "timeOfDay und when dürfen nicht gemeinsam angegeben werden (tim-10)."
+        "error": true
       }
     },
     {
@@ -81,7 +81,7 @@
         }
       ],
       "expect": {
-        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+        "error": true
       }
     },
     {
@@ -123,7 +123,7 @@
         }
       ],
       "expect": {
-        "error": "Alle Dosage-Elemente müssen demselben Schema folgen; Element 1 ergibt '4-Schema', Element 2 'DayOfWeek'."
+        "error": true
       }
     },
     {
@@ -148,7 +148,7 @@
         }
       ],
       "expect": {
-        "error": "timeOfDay muss im Format HH:MM oder HH:MM:SS[.Bruchteile] angegeben sein."
+        "error": true
       }
     },
     {
@@ -176,7 +176,7 @@
         }
       ],
       "expect": {
-        "error": "Nicht unterstützte Zeiteinheit: 'x'."
+        "error": true
       }
     },
     {
@@ -201,7 +201,7 @@
         }
       ],
       "expect": {
-        "error": "Nicht unterstützter Tagesabschnitt (when): 'XYZ'."
+        "error": true
       }
     },
     {
@@ -229,7 +229,7 @@
         }
       ],
       "expect": {
-        "error": "Nicht unterstützter Tagesabschnitt (when): 'XYZ'."
+        "error": true
       }
     },
     {
@@ -254,7 +254,7 @@
         }
       ],
       "expect": {
-        "error": "Nicht unterstützter Wochentag (dayOfWeek): 'xyz'."
+        "error": true
       }
     },
     {
@@ -296,7 +296,7 @@
         }
       ],
       "expect": {
-        "error": "Doppelte Belegung des Tagesabschnitts 'MORN' mit unterschiedlicher Dosis."
+        "error": true
       }
     },
     {
@@ -338,7 +338,7 @@
         }
       ],
       "expect": {
-        "error": "Doppelte Belegung des Wochentags 'mon' mit unterschiedlicher Dosis."
+        "error": true
       }
     },
     {
@@ -386,7 +386,7 @@
         }
       ],
       "expect": {
-        "error": "Doppelte Belegung der Kombination aus Wochentag 'mon' und Zeit-/Tagesabschnitt 'MORN' mit unterschiedlicher Dosis."
+        "error": true
       }
     },
     {
@@ -432,7 +432,7 @@
         }
       ],
       "expect": {
-        "error": "Doppelte Belegung der Uhrzeit '08:00 Uhr' mit unterschiedlicher Dosis."
+        "error": true
       }
     },
     {
@@ -478,7 +478,7 @@
         }
       ],
       "expect": {
-        "error": "Doppelte Belegung des Tagesabschnitts 'MORN' mit unterschiedlicher Dosis."
+        "error": true
       }
     },
     {
@@ -520,7 +520,7 @@
         }
       ],
       "expect": {
-        "error": "Doppelte Belegung der Uhrzeit '08:00 Uhr' mit unterschiedlicher Dosis."
+        "error": true
       }
     },
     {
@@ -568,7 +568,7 @@
         }
       ],
       "expect": {
-        "error": "Wochentags-Kombinationen mit Uhrzeiten und mit Tagesabschnitten dürfen nicht gemischt werden."
+        "error": true
       }
     },
     {
@@ -610,7 +610,7 @@
         }
       ],
       "expect": {
-        "error": "Wiederkehrende Intervalle erlauben genau ein Dosage-Element."
+        "error": true
       }
     },
     {
@@ -635,7 +635,7 @@
         }
       ],
       "expect": {
-        "error": "Nicht unterstützte Zeiteinheit: 'x'."
+        "error": true
       }
     },
     {
@@ -664,7 +664,7 @@
         }
       ],
       "expect": {
-        "error": "Nicht unterstützte Zeiteinheit: 'x'."
+        "error": true
       }
     },
     {
@@ -692,7 +692,7 @@
         }
       ],
       "expect": {
-        "error": "Nicht unterstützter Wochentag (dayOfWeek): 'xyz'."
+        "error": true
       }
     },
     {
@@ -720,7 +720,7 @@
         }
       ],
       "expect": {
-        "error": "Nicht unterstützter Wochentag (dayOfWeek): 'xyz'."
+        "error": true
       }
     },
     {
@@ -762,7 +762,7 @@
         }
       ],
       "expect": {
-        "error": "Doppelte Belegung des Tagesabschnitts 'MORN' mit unterschiedlicher Dosis."
+        "error": true
       }
     },
     {
@@ -810,7 +810,7 @@
         }
       ],
       "expect": {
-        "error": "Doppelte Belegung der Kombination aus Wochentag 'mon' und Zeit-/Tagesabschnitt 'MORN' mit unterschiedlicher Dosis."
+        "error": true
       }
     },
     {
@@ -838,7 +838,7 @@
         }
       ],
       "expect": {
-        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+        "error": true
       }
     },
     {
@@ -869,7 +869,7 @@
         }
       ],
       "expect": {
-        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+        "error": true
       }
     },
     {
@@ -900,7 +900,7 @@
         }
       ],
       "expect": {
-        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+        "error": true
       }
     },
     {
@@ -928,7 +928,7 @@
         }
       ],
       "expect": {
-        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+        "error": true
       }
     },
     {
@@ -976,7 +976,7 @@
         }
       ],
       "expect": {
-        "error": "Wochentags-Kombinationen mit Uhrzeiten und mit Tagesabschnitten dürfen nicht gemischt werden."
+        "error": true
       }
     },
     {
@@ -1024,7 +1024,7 @@
         }
       ],
       "expect": {
-        "error": "Wochentags-Kombinationen mit Uhrzeiten und mit Tagesabschnitten dürfen nicht gemischt werden."
+        "error": true
       }
     },
     {
@@ -1072,7 +1072,7 @@
         }
       ],
       "expect": {
-        "error": "Wochentags-Kombinationen mit Uhrzeiten und mit Tagesabschnitten dürfen nicht gemischt werden."
+        "error": true
       }
     },
     {
@@ -1101,7 +1101,7 @@
         }
       ],
       "expect": {
-        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+        "error": true
       }
     },
     {
@@ -1147,7 +1147,7 @@
         }
       ],
       "expect": {
-        "error": "Doppelte Belegung der Uhrzeit '08:00 Uhr' mit unterschiedlicher Dosis."
+        "error": true
       }
     },
     {
@@ -1193,7 +1193,7 @@
         }
       ],
       "expect": {
-        "error": "Doppelte Belegung der Uhrzeit '08:00 Uhr' mit unterschiedlicher Dosis."
+        "error": true
       }
     },
     {
@@ -1223,7 +1223,7 @@
         }
       ],
       "expect": {
-        "error": "timing.repeat.boundsDuration.comparator wird nicht unterstützt."
+        "error": true
       }
     },
     {
@@ -1265,7 +1265,7 @@
         }
       ],
       "expect": {
-        "error": "Doppelte Belegung des Tagesabschnitts 'MORN' mit unterschiedlicher Dosis."
+        "error": true
       }
     },
     {
@@ -1307,7 +1307,7 @@
         }
       ],
       "expect": {
-        "error": "Doppelte Belegung des Wochentags 'mon' mit unterschiedlicher Dosis."
+        "error": true
       }
     },
     {
@@ -1355,7 +1355,7 @@
         }
       ],
       "expect": {
-        "error": "Doppelte Belegung der Uhrzeit '08:00 Uhr' mit unterschiedlicher Dosis."
+        "error": true
       }
     },
     {
@@ -1397,7 +1397,7 @@
         }
       ],
       "expect": {
-        "error": "Doppelte Belegung der Uhrzeit '08:00 Uhr' mit unterschiedlicher Dosis."
+        "error": true
       }
     },
     {
@@ -1439,7 +1439,7 @@
         }
       ],
       "expect": {
-        "error": "Doppelte Belegung des Tagesabschnitts 'MORN' mit unterschiedlicher Dosis."
+        "error": true
       }
     },
     {
@@ -1465,7 +1465,7 @@
         }
       ],
       "expect": {
-        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+        "error": true
       }
     },
     {
@@ -1491,7 +1491,7 @@
         }
       ],
       "expect": {
-        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+        "error": true
       }
     },
     {
@@ -1517,7 +1517,7 @@
         }
       ],
       "expect": {
-        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+        "error": true
       }
     },
     {
@@ -1543,7 +1543,7 @@
         }
       ],
       "expect": {
-        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+        "error": true
       }
     },
     {
@@ -1585,7 +1585,7 @@
         }
       ],
       "expect": {
-        "error": "Alle Dosage-Elemente müssen demselben Schema folgen; Element 1 ergibt 'DayOfWeek', Element 2 '4-Schema'."
+        "error": true
       }
     },
     {
@@ -1627,7 +1627,7 @@
         }
       ],
       "expect": {
-        "error": "Alle Dosage-Elemente müssen demselben Schema folgen; Element 1 ergibt '4-Schema', Element 2 'TimeOfDay'."
+        "error": true
       }
     },
     {
@@ -1669,7 +1669,7 @@
         }
       ],
       "expect": {
-        "error": "Alle Dosage-Elemente müssen demselben Schema folgen; Element 1 ergibt '4-Schema', Element 2 'Interval'."
+        "error": true
       }
     },
     {
@@ -1712,7 +1712,7 @@
         }
       ],
       "expect": {
-        "error": "Alle Dosage-Elemente müssen demselben Schema folgen; Element 1 ergibt '4-Schema', Element 2 'Unknown'."
+        "error": true
       }
     },
     {
@@ -1760,7 +1760,7 @@
         }
       ],
       "expect": {
-        "error": "Doppelte Belegung der Uhrzeit '08:00 Uhr' mit unterschiedlicher Dosis."
+        "error": true
       }
     },
     {
@@ -1808,7 +1808,7 @@
         }
       ],
       "expect": {
-        "error": "Doppelte Belegung der Kombination aus Wochentag 'mon' und Zeit-/Tagesabschnitt 'MORN' mit unterschiedlicher Dosis."
+        "error": true
       }
     },
     {
@@ -1856,7 +1856,7 @@
         }
       ],
       "expect": {
-        "error": "Doppelte Belegung der Kombination aus Wochentag 'mon' und Zeit-/Tagesabschnitt 'MORN' mit unterschiedlicher Dosis."
+        "error": true
       }
     },
     {
@@ -1924,7 +1924,7 @@
         }
       ],
       "expect": {
-        "error": "Doppelte Belegung der Uhrzeit '08:00 Uhr' mit unterschiedlicher Dosis."
+        "error": true
       }
     },
     {
@@ -1952,7 +1952,7 @@
         }
       ],
       "expect": {
-        "error": "Nicht unterstützter Tagesabschnitt (when): 'XYZ'."
+        "error": true
       }
     },
     {
@@ -1977,7 +1977,7 @@
         }
       ],
       "expect": {
-        "error": "Nicht unterstützte Zeiteinheit: 'x'."
+        "error": true
       }
     },
     {
@@ -1996,7 +1996,7 @@
         }
       ],
       "expect": {
-        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+        "error": true
       }
     },
     {
@@ -2022,7 +2022,7 @@
         }
       ],
       "expect": {
-        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+        "error": true
       }
     },
     {
@@ -2048,7 +2048,7 @@
         }
       ],
       "expect": {
-        "error": "Die Dosierung entspricht keinem unterstützten Dosierungsschema."
+        "error": true
       }
     }
   ]

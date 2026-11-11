@@ -31,7 +31,7 @@ Jede Datei enthält einen Abschnitt mit seinen Fällen. Schlüssel, Dateinamen u
 | `dosages` | Liste der `Dosage`-Elemente. Der Fall gilt für `MedicationRequest`, `MedicationDispense` (jeweils unter `dosageInstruction`) und `MedicationStatement` (unter `dosage`) |
 | `resource` | Vollständige Ressource, anstelle von `dosages`, wenn der Fall die Ressource selbst betrifft (etwa einen nicht unterstützten `resourceType`) |
 | `expect.text` | Erwarteter Text, zeichengenau |
-| `expect.error` | Erwarteter Abbruch mit der Meldung aus dem Abschnitt „Fehler und Validierung“ der Spezifikation |
+| `expect.error` | `true`: Die Implementierung muss abbrechen und darf keinen Text liefern. Wie sie den Abbruch meldet, legt die Spezifikation nicht fest |
 
 Ein Fall enthält entweder `dosages` oder `resource` und entweder `expect.text` oder `expect.error`.
 
@@ -41,7 +41,7 @@ Für jeden Fall mit `dosages` wird je Ressourcentyp eine Ressource aus `resource
 
 Zahlen sind mit ihrer Genauigkeit zu lesen: `2.50` ist nicht `2.5`, und der erwartete Text lautet `2,50`. Ein JSON-Parser, der Dezimalzahlen als binäre Gleitkommazahl liest, besteht diese Fälle nicht.
 
-Für das Python-Skript führt [tests/test_cases.py](../test_cases.py) die Vektoren aus:
+Für das Python-Skript führt [tests/test_cases.py](../test_cases.py) die Vektoren aus. Bei einem Abbruch prüft es zusätzlich die Meldung des Skripts aus [tests/script-messages.json](../script-messages.json); diese Meldungen gehören zur Beispielimplementierung, nicht zum Algorithmus:
 
 ```
 python -m unittest tests/test_cases.py

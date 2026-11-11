@@ -28,7 +28,7 @@
         }
       ],
       "expect": {
-        "error": "Reine Bedarfsmedikation erlaubt genau ein Dosage-Element."
+        "error": true
       }
     },
     {
@@ -64,7 +64,7 @@
         }
       ],
       "expect": {
-        "error": "Eine Maximalmenge ist nur bei reiner Bedarfsmedikation zulässig, nicht zusammen mit einem strukturierten Rhythmus."
+        "error": true
       }
     },
     {
@@ -99,7 +99,7 @@
         }
       ],
       "expect": {
-        "error": "Ein Mindestabstand ist nur bei reiner Bedarfsmedikation zulässig, nicht zusammen mit einem strukturierten Rhythmus."
+        "error": true
       }
     },
     {
@@ -134,7 +134,7 @@
         }
       ],
       "expect": {
-        "error": "Es ist höchstens ein Mindestabstand (MinimumIntervalBetweenAdministrations) zulässig."
+        "error": true
       }
     },
     {
@@ -165,7 +165,7 @@
         }
       ],
       "expect": {
-        "error": "Es ist höchstens ein Mindestabstand (MinimumIntervalBetweenAdministrations) zulässig."
+        "error": true
       }
     },
     {
@@ -190,7 +190,7 @@
         }
       ],
       "expect": {
-        "error": "asNeededFor.valueCodeableConcept.text ist für die Textgenerierung erforderlich."
+        "error": true
       }
     },
     {
@@ -214,7 +214,7 @@
         }
       ],
       "expect": {
-        "error": "MinimumIntervalBetweenAdministrations.valueDuration ist für die Textgenerierung erforderlich."
+        "error": true
       }
     },
     {
@@ -241,7 +241,7 @@
         }
       ],
       "expect": {
-        "error": "MinimumIntervalBetweenAdministrations.valueDuration.value ist für die Textgenerierung erforderlich."
+        "error": true
       }
     },
     {
@@ -268,7 +268,7 @@
         }
       ],
       "expect": {
-        "error": "MinimumIntervalBetweenAdministrations.valueDuration.code ist für die Textgenerierung erforderlich."
+        "error": true
       }
     },
     {
@@ -296,7 +296,7 @@
         }
       ],
       "expect": {
-        "error": "maxDosePerPeriod.numerator.value ist für die Textgenerierung erforderlich."
+        "error": true
       }
     },
     {
@@ -324,7 +324,7 @@
         }
       ],
       "expect": {
-        "error": "maxDosePerPeriod.numerator.unit ist für die Textgenerierung erforderlich."
+        "error": true
       }
     },
     {
@@ -352,7 +352,7 @@
         }
       ],
       "expect": {
-        "error": "maxDosePerPeriod.denominator.value ist für die Textgenerierung erforderlich."
+        "error": true
       }
     },
     {
@@ -380,7 +380,7 @@
         }
       ],
       "expect": {
-        "error": "maxDosePerPeriod.denominator.code ist für die Textgenerierung erforderlich."
+        "error": true
       }
     },
     {
@@ -405,7 +405,7 @@
         }
       ],
       "expect": {
-        "error": "maxDosePerPeriod.numerator.value ist für die Textgenerierung erforderlich."
+        "error": true
       }
     },
     {
@@ -434,7 +434,7 @@
         }
       ],
       "expect": {
-        "error": "maxDosePerPeriod.denominator muss 1 d oder 24 h sein."
+        "error": true
       }
     },
     {
@@ -465,7 +465,7 @@
         }
       ],
       "expect": {
-        "error": "Nicht unterstützte modifierExtension: 'http://example.org/x'."
+        "error": true
       }
     },
     {
@@ -495,7 +495,7 @@
         }
       ],
       "expect": {
-        "error": "maxDosePerPeriod.numerator.comparator wird nicht unterstützt."
+        "error": true
       }
     },
     {
@@ -528,7 +528,7 @@
         }
       ],
       "expect": {
-        "error": "Ein Einnahmeanlass (asNeededFor) setzt asNeededBoolean = true voraus."
+        "error": true
       }
     },
     {
@@ -562,7 +562,7 @@
         }
       ],
       "expect": {
-        "error": "Ein Mindestabstand setzt asNeededBoolean = true voraus."
+        "error": true
       }
     },
     {
@@ -597,7 +597,7 @@
         }
       ],
       "expect": {
-        "error": "Eine Maximalmenge setzt asNeededBoolean = true voraus."
+        "error": true
       }
     },
     {
@@ -647,7 +647,7 @@
         }
       ],
       "expect": {
-        "error": "Ein Einnahmeanlass (asNeededFor) setzt asNeededBoolean = true voraus."
+        "error": true
       }
     },
     {
@@ -700,7 +700,7 @@
         }
       ],
       "expect": {
-        "error": "Ein Mindestabstand ist nur bei reiner Bedarfsmedikation zulässig, nicht zusammen mit einem strukturierten Rhythmus."
+        "error": true
       }
     },
     {
@@ -752,7 +752,7 @@
         }
       ],
       "expect": {
-        "error": "Eine Maximalmenge setzt asNeededBoolean = true voraus."
+        "error": true
       }
     },
     {
@@ -779,7 +779,7 @@
         }
       ],
       "expect": {
-        "error": "Ein Mindestabstand setzt asNeededBoolean = true voraus."
+        "error": true
       }
     },
     {
@@ -800,7 +800,7 @@
         }
       ],
       "expect": {
-        "error": "Ein Mindestabstand ist bei einer Freitext-Dosierung nicht darstellbar."
+        "error": true
       }
     },
     {
@@ -822,7 +822,7 @@
         }
       ],
       "expect": {
-        "error": "Eine Maximalmenge ist bei einer Freitext-Dosierung nicht darstellbar."
+        "error": true
       }
     },
     {
@@ -876,7 +876,7 @@
         }
       ],
       "expect": {
-        "error": "Ein Mindestabstand ist nur bei reiner Bedarfsmedikation zulässig, nicht zusammen mit einem strukturierten Rhythmus."
+        "error": true
       }
     },
     {
@@ -911,7 +911,7 @@
         }
       ],
       "expect": {
-        "error": "Eine Maximalmenge setzt asNeededBoolean = true voraus."
+        "error": true
       }
     },
     {
@@ -961,7 +961,7 @@
         }
       ],
       "expect": {
-        "error": "Ein Einnahmeanlass (asNeededFor) setzt asNeededBoolean = true voraus."
+        "error": true
       }
     },
     {
@@ -1012,7 +1012,7 @@
         }
       ],
       "expect": {
-        "error": "Ein Mindestabstand setzt asNeededBoolean = true voraus."
+        "error": true
       }
     },
     {
@@ -1063,7 +1063,7 @@
         }
       ],
       "expect": {
-        "error": "Ein Mindestabstand setzt asNeededBoolean = true voraus."
+        "error": true
       }
     },
     {
@@ -1115,7 +1115,7 @@
         }
       ],
       "expect": {
-        "error": "Eine Maximalmenge setzt asNeededBoolean = true voraus."
+        "error": true
       }
     },
     {
@@ -1150,7 +1150,7 @@
         }
       ],
       "expect": {
-        "error": "Ein Mindestabstand ist nur bei reiner Bedarfsmedikation zulässig, nicht zusammen mit einem strukturierten Rhythmus."
+        "error": true
       }
     },
     {
@@ -1188,7 +1188,7 @@
         }
       ],
       "expect": {
-        "error": "Ein Mindestabstand ist nur bei reiner Bedarfsmedikation zulässig, nicht zusammen mit einem strukturierten Rhythmus."
+        "error": true
       }
     },
     {
@@ -1218,7 +1218,7 @@
         }
       ],
       "expect": {
-        "error": "Nicht unterstützte modifierExtension: 'http://example.org/x'."
+        "error": true
       }
     },
     {
@@ -1254,7 +1254,7 @@
         }
       ],
       "expect": {
-        "error": "Eine Maximalmenge ist nur bei reiner Bedarfsmedikation zulässig, nicht zusammen mit einem strukturierten Rhythmus."
+        "error": true
       }
     },
     {
@@ -1284,7 +1284,7 @@
         }
       ],
       "expect": {
-        "error": "Reine Bedarfsmedikation erlaubt genau ein Dosage-Element."
+        "error": true
       }
     }
   ]
