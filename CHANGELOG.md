@@ -31,13 +31,14 @@ sie erscheinen mit dem nächsten.
 
 #### Changed
 
+- Fehlermeldungen: Die Spezifikation legt nur noch fest, wann der Algorithmus abbricht. „Fehler und Validierung“ listet die Abbruchbedingungen abschließend, jede mit ihrem Grund (1 bis 3). Wie eine Implementierung einen Abbruch meldet, ist nicht festgelegt, ebenso wenig Wortlaut und Sprache der Meldung oder welche von mehreren zutreffenden Bedingungen sie nennt. Damit entfällt auch die festgelegte Prüfreihenfolge: Typprüfung vor der Schema-Erkennung (Schritt 3), Dokumentreihenfolge und erste verletzte Bedingung in Schritt 4, Schema-Gleichheit vor der Regelprüfung in Schritt 6, Pflichtangaben von Mindestabstand und Maximalmenge vor Schritt 4. Bisher waren die Meldungen der Beispielimplementierung wortgenau vorgeschrieben (`ValueError("…")`); sie bleiben unverändert. Dass die Liste der Dosierungen eine Liste und jedes `Dosage`-Element ein Objekt sein muss, steht jetzt in Schritt 3; bisher ergab es sich nur aus den Meldungen.
 - Versionierung: Jedes Release erhält eine Versionsnummer aus Haupt-, Neben- und Patch-Version. Die Patch-Version steigt, wenn nur die Beispielimplementierung oder die Testvektoren korrigiert sind und der Algorithmus unverändert ist; eine Implementierung, die `2.0.0` umsetzt, erfüllt `2.0.1` unverändert. Redaktionelle Korrekturen der Spezifikation begründen kein eigenes Release. Bisher entstand eine neue Nummer nur bei einer Änderung der Spezifikation; eine Patch-Version war nicht festgelegt.
-- Mehr als eine Extension `MinimumIntervalBetweenAdministrations` an einem `Dosage`-Element führt zum Abbruch (`Es ist höchstens ein Mindestabstand (MinimumIntervalBetweenAdministrations) zulässig.`). Bisher wurde die erste verwendet und jede weitere entfiel.
-- Mehr als ein Eintrag in `doseAndRate` führt zum Abbruch (`doseAndRate darf höchstens einen Eintrag enthalten.`), ebenso `doseQuantity` und `doseRange` im selben Eintrag (`doseQuantity und doseRange dürfen nicht gemeinsam angegeben werden.`). Bisher wurden weitere Einträge ignoriert, und `doseQuantity` hatte Vorrang vor `doseRange`.
+- Mehr als eine Extension `MinimumIntervalBetweenAdministrations` an einem `Dosage`-Element führt zum Abbruch (Grund 2). Bisher wurde die erste verwendet und jede weitere entfiel.
+- Mehr als ein Eintrag in `doseAndRate` führt zum Abbruch (Grund 2), ebenso `doseQuantity` und `doseRange` im selben Eintrag. Bisher wurden weitere Einträge ignoriert, und `doseQuantity` hatte Vorrang vor `doseRange`.
 - Die Typprüfung (Schritt 3) ist über die Felder der Feldreferenz festgelegt statt über „gelesene Felder": In jeder `Quantity` werden `value`, `unit` und `code` geprüft, die Werte der beiden bekannten Extensions in `extension` und `modifierExtension`. Dasselbe gilt für die `comparator`-Prüfung. Die Beispielimplementierung prüfte bereits so.
 - **Leerraum** ist auf die Zeichen mit der Unicode-Eigenschaft `White_Space` festgelegt (bisher „jedes Unicode-Leerraumzeichen“). Das gilt für die Normalisierung, das Entfernen von Rand-Leerraum bei Einnahmeanlass und Hinweis und die Prüfung auf eine leere Einheit. U+001C bis U+001F, U+200B und U+FEFF zählen nicht dazu; die Beispielimplementierung fasste U+001C bis U+001F bisher mit zusammen.
-- Nicht endliche Werte (`NaN`, `Infinity`) gelten in der Typprüfung nicht als Zahl (`… muss numerisch sein.`). Bisher erschien `je NaN Stück`, wenn der JSON-Parser solche Werte annahm.
-- Ein Zeitpunkt in `boundsPeriod`, der in UTC oder in der Zielzeitzone außerhalb der Jahre `0001` bis `9999` liegt (etwa `0001-01-01T00:00:00+14:00`), führt zum Abbruch mit der Meldung für nicht parsebare Werte. Die Beispielimplementierung brach bisher mit einem `OverflowError` ab.
+- Nicht endliche Werte (`NaN`, `Infinity`) gelten in der Typprüfung nicht als Zahl (Grund 3). Bisher erschien `je NaN Stück`, wenn der JSON-Parser solche Werte annahm.
+- Ein Zeitpunkt in `boundsPeriod`, der in UTC oder in der Zielzeitzone außerhalb der Jahre `0001` bis `9999` liegt (etwa `0001-01-01T00:00:00+14:00`), führt wie ein nicht parsebarer Wert zum Abbruch (Grund 1). Die Beispielimplementierung brach bisher mit einem `OverflowError` ab.
 
 #### Fixed
 
@@ -47,7 +48,7 @@ sie erscheinen mit dem nächsten.
 
 #### Added
 
-- `tests/cases/`: Testvektoren als JSON, je Fall die `Dosage`-Elemente und der erwartete Text oder die erwartete Abbruchmeldung. Sie sind unabhängig von der Programmiersprache und gegen jede Implementierung ausführbar; das Format beschreibt `tests/cases/README.md`. `tests/test_cases.py` führt jeden Fall für `MedicationRequest`, `MedicationDispense` und `MedicationStatement` gegen das Skript aus.
+- `tests/cases/`: Testvektoren als JSON, je Fall die `Dosage`-Elemente und der erwartete Text oder ein erwarteter Abbruch. Sie sind unabhängig von der Programmiersprache und gegen jede Implementierung ausführbar; das Format beschreibt `tests/cases/README.md`. `tests/test_cases.py` führt jeden Fall für `MedicationRequest`, `MedicationDispense` und `MedicationStatement` gegen das Skript aus.
 
 #### Changed
 

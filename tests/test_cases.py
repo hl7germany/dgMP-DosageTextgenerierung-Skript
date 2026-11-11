@@ -9,8 +9,11 @@ ist der Runner für das Python-Skript:
   MedicationStatement; die Liste steht dabei unter `dosageInstruction`
   beziehungsweise `dosage`.
 - Ein Fall mit `resource` läuft genau mit dieser Ressource.
-- `expect.text` muss zeichengenau erzeugt werden, `expect.error` ist die
-  Meldung des Abbruchs.
+- `expect.text` muss zeichengenau erzeugt werden; bei `expect.error` muss
+  das Skript abbrechen.
+
+Den Wortlaut einer Meldung legt die Spezifikation nicht fest. Die Meldungen des
+Skripts stehen je Fall in tests/script-messages.json und werden hier mitgeprüft.
 """
 
 import importlib.util
@@ -21,6 +24,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CASES_DIR = Path(__file__).resolve().parent / "cases"
+MESSAGES_PATH = Path(__file__).resolve().parent / "script-messages.json"
 SPEC = importlib.util.spec_from_file_location(
     "medication_dosage_to_text", ROOT / "medication-dosage-to-text.py"
 )
@@ -42,6 +46,11 @@ def load_files():
             # bleibt 2.50.
             files[path.name] = json.load(file, parse_float=Decimal)
     return files
+
+
+def load_messages():
+    with open(MESSAGES_PATH, encoding="utf-8") as file:
+        return json.load(file)
 
 
 def resources(case):
@@ -74,8 +83,20 @@ class CaseFilesTest(unittest.TestCase):
                     else:
                         self.assertIsInstance(case["resource"], dict)
                     self.assertIn(set(case["expect"]), [{"text"}, {"error"}])
-                    for value in case["expect"].values():
-                        self.assertIsInstance(value, str)
+                    if "text" in case["expect"]:
+                        self.assertIsInstance(case["expect"]["text"], str)
+                    else:
+                        self.assertIs(case["expect"]["error"], True)
+
+    def test_every_error_case_has_exactly_one_script_message(self):
+        error_cases = [case["name"] for content in load_files().values()
+                       for case in content["cases"] if "error" in case["expect"]]
+        messages = load_messages()
+        self.assertEqual(sorted(error_cases), sorted(messages),
+                         "tests/script-messages.json muss genau die Fälle mit expect.error enthalten.")
+        for name, message in messages.items():
+            with self.subTest(name=name):
+                self.assertIsInstance(message, str)
 
     def test_inputs_are_unique(self):
         seen = {}
@@ -91,6 +112,7 @@ class CaseFilesTest(unittest.TestCase):
 class CasesTest(unittest.TestCase):
     def test_every_case_produces_its_expected_result(self):
         generator = MODULE.MedicationDosageTextGenerator()
+        messages = load_messages()
         for file_name, content in load_files().items():
             for case in content["cases"]:
                 expect = case["expect"]
@@ -101,7 +123,7 @@ class CasesTest(unittest.TestCase):
                         if "error" in expect:
                             with self.assertRaises(ValueError) as raised:
                                 generator.generate_dosage_text(resource)
-                            self.assertEqual(expect["error"], str(raised.exception))
+                            self.assertEqual(messages.get(case["name"]), str(raised.exception))
                         else:
                             self.assertEqual(expect["text"], generator.generate_dosage_text(resource))
 
