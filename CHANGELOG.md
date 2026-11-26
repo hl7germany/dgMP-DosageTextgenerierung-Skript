@@ -25,6 +25,10 @@ sie erscheinen mit dem nächsten.
 
 Änderungen, die nur Tests oder CI betreffen, stehen nicht im Changelog.
 
+## [2.0.0] - 2026-11-26
+
+Algorithmus und Beispielimplementierung entsprechen 2.0.0-rc.3; geändert ist nur die Versionsnummer. Die Änderungen gegenüber 2.0.0-ballot stehen in den Abschnitten 2.0.0-rc.1 bis 2.0.0-rc.3.
+
 ## [2.0.0-rc.3] - 2026-11-11
 
 ### Algorithmus
